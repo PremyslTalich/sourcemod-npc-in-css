@@ -12,11 +12,12 @@
 #pragma once
 #endif
 
+
 #include "simtimer.h"
-#include "ai_component.h"
+#include "CAI_component.h"
 #include "ai_navgoaltype.h"
 #include "ai_navtype.h"
-#include "ai_motor.h"
+#include "CAI_motor.h"
 
 class CEntity;
 class CAI_NPC;

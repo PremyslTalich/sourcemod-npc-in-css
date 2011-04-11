@@ -5,6 +5,7 @@
 #include "CEntity.h"
 #include "CCycler_Fix.h"
 #include "CAI_NPC.h"
+#include "soundent.h"
 
 abstract_class CE_BaseHeadcrab : public CE_Cycler_Fix
 {
@@ -29,7 +30,7 @@ public:
 	void JumpToBurrowHint( CAI_Hint *pHint );
 
 	bool	HasHeadroom();
-	void	LeapTouch ( CBaseEntity *pOther );
+	void	LeapTouch ( CEntity *pOther );
 	virtual void TouchDamage( CEntity *pOther );
 	bool	CorpseGib( const CTakeDamageInfo &info );
 	void	Touch(CEntity *pOther );
@@ -76,7 +77,7 @@ public:
 		return false;
 	}
 
-	virtual void PlayerHasIlluminatedNPC( CPlayer *pPlayer, float flDot );
+	virtual void PlayerHasIlluminatedNPC( CBaseEntity *pPlayer, float flDot );
 
 	void DropFromCeiling( void );
 
@@ -142,6 +143,11 @@ protected:
 
 };
 
+//=========================================================
+//=========================================================
+// The ever popular chubby classic headcrab
+//=========================================================
+//=========================================================
 class CE_NPC_Headcrab : public CE_BaseHeadcrab
 {
 public:
@@ -161,11 +167,125 @@ public:
 	void	AttackSound( void );
 	void	TelegraphSound( void );
 
-	virtual void Init(edict_t *pEdict, CBaseEntity *pBaseEntity);
-	virtual ServerClass *GetServerClass(void);
-	//virtual void Think(void);
-
-	//virtual void MyThink(void);
 };
+
+
+//=========================================================
+//=========================================================
+// The spindly, fast headcrab
+//=========================================================
+//=========================================================
+class CE_NPC_FastHeadcrab : public CE_BaseHeadcrab
+{
+public:
+	CE_DECLARE_CLASS( CE_NPC_FastHeadcrab, CE_BaseHeadcrab );
+	
+	CE_NPC_FastHeadcrab();
+
+	void	Precache( void );
+	void	Spawn( void );
+	bool	QuerySeeEntity(CBaseEntity *pSightEnt, bool bOnlyHateOrFearIfNPC = false);
+
+	float	MaxYawSpeed( void );
+
+	void	PrescheduleThink( void );
+	void	RunTask( const Task_t *pTask );
+	void	StartTask( const Task_t *pTask );
+
+	int		SelectSchedule( void );
+	int		TranslateSchedule( int scheduleType );
+
+	int		m_iRunMode;
+	float	m_flRealGroundSpeed;
+	float	m_flSlowRunTime;
+	float	m_flPauseTime;
+	Vector	m_vecJumpVel;
+
+	void	BiteSound( void );
+	void	PainSound( const CTakeDamageInfo &info );
+	void	DeathSound( const CTakeDamageInfo &info );
+	void	IdleSound( void );
+	void	AlertSound( void );
+	void	AttackSound( void );
+
+	enum SquadSlot_t
+	{	
+		SQUAD_SLOT_ENGAGE1 = LAST_SHARED_SQUADSLOT,
+		SQUAD_SLOT_ENGAGE2,
+		SQUAD_SLOT_ENGAGE3,
+		SQUAD_SLOT_ENGAGE4,
+	};
+
+	DEFINE_CUSTOM_AI;
+};
+
+
+//=========================================================
+//=========================================================
+// Treacherous black headcrab
+//=========================================================
+//=========================================================
+class CE_NPC_BlackHeadcrab : public CE_BaseHeadcrab
+{
+public:
+	public:
+	CE_DECLARE_CLASS( CE_NPC_BlackHeadcrab, CE_BaseHeadcrab );
+	
+	CE_NPC_BlackHeadcrab();
+
+	void Eject( const QAngle &vecAngles, float flVelocityScale, CEntity *pEnemy );
+	void EjectTouch( CEntity *pOther );
+
+	//
+	// CBaseHeadcrab implementation.
+	//
+	void TouchDamage( CEntity *pOther );
+	void BiteSound( void );
+	void AttackSound( void );
+
+	//
+	// CAI_BaseNPC implementation.
+	//
+	virtual void PrescheduleThink( void );
+	virtual void BuildScheduleTestBits( void );
+	virtual int SelectSchedule( void );
+	virtual int TranslateSchedule( int scheduleType );
+
+	virtual Activity NPC_TranslateActivity( Activity eNewActivity );
+	virtual void HandleAnimEvent( animevent_t *pEvent );
+	virtual float MaxYawSpeed( void );
+
+	virtual int	GetSoundInterests() { return (BaseClass::GetSoundInterests() | SOUND_DANGER | SOUND_BULLET_IMPACT); }
+
+	bool IsHeavyDamage( const CTakeDamageInfo &info );
+
+	virtual void PainSound( const CTakeDamageInfo &info );
+	virtual void DeathSound( const CTakeDamageInfo &info );
+	virtual void IdleSound( void );
+	virtual void AlertSound( void );
+	virtual void ImpactSound( void );
+	virtual void TelegraphSound( void );
+
+
+	//
+	// CBaseEntity implementation.
+	//
+	virtual void Precache( void );
+	virtual void Spawn( void );
+
+	DEFINE_CUSTOM_AI;
+
+private:
+
+
+	void JumpFlinch( const Vector *pvecAwayFromPos );
+	void Panic( float flDuration );
+
+	bool m_bPanicState;
+	float m_flPanicStopTime;
+	float m_flNextHopTime;		// Keeps us from hopping too often due to damage.
+};
+
+
 
 #endif

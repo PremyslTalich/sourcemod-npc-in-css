@@ -21,6 +21,8 @@
 #include "shareddefs.h"
 #include "CEntityManager.h"
 #include "CTakeDamageInfo.h"
+#include "CAI_NPC.h"
+#include "model_types.h"
 
 
 IHookTracker *IHookTracker::m_Head = NULL;
@@ -56,6 +58,8 @@ SH_DECL_MANUALHOOK3_void(TraceAttack, 0, 0, 0, const CTakeDamageInfo &, const Ve
 SH_DECL_MANUALHOOK2(BodyTarget, 0, 0, 0, Vector, const Vector &, bool);
 SH_DECL_MANUALHOOK0(GetServerVehicle, 0, 0, 0, IServerVehicle *);
 SH_DECL_MANUALHOOK0(IsAlive, 0, 0, 0, bool);
+SH_DECL_MANUALHOOK0(WorldSpaceCenter, 0, 0, 0, const Vector &);
+SH_DECL_MANUALHOOK0_void(PhysicsSimulate, 0, 0, 0);
 
 
 DECLARE_HOOK(Teleport, CEntity);
@@ -82,8 +86,10 @@ DECLARE_HOOK(DecalTrace, CEntity);
 DECLARE_HOOK(Event_Killed, CEntity);
 DECLARE_HOOK(TraceAttack, CEntity);
 DECLARE_HOOK(BodyTarget, CEntity);
-DECLARE_HOOK(GetServerVehicle, CEntity);
+//DECLARE_HOOK(GetServerVehicle, CEntity);
 DECLARE_HOOK(IsAlive, CEntity);
+DECLARE_HOOK(WorldSpaceCenter, CEntity);
+DECLARE_HOOK(PhysicsSimulate, CEntity);
 
 
 DECLARE_DEFAULTHANDLER_void(CEntity, Teleport, (const Vector *origin, const QAngle* angles, const Vector *velocity), (origin, angles, velocity));
@@ -103,6 +109,8 @@ DECLARE_DEFAULTHANDLER_void(CEntity,Event_Killed, (const CTakeDamageInfo &info),
 DECLARE_DEFAULTHANDLER_void(CEntity,TraceAttack, (const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr), (info, vecDir, ptr));
 DECLARE_DEFAULTHANDLER(CEntity,BodyTarget, Vector, (const Vector &posSrc, bool bNoisy),(posSrc, bNoisy));
 DECLARE_DEFAULTHANDLER(CEntity,IsAlive, bool, (),());
+DECLARE_DEFAULTHANDLER(CEntity,WorldSpaceCenter, const Vector &, (),());
+DECLARE_DEFAULTHANDLER_void(CEntity,PhysicsSimulate, (),());
 
 
 
@@ -163,26 +171,19 @@ DEFINE_PROP(m_iClassname, CEntity);
 
 
 DECLARE_DETOUR(SetLocalOrigin, CEntity);
-DECLARE_DEFAULTHANDLER_DETOUR(CEntity, SetLocalOrigin, void, (const Vector& origin ), (origin));
+DECLARE_DEFAULTHANDLER_DETOUR_void(CEntity, SetLocalOrigin, (const Vector& origin ), (origin));
 
 DECLARE_DETOUR(PhysicsTouchTriggers, CEntity);
-DECLARE_DEFAULTHANDLER_DETOUR(CEntity, PhysicsTouchTriggers, void, (const Vector *pPrevAbsOrigin ), (pPrevAbsOrigin));
+DECLARE_DEFAULTHANDLER_DETOUR_void(CEntity, PhysicsTouchTriggers, (const Vector *pPrevAbsOrigin ), (pPrevAbsOrigin));
 
 DECLARE_DETOUR(TakeDamage, CEntity);
-DECLARE_DEFAULTHANDLER_DETOUR(CEntity, TakeDamage, void, (const CTakeDamageInfo &inputInfo), (inputInfo));
+DECLARE_DEFAULTHANDLER_DETOUR_void(CEntity, TakeDamage, (const CTakeDamageInfo &inputInfo), (inputInfo));
 
-//DECLARE_DETOUR(SetAbsOrigin, CEntity);
-//DECLARE_DEFAULTHANDLER_DETOUR(CEntity, SetAbsOrigin, void, (const Vector& absOrigin), (absOrigin));
+DECLARE_DETOUR(SetAbsOrigin, CEntity);
+DECLARE_DEFAULTHANDLER_DETOUR_void(CEntity, SetAbsOrigin, (const Vector& absOrigin), (absOrigin));
 
 DECLARE_DETOUR(SetLocalAngles, CEntity);
-DECLARE_DEFAULTHANDLER_DETOUR(CEntity, SetLocalAngles, void, (const QAngle& angles), (angles));
-
-
-void CEntity::SetAbsOrigin(const Vector& absOrigin)
-{
-
-}
-
+DECLARE_DEFAULTHANDLER_DETOUR_void(CEntity, SetLocalAngles, (const QAngle& angles), (angles));
 
 
 /* Hacked Datamap declaration to fallback to the corresponding real entities one */
@@ -194,17 +195,22 @@ END_DATADESC()
 
 PhysIsInCallbackFuncType PhysIsInCallback;
 
-
 IServerVehicle *CEntity::GetServerVehicle()
 {
+	return g_helpfunc.GetServerVehicle(BaseEntity());
+}
+
+/*IServerVehicle *CEntity::GetServerVehicle()
+{
+	//return SH_MCALL(META_IFACEPTR(CBaseEntity), GetServerVehicle)();
 	return SH_MCALL(BaseEntity(), GetServerVehicle)();
 }
 
 IServerVehicle *CEntity::InternalGetServerVehicle()
 {
-	/* Do absolutely nothing since the iface ptr is 0xcccccccc sometimes and we can't handle that yet */
+	//Do absolutely nothing since the iface ptr is 0xcccccccc sometimes and we can't handle that yet
 	RETURN_META_VALUE(MRES_IGNORED, NULL);
-}
+}*/
 
 datamap_t* CEntity::GetDataDescMap()
 {
@@ -235,15 +241,33 @@ CE_LINK_ENTITY_TO_CLASS(baseentity, CEntity);
 
 variant_t g_Variant;
 
+
 void CEntity::Init(edict_t *pEdict, CBaseEntity *pBaseEntity)
 {
 	m_pEntity = pBaseEntity;
 	m_pEdict = pEdict;
 
+	char vtable[20];
+	_snprintf(vtable, sizeof(vtable), "%x", gamehelpers->EntityToReference(m_pEntity));
+
+	cell_t s = gamehelpers->EntityToReference(m_pEntity);
+	cell_t p = gamehelpers->EntityToBCompatRef(m_pEntity);
+	
+	//pEntityData_lookup.insert(vtable, this);
+
+	/*char vtable[20];
+	_snprintf(vtable, sizeof(vtable), "%x", (unsigned int)m_pEntity);
+	CEntity *cent = this;
+	pEntityData_lookup.insert(vtable, cent);*/
+
+	/*CEntity_Data *data = new CEntity_Data();
+	data->centity = this;
+	data->cbase = m_pEntity;
+	CEntity_lookup.push_back(data);*/
+
 	assert(!pEntityData[entindex()]);
 
 	pEntityData[entindex()] = this;
-
 	if(!m_pEntity || !m_pEdict)
 		return;
 
@@ -255,12 +279,19 @@ void CEntity::Init(edict_t *pEdict, CBaseEntity *pBaseEntity)
 
 void CEntity::Destroy()
 {
+//	META_CONPRINTF("Destroy %s\n", GetClassname());
 	pEntityData[entindex()] = NULL;
 	delete col_ptr;
 	delete this;
+
 }
 
 CBaseEntity * CEntity::BaseEntity()
+{
+	return m_pEntity;
+}
+
+CBaseEntity * CEntity::BaseEntity() const
 {
 	return m_pEntity;
 }
@@ -378,7 +409,11 @@ void CEntity::InternalEndTouch(CBaseEntity *pOther)
 void CEntity::Touch(CEntity *pOther)
 {
 	if ( m_pfnTouch ) 
+	{
+		SET_META_RESULT(MRES_SUPERCEDE);
 		(this->*m_pfnTouch)(pOther);
+		return;
+	}
 
 	//if (m_pParent)
 	//	m_pParent->Touch(pOther);
@@ -454,6 +489,7 @@ void CEntity::Think()
 {
 	if (m_pfnThink)
 	{
+		SET_META_RESULT(MRES_SUPERCEDE);
 		(this->*m_pfnThink)();
 		return;
 	}
@@ -914,11 +950,11 @@ Vector CEntity::EyePosition(void)
 
 CAI_NPC	*CEntity::MyNPCPointer()
 {
-	CEntity *ce = this;
-	if(IsNPC()) 
-		return (CAI_NPC*)(ce);
+	if(!IsNPC()) 
+		return NULL;
 
-	return NULL;
+	CAI_NPC *ce = dynamic_cast<CAI_NPC *>(this);
+	return ce;
 }
 
 CEntity *CEntity::GetGroundEntity()
@@ -1002,4 +1038,28 @@ void CEntity::ApplyAbsVelocityImpulse( const Vector &vecImpulse )
 			SetAbsVelocity( vecResult );
 		}
 	}
+}
+
+
+HSOUNDSCRIPTHANDLE CEntity::PrecacheScriptSound( const char *soundname )
+{
+	return g_helpfunc.PrecacheScriptSound(soundname);
+}
+
+void CEntity::EmitSound( const char *soundname, float soundtime, float *duration)
+{
+	return g_helpfunc.EmitSound(BaseEntity(), soundname, soundtime, duration);
+}
+
+bool CEntity::IsBSPModel() const
+{
+	if ( GetSolid() == SOLID_BSP )
+		return true;
+	
+	const model_t *model = modelinfo->GetModel( GetModelIndex() );
+
+	if ( GetSolid() == SOLID_VPHYSICS && modelinfo->GetModelType( model ) == mod_brush )
+		return true;
+
+	return false;
 }

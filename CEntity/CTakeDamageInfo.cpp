@@ -124,8 +124,8 @@ void CalculateMeleeDamageForce( CTakeDamageInfo *info, const Vector &vecMeleeDir
 	Vector vecForce = vecMeleeDir;
 	VectorNormalize( vecForce );
 	vecForce *= flForceScale;
-	//CE_TODO
-	vecForce *= /*phys_pushscale.GetFloat()*/ 1;
+
+	vecForce *= phys_pushscale->GetFloat();
 	vecForce *= flScale;
 	info->SetDamageForce( vecForce );
 }

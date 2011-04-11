@@ -739,7 +739,7 @@ bool CAI_Hint::HintMatchesCriteria( CAI_NPC *pNPC, const CHintCriteria &hintCrit
 		*flNearestDistance = distance;
 	}
 
-	// CE_TODO
+	//CE_TODO
 	/*if ( hintCriteria.HasFlag(bits_HINT_HAS_LOS_TO_PLAYER|bits_HAS_EYEPOSITION_LOS_TO_PLAYER) )
 	{
 		CBasePlayer *pPlayer = AI_GetSinglePlayer();

@@ -2,6 +2,8 @@
 #define _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
 
 #include "smsdk_ext.h"
+#include "sh_list.h"
+
 
 #include <eiface.h>
 #include <igameevents.h>
@@ -78,6 +80,9 @@ extern IStaticPropMgrServer *staticpropmgr;
 extern IVModelInfo *modelinfo;
 extern ISpatialPartition *partition;
 extern IPhysicsSurfaceProps *physprops;
+extern IPhysicsCollision *physcollision;
+extern ISoundEmitterSystemBase *soundemitterbase;
+
 
 extern IPhysicsObjectPairHash *myg_EntityCollisionHash;
 

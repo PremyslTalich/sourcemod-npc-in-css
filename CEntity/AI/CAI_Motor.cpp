@@ -51,3 +51,4 @@ float CAI_Motor::DeltaIdealYaw ( void )
 
 	return UTIL_AngleDiff( GetIdealYaw(), flCurrentYaw );
 }
+

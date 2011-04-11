@@ -8,7 +8,7 @@
 
 SH_DECL_MANUALHOOK0(GameRules_FAllowNPCsHook, 0, 0, 0, bool);
 
-extern CAI_SchedulesManager g_AI_SchedulesManager;
+//extern CAI_SchedulesManager g_AI_SchedulesManager;
 
 
 HelperFunction g_helpfunc;
@@ -46,10 +46,17 @@ bool HelperFunction::Initialize()
 
 	my_g_pGameRules = *reinterpret_cast<void ***>(addr + offset);
 
+	
 	g_AI_SchedulesManager.LoadAllSchedules();	
 
-	GetActivityIDCDetour = DETOUR_CREATE_STATIC(GetActivityID, "GetActivityID");
-	GetActivityIDCDetour->EnableDetour();	
+	//GetActivityIDCDetour = DETOUR_CREATE_STATIC(GetActivityID, "GetActivityID");
+	//GetActivityIDCDetour->EnableDetour();	
+
+	// "UTIL_EmitAmbientSound:  Sentence emitte"
+	addr = reinterpret_cast<char *>(0x001E19B2+serverdll_addr+1);
+	unsigned char *data = NULL;
+	memcpy(&data, reinterpret_cast<void*>(addr), sizeof(char*));
+	g_SoundEmitterSystem = (void *)data;
 
 	return true;
 }
@@ -202,6 +209,43 @@ CBaseEntity *HelperFunction::CreateEntityByName(char *entityname,int ForceEdictI
 }
 
 
+CBaseEntity *HelperFunction::NPCPhysics_CreateSolver(CBaseEntity *pNPC, CBaseEntity *c, bool disableCollisions, float separationDuration)
+{
+	static void *func = NULL;
+	if(!func)
+	{
+		if(!g_pGameConf->GetMemSig("NPCPhysics_CreateSolver", &func))
+		{
+			assert(0);
+			return NULL;
+		}
+	}
+
+	CBaseEntity *pEntity = NULL;
+	typedef CBaseEntity* (*_func)(CBaseEntity *, CBaseEntity *, bool, float);
+    _func thisfunc = (_func)func;
+    pEntity = (CBaseEntity*)thisfunc(pNPC, pNPC, disableCollisions, separationDuration);
+	return pEntity;
+}
+
+HSOUNDSCRIPTHANDLE HelperFunction::PrecacheScriptSound(const char *soundname)
+{
+	static void *func = NULL;
+	if(!func)
+	{
+		if(!g_pGameConf->GetMemSig("PrecacheScriptSound", &func))
+		{
+			assert(0);
+			return SOUNDEMITTER_INVALID_HANDLE;
+		}
+	}
+
+	typedef HSOUNDSCRIPTHANDLE (__fastcall *_func)(void *, int , const char *);
+    _func thisfunc = (_func)func;
+    return thisfunc(g_SoundEmitterSystem, 0, soundname);
+}
+
+
 int HelperFunction::SelectWeightedSequence(void *pstudiohdr, int activity, int curSequence)
 {
 	static void *func = NULL;
@@ -323,6 +367,55 @@ void HelperFunction::SetAbsAngles(CBaseEntity *pEntity, const QAngle& absAngles)
     _func thisfunc = (_func)(func);
 
 	(thisfunc)(pEntity,0,absAngles);
+}
+
+IServerVehicle *HelperFunction::GetServerVehicle(CBaseEntity *pEntity)
+{
+	static int offset = 0;
+	if(!offset)
+	{
+		if(!g_pGameConf->GetOffset("GetServerVehicle", &offset))
+		{
+			assert(0);
+			return NULL;
+		}
+	}
+
+	if(!pEntity)
+		return NULL;
+
+	void **this_ptr = *reinterpret_cast<void ***>(&pEntity);
+	void **vtable = *reinterpret_cast<void ***>(pEntity);
+	void *vfunc = vtable[offset];
+
+	union
+	{
+		IServerVehicle *(VEmptyClass::*mfpnew)();
+		void *addr;
+	} u;
+	u.addr = vfunc;
+
+	return (reinterpret_cast<VEmptyClass *>(this_ptr)->*u.mfpnew)();
+}
+
+void HelperFunction::EmitSound(CBaseEntity *pEntity, const char *soundname, float soundtime, float *duration)
+{
+	static void *func = NULL;
+	if(!func)
+	{
+		if(!g_pGameConf->GetMemSig("EmitSound_char_float_pfloat", &func))
+		{
+			assert(0);
+			return;
+		}
+	}
+
+	if(!pEntity)
+		return;
+
+	typedef void (__fastcall *_func)(void *,int, const char *, float, float *);
+	_func thisfunc = (_func)(func);
+	(thisfunc)(pEntity,0,soundname, soundtime, duration);
 }
 
 void HelperFunction::SetSolid(void *Collision_ptr, SolidType_t val)
@@ -529,6 +622,46 @@ void HelperFunction::SetIdealActivity(CBaseEntity *pEntity, Activity NewActivity
 	(thisfunc)(pEntity,0, NewActivity);
 }
 
+void HelperFunction::CallNPCThink(CBaseEntity *pEntity)
+{
+	static void *func = NULL;
+	if(!func)
+	{
+		if(!g_pGameConf->GetMemSig("CallNPCThink", &func))
+		{
+			assert(0);
+			return;
+		}
+	}
+
+	if(!pEntity)
+		return;
+
+	typedef void (__fastcall *_func)(void *,int);
+	_func thisfunc = (_func)(func);
+	(thisfunc)(pEntity,0);
+}
+
+bool HelperFunction::HaveSequenceForActivity(CBaseEntity *pEntity, Activity activity)
+{
+	static void *func = NULL;
+	if(!func)
+	{
+		if(!g_pGameConf->GetMemSig("HaveSequenceForActivity", &func))
+		{
+			assert(0);
+			return false;
+		}
+	}
+
+	if(!pEntity)
+		return false;
+
+	typedef bool (__fastcall *_func)(void *,int, Activity);
+	_func thisfunc = (_func)(func);
+	return (thisfunc)(pEntity,0, activity);
+}
+
 int HelperFunction::CBaseCombatCharacter_OnTakeDamage(CBaseEntity *pEntity, CEntityTakeDamageInfo &info)
 {
 	static void *func = NULL;
@@ -549,5 +682,39 @@ int HelperFunction::CBaseCombatCharacter_OnTakeDamage(CBaseEntity *pEntity, CEnt
 	return (thisfunc)(pEntity,0, info);
 }
 
+
+bool HelperFunction::ShouldBrushBeIgnored(void *ptr, CBaseEntity *pEntity)
+{
+	static void *func = NULL;
+	if(!func)
+	{
+		if(!g_pGameConf->GetMemSig("ShouldBrushBeIgnored", &func))
+		{
+			assert(0);
+			return false;
+		}
+	}
+	typedef bool (__fastcall *_func)(void *,int, CBaseEntity *);
+	_func thisfunc = (_func)(func);
+	return (thisfunc)(ptr,0, pEntity);
+}
+
+bool HelperFunction::MoveLimit(void *ptr, Navigation_t navType, const Vector &vecStart, 
+		const Vector &vecEnd, unsigned int collisionMask, const CBaseEntity *pTarget, 
+		float pctToCheckStandPositions, unsigned flags, AIMoveTrace_t* pTrace)
+{
+	static void *func = NULL;
+	if(!func)
+	{
+		if(!g_pGameConf->GetMemSig("MoveLimit", &func))
+		{
+			assert(0);
+			return false;
+		}
+	}
+	typedef bool (__fastcall *_func)(void *,int, Navigation_t, const Vector &, const Vector &, unsigned int, const CBaseEntity *, float, unsigned, AIMoveTrace_t*);
+	_func thisfunc = (_func)(func);
+	return (thisfunc)(ptr,0, navType, vecStart, vecEnd, collisionMask, pTarget, pctToCheckStandPositions, flags, pTrace);
+}
 
 

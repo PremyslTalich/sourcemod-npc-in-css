@@ -64,6 +64,60 @@ bool Studio_AnimPosition( mstudioanimdesc_t *panim, float flCycle, Vector &vecPo
 
 
 //-----------------------------------------------------------------------------
+// Purpose: converts a ranged pose parameter value into a 0..1 encoded value
+// Output: 	ctlValue contains 0..1 encoding.
+//			returns clamped ranged value
+//-----------------------------------------------------------------------------
+
+float Studio_SetPoseParameter( const CStudioHdr *pStudioHdr, int iParameter, float flValue, float &ctlValue )
+{
+	if (iParameter < 0 || iParameter >= pStudioHdr->GetNumPoseParameters())
+	{
+		return 0;
+	}
+
+	const mstudioposeparamdesc_t &PoseParam = pStudioHdr->pPoseParameter( iParameter );
+
+	Assert( IsFinite( flValue ) );
+
+	if (PoseParam.loop)
+	{
+		float wrap = (PoseParam.start + PoseParam.end) / 2.0 + PoseParam.loop / 2.0;
+		float shift = PoseParam.loop - wrap;
+
+		flValue = flValue - PoseParam.loop * floor((flValue + shift) / PoseParam.loop);
+	}
+
+	ctlValue = (flValue - PoseParam.start) / (PoseParam.end - PoseParam.start);
+
+	if (ctlValue < 0) ctlValue = 0;
+	if (ctlValue > 1) ctlValue = 1;
+
+	Assert( IsFinite( ctlValue ) );
+
+	return ctlValue * (PoseParam.end - PoseParam.start) + PoseParam.start;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: converts a 0..1 encoded pose parameter value into a ranged value
+// Output: 	returns ranged value
+//-----------------------------------------------------------------------------
+
+float Studio_GetPoseParameter( const CStudioHdr *pStudioHdr, int iParameter, float ctlValue )
+{
+	if (iParameter < 0 || iParameter >= pStudioHdr->GetNumPoseParameters())
+	{
+		return 0;
+	}
+
+	const mstudioposeparamdesc_t &PoseParam = pStudioHdr->pPoseParameter( iParameter );
+
+	return ctlValue * (PoseParam.end - PoseParam.start) + PoseParam.start;
+}
+
+
+//-----------------------------------------------------------------------------
 // Purpose: returns cycles per second of a sequence (cycles/second)
 //-----------------------------------------------------------------------------
 

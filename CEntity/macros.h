@@ -239,6 +239,7 @@ public:
 	T* ptr;
 };
 
+
 class CFakeHandle : public CBaseHandle
 {
 public:
@@ -301,7 +302,6 @@ public:
 public:
 	CFakeHandle* ptr;
 };
-
 
 
 class IPropTracker
@@ -490,6 +490,10 @@ void type::name params \
 void type::Internal##name params \
 { \
 	type *pEnt = (type *)CEntity::Instance((CBaseEntity *)this); \
+	if(!pEnt) {\
+		(this->*name##_Actual) paramscall;\
+		return;\
+	}\
 	assert(pEnt); \
 	pEnt->name paramscall; \
 } \
@@ -503,13 +507,17 @@ ret type::name params \
 ret type::Internal##name params \
 { \
 	type *pEnt = (type *)CEntity::Instance((CBaseEntity *)this); \
+	if(!pEnt) {\
+		return (this->*name##_Actual) paramscall;\
+	}\
 	assert(pEnt); \
 	return pEnt->name paramscall; \
 } \
 ret (type::* type::name##_Actual) params = NULL;
 
 
-#define DUMP_FUNCTION() META_CONPRINTF("%s\n",__FUNCTION__)
+//#define DUMP_FUNCTION() META_CONPRINTF("%s\n",__FUNCTION__)
 
+#define DUMP_FUNCTION()
 
 #endif // _INCLUDE_MACROS_H_

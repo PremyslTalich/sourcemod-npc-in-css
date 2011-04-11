@@ -387,3 +387,20 @@ int CStudioHdr::CActivityToSequenceMapping::NumSequencesForActivity( int forActi
 	}
 }
 
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+
+int	CStudioHdr::GetNumPoseParameters( void ) const
+{
+	if (m_pVModel == NULL)
+	{
+		return m_pStudioHdr->numlocalposeparameters;
+	}
+
+	Assert( m_pVModel );
+
+	return m_pVModel->m_pose.Count();
+}
+

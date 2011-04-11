@@ -149,6 +149,9 @@ void CEntityManager::LinkEntityToClass(IEntityFactory_CE *pFactory, const char *
 
 IServerNetworkable *CEntityManager::Create(const char *pClassName)
 {
+	//META_CONPRINTF("CEntityManager::Create %s\n",pClassName);
+	
+
 	IServerNetworkable *pNetworkable = META_RESULT_ORIG_RET(IServerNetworkable *);
 
 	if (!pNetworkable)
@@ -163,6 +166,7 @@ IServerNetworkable *CEntityManager::Create(const char *pClassName)
 	{
 		return NULL;
 	}
+
 
 	IEntityFactory_CE **value = NULL;
 	value = pFactoryTrie.retrieve(pClassName);

@@ -3,8 +3,6 @@
 
 CE_LINK_ENTITY_TO_CLASS(CCycler, CE_Cycler_Fix);
 
-//extern CAI_ClassScheduleIdSpace *my_gm_ClassScheduleIdSpace;
-
 
 void CE_Cycler_Fix::Spawn(void)
 {
@@ -36,11 +34,25 @@ void CE_Cycler_Fix::Think(void)
 	DUMP_FUNCTION();
 
 	CBaseEntity *cbase = BaseEntity();
-	datamap_t *pMap = gamehelpers->GetDataMap(cbase);
-	typedescription_t *td = gamehelpers->FindInDataMap(pMap,"m_pfnThink");
-	int offset = td->fieldOffset[TD_OFFSET_NORMAL];
+	static int offset = -1;
+	if(offset == -1)
+	{
+		datamap_t *pMap = gamehelpers->GetDataMap(cbase);
+		typedescription_t *td = gamehelpers->FindInDataMap(pMap,"m_pfnThink");
+		offset = td->fieldOffset[TD_OFFSET_NORMAL];
+	}
+	void *addr = *(void* *)((unsigned char *)cbase + offset);
 
-	void * addr = *(void* *)((unsigned char *)cbase + offset);
+	if(m_pfnThink)
+	{
+		(this->*m_pfnThink)();
+		void *addr2 = *(void* *)((unsigned char *)cbase + offset);
+		if(addr2 != addr)
+		{
+			m_pfnThink = NULL;
+		}
+		return;
+	}
 
 	typedef void (__fastcall *_func)(void *,int);
 	_func thisfunc = (_func)(addr);

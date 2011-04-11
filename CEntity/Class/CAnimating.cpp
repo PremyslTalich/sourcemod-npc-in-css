@@ -28,13 +28,15 @@ DECLARE_DEFAULTHANDLER_void(CAnimating, StudioFrameAdvance, (), ());
 
 
 DECLARE_DETOUR(StudioFrameAdvanceManual, CAnimating);
-DECLARE_DEFAULTHANDLER_DETOUR(CAnimating, StudioFrameAdvanceManual, void, (float flInterval),(flInterval));
+DECLARE_DEFAULTHANDLER_DETOUR_void(CAnimating, StudioFrameAdvanceManual, (float flInterval),(flInterval));
 
 
 SH_DECL_MANUALHOOK4_void(Ignite, 0, 0, 0, float, bool, float, bool);
 DECLARE_HOOK(Ignite, CAnimating);
 DECLARE_DEFAULTHANDLER_void(CAnimating, Ignite, (float flFlameLifetime, bool bNPCOnly, float flSize , bool bCalledByLevelDesigner), (flFlameLifetime, bNPCOnly, flSize, bCalledByLevelDesigner));
 
+DECLARE_DETOUR(GetModelPtr, CAnimating);
+DECLARE_DEFAULTHANDLER_DETOUR(CAnimating, GetModelPtr, CStudioHdr *, (),());
 
 
 //Sendprops
@@ -47,6 +49,10 @@ DEFINE_PROP(m_flCycle,CAnimating);
 DEFINE_PROP(m_pStudioHdr,CAnimating);
 DEFINE_PROP(m_nSequence,CAnimating);
 DEFINE_PROP(m_bSequenceLoops,CAnimating);
+DEFINE_PROP(m_flGroundSpeed,CAnimating);
+DEFINE_PROP(m_bSequenceFinished,CAnimating);
+
+
 
 #define MAX_ANIMTIME_INTERVAL 0.2f
 
@@ -76,7 +82,7 @@ float CAnimating::GetAnimTimeInterval() const
 // Purpose:
 // Output :
 //-----------------------------------------------------------------------------
-bool CAnimating::GetIntervalMovement( float flIntervalUsed, bool &bMoveSeqFinished, Vector &newPosition, QAngle &newAngles )
+/*bool CAnimating::GetIntervalMovement( float flIntervalUsed, bool &bMoveSeqFinished, Vector &newPosition, QAngle &newAngles )
 {
 	CStudioHdr *pstudiohdr = GetModelPtr( );
 	if (! pstudiohdr || !pstudiohdr->SequencesAvailable())
@@ -114,8 +120,9 @@ bool CAnimating::GetIntervalMovement( float flIntervalUsed, bool &bMoveSeqFinish
 		newAngles = GetLocalAngles();
 		return false;
 	}
-}
+}*/
 
+/**
 float CAnimating::GetSequenceCycleRate( CStudioHdr *pStudioHdr, int iSequence )
 {
 	float t = SequenceDuration( pStudioHdr, iSequence );
@@ -151,7 +158,61 @@ float CAnimating::SequenceDuration( CStudioHdr *pStudioHdr, int iSequence )
 
 	return Studio_Duration( pStudioHdr, iSequence, GetPoseParameterArray() );
 }
+*/
 
+//=========================================================
+//=========================================================
+bool CAnimating::HasPoseParameter( int iSequence, int iParameter )
+{
+	CStudioHdr *pstudiohdr = GetModelPtr( );
+
+	if ( !pstudiohdr )
+	{
+		return false;
+	}
+
+	if ( !pstudiohdr->SequencesAvailable() )
+	{
+		return false;
+	}
+
+	if (iSequence < 0 || iSequence >= pstudiohdr->GetNumSeq())
+	{
+		return false;
+	}
+
+	mstudioseqdesc_t &seqdesc = pstudiohdr->pSeqdesc( iSequence );
+	if (pstudiohdr->GetSharedPoseParameter( iSequence, seqdesc.paramindex[0] ) == iParameter || 
+		pstudiohdr->GetSharedPoseParameter( iSequence, seqdesc.paramindex[1] ) == iParameter)
+	{
+		return true;
+	}
+	return false;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//
+// Input  : iSequence - 
+//
+// Output : float - 
+//-----------------------------------------------------------------------------
+float CAnimating::GetSequenceMoveYaw( int iSequence )
+{
+	Vector				vecReturn;
+	
+	Assert( GetModelPtr() );
+	::GetSequenceLinearMotion( GetModelPtr(), iSequence, GetPoseParameterArray(), &vecReturn );
+
+	if (vecReturn.Length() > 0)
+	{
+		return UTIL_VecToYaw( vecReturn );
+	}
+
+	return NOMOTION;
+}
 
 //-----------------------------------------------------------------------------
 // Make a model look as though it's burning. 
@@ -189,4 +250,44 @@ int CAnimating::SelectWeightedSequence ( Activity activity, int curSequence )
 	Assert( activity != ACT_INVALID );
 	Assert( GetModelPtr() );
 	return g_helpfunc.SelectWeightedSequence( GetModelPtr(), activity, curSequence );
+}
+
+float CAnimating::SetPoseParameter( CStudioHdr *pStudioHdr, int iParameter, float flValue )
+{
+	if ( !pStudioHdr )
+	{
+		return flValue;
+	}
+
+	if (iParameter >= 0)
+	{
+		float flNewValue;
+		flValue = Studio_SetPoseParameter( pStudioHdr, iParameter, flValue, flNewValue );
+		*(m_flPoseParameter.ptr)[iParameter] = flNewValue;
+	}
+
+	return flValue;
+}
+
+float CAnimating::GetPoseParameter( int iParameter )
+{
+	CStudioHdr *pstudiohdr = GetModelPtr( );
+
+	if ( !pstudiohdr )
+	{
+		Assert(!"CBaseAnimating::GetPoseParameter: model missing");
+		return 0.0;
+	}
+
+	if ( !pstudiohdr->SequencesAvailable() )
+	{
+		return 0;
+	}
+
+	if (iParameter >= 0)
+	{
+		return Studio_GetPoseParameter( pstudiohdr, iParameter, *(m_flPoseParameter.ptr)[iParameter]);
+	}
+
+	return 0.0;
 }

@@ -15,22 +15,6 @@ CAI_SchedulesManager g_AI_SchedulesManager;
 //-----------------------------------------------------------------------------
 bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pStartFile, CAI_ClassScheduleIdSpace *pIdSpace )
 {
-	/*static void *func = NULL;
-	if(!func)
-	{
-		if(!g_pGameConf->GetMemSig("LoadSchedulesFromBuffer", &func))
-		{
-			assert(0);
-			return false;
-		}
-	}
-
-	typedef bool (__fastcall *_func)(void *,int, const char *, char *, CAI_ClassScheduleIdSpace *);
-    _func thisfunc = (_func)(func);
-
-	return (thisfunc)(this,0,"CAI_BaseNPC",pStartFile,pIdSpace);*/
-
-
 	char token[1024];
 	char save_token[1024];
 	const char *pfile = engine->ParseFile(pStartFile, token, sizeof( token ) );
@@ -511,7 +495,7 @@ CAI_Schedule::~CAI_Schedule( void )
 
 void CAI_NPC::InitSchedulingTables()
 {
-	CAI_NPC::gm_ClassScheduleIdSpace.Init( "CAI_NPC", CAI_NPC::GetSchedulingSymbols() );
+	CAI_NPC::gm_ClassScheduleIdSpace.Init( "CAI_BaseNPC", CAI_NPC::GetSchedulingSymbols() );
 	CAI_NPC::InitDefaultScheduleSR();
 	CAI_NPC::InitDefaultConditionSR();
 	CAI_NPC::InitDefaultTaskSR();
@@ -521,7 +505,7 @@ void CAI_NPC::InitSchedulingTables()
 
 void CAI_NPC::InitDefaultScheduleSR(void)
 {
-	#define ADD_DEF_SCHEDULE( name, localId ) idSpace.AddSchedule(name, localId, "CAI_NPC" )
+	#define ADD_DEF_SCHEDULE( name, localId ) idSpace.AddSchedule(name, localId, "CAI_BaseNPC" )
 
 	CAI_ClassScheduleIdSpace &idSpace = CAI_NPC::AccessClassScheduleIdSpaceDirect();
 
@@ -627,7 +611,7 @@ void CAI_NPC::InitDefaultScheduleSR(void)
 // Output :
 //-----------------------------------------------------------------------------
 
-#define ADD_CONDITION_TO_SR( _n ) idSpace.AddCondition( #_n, _n, "CAI_NPC" )
+#define ADD_CONDITION_TO_SR( _n ) idSpace.AddCondition( #_n, _n, "CAI_BaseNPC" )
 
 void	CAI_NPC::InitDefaultConditionSR(void)
 {
@@ -713,7 +697,7 @@ void	CAI_NPC::InitDefaultConditionSR(void)
 //-----------------------------------------------------------------------------
 void CAI_NPC::InitDefaultTaskSR(void)
 {
-	#define ADD_DEF_TASK( name ) idSpace.AddTask(#name, name, "CAI_NPC" )
+	#define ADD_DEF_TASK( name ) idSpace.AddTask(#name, name, "CAI_BaseNPC" )
 
 	CAI_ClassScheduleIdSpace &idSpace = CAI_NPC::AccessClassScheduleIdSpaceDirect();
 

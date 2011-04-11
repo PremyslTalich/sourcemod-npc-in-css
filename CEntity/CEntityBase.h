@@ -35,4 +35,5 @@ public:
 	static CEntity* Instance(CBaseEntity *pEnt);
 };
 
+
 #endif // _INCLUDE_CENTITYBASE_H_

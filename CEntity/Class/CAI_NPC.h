@@ -19,13 +19,16 @@
 #include "npcevent.h"
 #include "ai_movetypes.h"
 #include "ai_moveshoot.h"
-#include "ai_motor.h"
+#include "CAI_motor.h"
 #include "ai_activity.h"
-#include "ai_moveprobe.h"
+#include "CAI_moveprobe.h"
+#include "CAI_Squad.h"
+#include "ai_squadslot.h"
 #include "activitylist.h"
 #include "eventlist.h"
 
 
+class CAI_BehaviorBase;
 class CAI_Hint;
 
 //=============================================================================
@@ -388,6 +391,8 @@ class CAI_NPC : public CCombatCharacter
 {
 public:
 	CE_DECLARE_CLASS(CAI_NPC, CCombatCharacter);
+	
+	CAI_NPC();
 
 	void		SetHullSizeNormal(bool force=false);
 
@@ -404,7 +409,7 @@ public:
 	bool		AutoMovement( float flInterval, CEntity *pTarget = NULL, AIMoveTrace_t *pTraceResult = NULL );
 	
 	void		TaskComplete(  bool fIgnoreSetFailedCondition = false);
-	void 		SetTaskStatus( TaskStatus_e status )	{ (*m_ScheduleState).fTaskStatus = status; 	}
+	void 		SetTaskStatus( TaskStatus_e status )	{ m_ScheduleState->fTaskStatus = status; 	}
 
 	CAI_MoveProbe *		GetMoveProbe() 				{ return m_pMoveProbe; }
 	const CAI_MoveProbe *GetMoveProbe() const		{ return m_pMoveProbe; }
@@ -417,7 +422,9 @@ public:
 
 	const Vector &		GetHullMins() const		{ return NAI_Hull::Mins(GetHullType()); }
 	const Vector &		GetHullMaxs() const		{ return NAI_Hull::Maxs(GetHullType()); }
-	
+	float				GetHullWidth()	const	{ return NAI_Hull::Width(GetHullType()); }
+	float				GetHullHeight() const	{ return NAI_Hull::Height(GetHullType()); }
+
 	Activity			GetActivity( void ) { return m_Activity; }
 
 	string_t			GetHintGroup( void )			{ return m_strHintGroup; }
@@ -442,6 +449,10 @@ public:
 	CAI_Navigator *		GetNavigator() 				{ return m_pNavigator; }
 	const CAI_Navigator *GetNavigator() const 		{ return m_pNavigator; }
 
+	CAI_Squad *			GetSquad() 				{ return m_pSquad; }
+	const CAI_Squad		*GetSquad() const 		{ return m_pSquad; }
+
+	
 	bool	FacingIdeal();
 
 	int 				GetScheduleCurTaskIndex() const			{ return m_ScheduleState.ptr->iCurTask;	}
@@ -453,7 +464,34 @@ public:
 	static CAI_GlobalScheduleNamespace *GetSchedulingSymbols()		{ return &gm_SchedulingSymbols; }
 	static CAI_ClassScheduleIdSpace &AccessClassScheduleIdSpaceDirect() { return gm_ClassScheduleIdSpace; }
 
-	static bool Load();
+	
+	bool OccupyStrategySlotRange( int slotIDStart, int slotIDEnd );
+	
+	Navigation_t		GetNavType() const;
+	void				SetNavType( Navigation_t navType );
+
+
+	inline void			Remember( int iMemory ) 		{ m_afMemory |= iMemory; }
+	inline void			Forget( int iMemory ) 			{ m_afMemory &= ~iMemory; }
+	inline bool			HasMemory( int iMemory ) 		{ if ( m_afMemory & iMemory ) return TRUE; return FALSE; }
+	inline bool			HasAllMemories( int iMemory ) 	{ if ( (m_afMemory & iMemory) == iMemory ) return TRUE; return FALSE; }
+
+	void				SetCustomInterruptCondition( int nCondition );
+	bool				IsCustomInterruptConditionSet( int nCondition );
+	void				ClearCustomInterruptCondition( int nCondition );
+	void				ClearCustomInterruptConditions( void );
+
+	inline void			SetIdealState( NPC_STATE eIdealState );	
+	inline NPC_STATE	GetIdealState();
+
+	bool				IsMoving( void );
+
+	void				ClearSchedule( const char *szReason );
+
+	void				ResetScheduleCurTaskIndex();
+
+	bool				IsWaitFinished();
+	float				SetWait( float minWait, float maxWait = 0.0 );
 
 public:
 	virtual CEAI_Enemies *GetEnemies();
@@ -489,14 +527,22 @@ public:
 	virtual Activity NPC_TranslateActivity( Activity eNewActivity );
 	virtual bool HandleInteraction(int interactionType, void *data, CCombatCharacter* sourceEnt);
 	virtual CAI_Schedule *GetSchedule(int schedule);
-	virtual const char *TaskName(int taskID);
+	virtual void PlayerHasIlluminatedNPC(CBaseEntity *pPlayer, float flDot );
+	virtual bool QuerySeeEntity( CBaseEntity *pEntity, bool bOnlyHateOrFearIfNPC = false );
+	virtual int	GetSoundInterests();
+	virtual void BuildScheduleTestBits( void );
+	virtual bool UpdateEnemyMemory( CBaseEntity *pEnemy, const Vector &position, CBaseEntity *pInformer = NULL);
+	virtual	bool OverrideMoveFacing( const AILocalMoveGoal_t &move, float flInterval );
+	virtual float GetHitgroupDamageMultiplier( int iHitGroup, const CTakeDamageInfo &info );
+	virtual bool OnBehaviorChangeStatus(  CAI_BehaviorBase *pBehavior, bool fCanFinishSchedule );
+	virtual bool IsInterruptable();
 
 
 public: // sign
-
+	void CallNPCThink();
+	void SetEnemy(CBaseEntity *pEnemy, bool bSetCondNewEnemy = true);
 
 public:
-	virtual void PlayerHasIlluminatedNPC( CPlayer *pPlayer, float flDot );
 	virtual bool CanBeAnEnemyOf( CEntity *pEnemy );
 
 protected:
@@ -523,7 +569,7 @@ public:
 	static CAI_LocalIdSpace    gm_SquadSlotIdSpace; // use the pointer
 	static CAI_ClassScheduleIdSpace		gm_ClassScheduleIdSpace;*/
 
-	static CAI_GlobalScheduleNamespace	gm_SchedulingSymbols;
+	static CAI_GlobalScheduleNamespace	gm_SchedulingSymbols; // need acturl pointer?
 	static CAI_ClassScheduleIdSpace		gm_ClassScheduleIdSpace;
 
 protected:
@@ -578,10 +624,20 @@ public:
 	DECLARE_DEFAULTHEADER(NPC_TranslateActivity, Activity, (Activity eNewActivity));
 	DECLARE_DEFAULTHEADER(GetSchedule, CAI_Schedule *, (int schedule));
 	DECLARE_DEFAULTHEADER(TaskName, const char *, (int taskID));
+	DECLARE_DEFAULTHEADER(PlayerHasIlluminatedNPC, void, (CBaseEntity *pPlayer, float flDot));
+	DECLARE_DEFAULTHEADER(QuerySeeEntity, bool, (CBaseEntity *pEntity, bool bOnlyHateOrFearIfNPC));
+	DECLARE_DEFAULTHEADER(GetSoundInterests, int, ());
+	DECLARE_DEFAULTHEADER(BuildScheduleTestBits, void, ());
+	DECLARE_DEFAULTHEADER(UpdateEnemyMemory, bool, (CBaseEntity *pEnemy, const Vector &position, CBaseEntity *pInformer));
+	DECLARE_DEFAULTHEADER(OverrideMoveFacing, bool, (const AILocalMoveGoal_t &move, float flInterval));
+	DECLARE_DEFAULTHEADER(GetHitgroupDamageMultiplier , float, (int iHitGroup, const CTakeDamageInfo &info));
+	DECLARE_DEFAULTHEADER(OnBehaviorChangeStatus, bool, (CAI_BehaviorBase *pBehavior, bool fCanFinishSchedule));
+	DECLARE_DEFAULTHEADER(IsInterruptable, bool, ());
 
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetSchedule_Int, bool, (int localScheduleID));
+	DECLARE_DEFAULTHEADER_DETOUR(SetEnemy, void, (CBaseEntity *pEnemy, bool bSetCondNewEnemy));
 
 
 protected: // sign
@@ -598,13 +654,13 @@ protected: //Sendprops
 protected: //Datamaps
 	DECLARE_DATAMAP(NPC_STATE, m_NPCState);
 	DECLARE_DATAMAP(int, m_afCapability);
-	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_Conditions,0x824);
+	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_Conditions,0x834);
 	DECLARE_DATAMAP(CFakeHandle, m_hEnemy);
 	DECLARE_DATAMAP(AIScheduleState_t, m_ScheduleState);
 	DECLARE_DATAMAP(CAI_MoveAndShootOverlay, m_MoveAndShootOverlay);
-	DECLARE_DATAMAP(CAI_Motor, m_pMotor);
+	DECLARE_DATAMAP(CAI_Motor *, m_pMotor);
 	DECLARE_DATAMAP(float, m_flNextFlinchTime);
-	DECLARE_DATAMAP(CAI_MoveProbe, m_pMoveProbe);
+	DECLARE_DATAMAP(CAI_MoveProbe *, m_pMoveProbe);
 	DECLARE_DATAMAP(Activity, m_Activity);
 	DECLARE_DATAMAP(string_t, m_strHintGroup);
 	DECLARE_DATAMAP(CAI_Hint, m_pHintNode);
@@ -612,10 +668,19 @@ protected: //Datamaps
 	DECLARE_DATAMAP_OFFSET(CAI_Schedule, m_pSchedule, 0x7F0); // "Schedule cleared: %s\"
 	DECLARE_DATAMAP(int, m_IdealSchedule);
 	DECLARE_DATAMAP(int, m_iInteractionState);
-	DECLARE_DATAMAP(CEAI_ScriptedSequence, m_hCine);
 	DECLARE_DATAMAP(Activity, m_IdealActivity);
-	DECLARE_DATAMAP(CAI_Navigator, m_pNavigator);
-	
+	DECLARE_DATAMAP(CAI_Navigator *, m_pNavigator);
+	DECLARE_DATAMAP_OFFSET(CAI_Squad *, m_pSquad,0xA80); // "Found %s that isn't in a squad\n"
+	DECLARE_DATAMAP(int, m_iMySquadSlot);
+	DECLARE_DATAMAP(int, m_afMemory);
+	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_CustomInterruptConditions,0x854);
+	DECLARE_DATAMAP(NPC_STATE, m_IdealNPCState);
+	DECLARE_DATAMAP_OFFSET(int, m_poseMove_Yaw,0x830); // move_yaw
+	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_InverseIgnoreConditions,0x894);
+	DECLARE_DATAMAP(float, m_flWaitFinished);
+
+public:
+	DECLARE_DATAMAP(CEAI_ScriptedSequence, m_hCine);
 
 	friend class CAI_SchedulesManager;
 };
@@ -624,10 +689,38 @@ protected: //Datamaps
 
 inline bool	CAI_NPC::HaveSequenceForActivity( Activity activity )				
 {
-	return ( (GetModelPtr()) ? GetModelPtr()->HaveSequenceForActivity(activity) : false ); 
-
+	return g_helpfunc.HaveSequenceForActivity(BaseEntity(), activity);
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Sets the ideal state of this NPC.
+//-----------------------------------------------------------------------------
+inline void	CAI_NPC::SetIdealState( NPC_STATE eIdealState )
+{
+	if (eIdealState != m_IdealNPCState)
+	{
+		m_IdealNPCState = eIdealState;
+	}
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns the current ideal state the NPC will try to achieve.
+//-----------------------------------------------------------------------------
+inline NPC_STATE CAI_NPC::GetIdealState()
+{
+	return m_IdealNPCState;
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+inline void CAI_NPC::ResetScheduleCurTaskIndex()
+{
+	m_ScheduleState->iCurTask = 0;
+	m_ScheduleState->iTaskInterrupt = 0;
+	m_ScheduleState->bTaskRanAutomovement = false;
+	m_ScheduleState->bTaskUpdatedYaw = false;
+}
 
 inline const QAngle &CAI_Component::GetLocalAngles( void ) const
 {
@@ -639,8 +732,19 @@ inline const Vector &CAI_Component::GetLocalOrigin() const
 	return CEntity::Instance((CBaseEntity *)GetOuter())->GetLocalOrigin();
 }
 
+//-----------------------------------------------------------------------------
 
+inline void CAI_Component::TaskComplete( bool fIgnoreSetFailedCondition )
+{
+	//CAI_NPC *npc = (CAI_NPC *)CEntity::Instance((CBaseEntity *)GetOuter());	
+	//GetOuter()->TaskComplete( fIgnoreSetFailedCondition );
+}
 
+inline void CAI_Component::TaskFail( AI_TaskFailureCode_t code )
+{
+	//CAI_NPC *npc = (CAI_NPC *)CEntity::Instance((CBaseEntity *)GetOuter());	
+	//GetOuter()->TaskFail( code );
+}
 
 //-------------------------------------
 
@@ -770,7 +874,7 @@ typedef bool (*AIScheduleLoadFunc_t)();
 	static CAI_ClassScheduleIdSpace 	gm_ClassScheduleIdSpace; \
 	static const char *					gm_pszErrorClassName;\
 	\
-	static CAI_ClassScheduleIdSpace &	AccessClassScheduleIdSpaceDirect() 	{ return gm_ClassScheduleIdSpace; } \
+	static CAI_ClassScheduleIdSpace &AccessClassScheduleIdSpaceDirect() 	{ return gm_ClassScheduleIdSpace; } \
 	virtual CAI_ClassScheduleIdSpace *	GetClassScheduleIdSpace()			{ return &gm_ClassScheduleIdSpace; } \
 	virtual const char *				GetSchedulingErrorName()			{ return gm_pszErrorClassName; } \
 	\
@@ -844,6 +948,20 @@ typedef bool (*AIScheduleLoadFunc_t)();
 		return "";\
 	}
 
+
+#define AI_BEGIN_CUSTOM_SCHEDULE_PROVIDER( derivedClass ) \
+	IMPLEMENT_CUSTOM_SCHEDULE_PROVIDER(derivedClass ) \
+	void derivedClass::InitCustomSchedules( void ) \
+	{ \
+		typedef derivedClass CNpc; \
+		const char *pszClassName = #derivedClass; \
+		\
+		CUtlVector<char *> schedulesToLoad; \
+		CUtlVector<AIScheduleLoadFunc_t> reqiredOthers; \
+		CAI_NamespaceInfos scheduleIds; \
+		CAI_NamespaceInfos taskIds; \
+		CAI_NamespaceInfos conditionIds;
+		
 
 //-----------------
 
@@ -920,6 +1038,51 @@ typedef bool (*AIScheduleLoadFunc_t)();
 
 //-------------------------------------
 
+
+// IDs are stored and then added in order due to constraints in the namespace implementation
+#define AI_END_CUSTOM_SCHEDULE_PROVIDER() \
+		\
+		int i; \
+		\
+		CNpc::AccessClassScheduleIdSpaceDirect().Init( pszClassName, BaseClass::GetSchedulingSymbols(), &BaseClass::AccessClassScheduleIdSpaceDirect() ); \
+		\
+		scheduleIds.Sort(); \
+		taskIds.Sort(); \
+		conditionIds.Sort(); \
+		\
+		for ( i = 0; i < scheduleIds.Count(); i++ ) \
+		{ \
+			ADD_CUSTOM_SCHEDULE_NAMED( CNpc, scheduleIds[i].pszName, scheduleIds[i].localId );  \
+		} \
+		\
+		for ( i = 0; i < taskIds.Count(); i++ ) \
+		{ \
+			ADD_CUSTOM_TASK_NAMED( CNpc, taskIds[i].pszName, taskIds[i].localId );  \
+		} \
+		\
+		for ( i = 0; i < conditionIds.Count(); i++ ) \
+		{ \
+			if ( ValidateConditionLimits( conditionIds[i].pszName ) ) \
+			{ \
+				ADD_CUSTOM_CONDITION_NAMED( CNpc, conditionIds[i].pszName, conditionIds[i].localId );  \
+			} \
+		} \
+		\
+		for ( i = 0; i < reqiredOthers.Count(); i++ ) \
+		{ \
+			(*reqiredOthers[i])();  \
+		} \
+		\
+		for ( i = 0; i < schedulesToLoad.Count(); i++ ) \
+		{ \
+			if ( CNpc::gm_SchedLoadStatus.fValid ) \
+			{ \
+				CNpc::gm_SchedLoadStatus.fValid = g_AI_SchedulesManager.LoadSchedulesFromBuffer( pszClassName, schedulesToLoad[i], &AccessClassScheduleIdSpaceDirect() ); \
+			} \
+			else \
+				break; \
+		} \
+	}
 
 
 inline bool ValidateConditionLimits( const char *pszNewCondition )

@@ -22,7 +22,7 @@
 #include <vphysics_interface.h>
 #include "vphysics/object_hash.h"
 #include "model_types.h"
-
+#include "CPlayer.h"
 
 const char *variant_t::ToString( void ) const
 {
@@ -460,8 +460,7 @@ CPlayer	*UTIL_PlayerByIndex( int playerIndex )
 // computes gravity scale for an absolute gravity.  Pass the result into CBaseEntity::SetGravity()
 float UTIL_ScaleForGravity( float desiredGravity )
 {
-	//CE_TODO
-	float worldGravity = /*sv_gravity.GetFloat()*/800.0f;
+	float worldGravity = sv_gravity->GetFloat();
 	return worldGravity > 0 ? desiredGravity / worldGravity : 0;
 }
 
@@ -474,12 +473,6 @@ void UTIL_DecalTrace( trace_t *pTrace, char const *decalName )
 	CEntity *pEntity = CEntity::Instance(pTrace->m_pEnt);
 	assert(pEntity);
 	pEntity->DecalTrace( pTrace, decalName );
-}
-
-int UTIL_EntitiesInSphere( const Vector &center, float radius, CFlaggedEntitiesEnum *pEnum )
-{
-	partition->EnumerateElementsInSphere( PARTITION_ENGINE_NON_STATIC_EDICTS, center, radius, false, pEnum );
-	return pEnum->GetCount();
 }
 
 CEntitySphereQuery::CEntitySphereQuery( const Vector &center, float radius, int flagMask )
@@ -533,4 +526,114 @@ IterationRetval_t CFlaggedEntitiesEnum::EnumElement( IHandleEntity *pHandleEntit
 	}
 
 	return ITERATION_CONTINUE;
+}
+
+
+//-----------------------------------------------------------------------------
+// Compute shake amplitude
+//-----------------------------------------------------------------------------
+inline float ComputeShakeAmplitude( const Vector &center, const Vector &shakePt, float amplitude, float radius ) 
+{
+	if ( radius <= 0 )
+		return amplitude;
+
+	float localAmplitude = -1;
+	Vector delta = center - shakePt;
+	float distance = delta.Length();
+
+	if ( distance <= radius )
+	{
+		// Make the amplitude fall off over distance
+		float flPerc = 1.0 - (distance / radius);
+		localAmplitude = amplitude * flPerc;
+	}
+
+	return localAmplitude;
+}
+
+void UTIL_ScreenShake(int players[], int total, float localAmplitude, float frequency, float duration, ShakeCommand_t eCommand)
+{
+	static int shake_id = -1;
+	if(shake_id == -1)
+	{
+		shake_id = usermsgs->GetMessageIndex("Shake");
+	}
+
+	if (( localAmplitude > 0 ) || ( eCommand == SHAKE_STOP ))
+	{
+		if ( eCommand == SHAKE_STOP )
+			localAmplitude = 0;
+
+		bf_write *pBitBuf = usermsgs->StartMessage(shake_id, players, total, USERMSG_RELIABLE);
+		if(pBitBuf == NULL) return; 
+
+		pBitBuf->WriteByte(eCommand);
+		pBitBuf->WriteFloat(localAmplitude);
+		pBitBuf->WriteFloat(frequency);
+		pBitBuf->WriteFloat(duration);
+		usermsgs->EndMessage();
+	}
+}
+
+
+const float MAX_SHAKE_AMPLITUDE = 16.0f;
+void UTIL_ScreenShake( const Vector &center, float amplitude, float frequency, float duration, float radius, ShakeCommand_t eCommand, bool bAirShake )
+{
+	int			i;
+	float		localAmplitude;
+
+	if ( amplitude > MAX_SHAKE_AMPLITUDE )
+	{
+		amplitude = MAX_SHAKE_AMPLITUDE;
+	}
+	
+	int players[128];
+	int total = 0;
+	for ( i = 1; i <= gpGlobals->maxClients; i++ )
+	{
+		CPlayer *pPlayer = UTIL_PlayerByIndex( i );
+
+		//
+		// Only start shakes for players that are on the ground unless doing an air shake.
+		//
+		if ( !pPlayer || (!bAirShake && (eCommand == SHAKE_START) && !(pPlayer->GetFlags() & FL_ONGROUND)) )
+		{
+			continue;
+		}
+
+		localAmplitude = ComputeShakeAmplitude( center, pPlayer->WorldSpaceCenter(), amplitude, radius );
+
+		// This happens if the player is outside the radius, in which case we should ignore 
+		// all commands
+		if (localAmplitude < 0)
+			continue;
+
+		players[total] = i;
+		total++;
+	}
+
+	if(total > 0)
+		UTIL_ScreenShake(players, total, localAmplitude, frequency, duration, eCommand );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int UTIL_EntitiesInBox( const Vector &mins, const Vector &maxs, CFlaggedEntitiesEnum *pEnum )
+{
+	partition->EnumerateElementsInBox( PARTITION_ENGINE_NON_STATIC_EDICTS, mins, maxs, false, pEnum );
+	return pEnum->GetCount();
+}
+
+
+int UTIL_EntitiesAlongRay( const Ray_t &ray, CFlaggedEntitiesEnum *pEnum )
+{
+	partition->EnumerateElementsAlongRay( PARTITION_ENGINE_NON_STATIC_EDICTS, ray, false, pEnum );
+	return pEnum->GetCount();
+}
+
+int UTIL_EntitiesInSphere( const Vector &center, float radius, CFlaggedEntitiesEnum *pEnum )
+{
+	partition->EnumerateElementsInSphere( PARTITION_ENGINE_NON_STATIC_EDICTS, center, radius, false, pEnum );
+	return pEnum->GetCount();
 }

@@ -23,7 +23,7 @@
 #include "extension.h"
 #include "CEntity.h"
 #include "networkvar.h"
-
+#include "shake.h"
 
 
 //-----------------------------------------------------------------------------
@@ -147,6 +147,23 @@ private:
 };
 
 
+class CTraceFilterOnlyNPCsAndPlayer : public CE_CTraceFilterSimple
+{
+public:
+	CTraceFilterOnlyNPCsAndPlayer( const IHandleEntity *passentity, int collisionGroup )
+		: CE_CTraceFilterSimple( passentity, collisionGroup )
+	{
+	}
+
+	virtual TraceType_t	GetTraceType() const
+	{
+		return TRACE_ENTITIES_ONLY;
+	}
+
+	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
+};
+
+
 class CPlayer;
 
 class CEntityLookup;
@@ -166,6 +183,14 @@ inline CEntity *CE_EntityFromEntityHandle( const IHandleEntity *pConstHandleEnti
 
 	if ( staticpropmgr->IsStaticProp( pHandleEntity ) )
 		return NULL;
+
+	IServerUnknown *pUnk = (IServerUnknown*)pHandleEntity;
+	return CEntityLookup::Instance(pUnk->GetBaseEntity());
+}
+
+inline CEntity *CE_EntityFromEntityHandle_NoStatic( IHandleEntity *pConstHandleEntity )
+{
+	IHandleEntity *pHandleEntity = const_cast<IHandleEntity*>(pConstHandleEntity);
 
 	IServerUnknown *pUnk = (IServerUnknown*)pHandleEntity;
 	return CEntityLookup::Instance(pUnk->GetBaseEntity());
@@ -202,10 +227,24 @@ float UTIL_ScaleForGravity( float desiredGravity );
 
 void UTIL_DecalTrace( trace_t *pTrace, char const *decalName );
 
+void UTIL_ScreenShake( const Vector &center, float amplitude, float frequency, float duration, float radius, ShakeCommand_t eCommand, bool bAirShake=false);
+
 inline bool FStrEq(const char *sz1, const char *sz2)
 {
 	return ( sz1 == sz2 || stricmp(sz1, sz2) == 0 );
 }
 
+//---------------------------------------------------------
+//---------------------------------------------------------
+inline float UTIL_DistApprox2D( const Vector &vec1, const Vector &vec2 )
+{
+	float dx;
+	float dy;
+
+	dx = vec1.x - vec2.x;
+	dy = vec1.y - vec2.y;
+
+	return fabs(dx) + fabs(dy);
+}
 
 #endif // _INCLUDE_UTIL_H_

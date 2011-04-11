@@ -22,6 +22,7 @@
 
 #include "CEntity.h"
 #include "bone_setup.h"
+#include "animation.h"
 
 
 class CAnimating : public CEntity
@@ -38,10 +39,10 @@ public:
 	float			GetCycle() const;
 	void			SetCycle(float flCycle);
 	float			GetAnimTimeInterval() const;
-	bool			GetIntervalMovement( float flIntervalUsed, bool &bMoveSeqFinished, Vector &newPosition, QAngle &newAngles );
-	float			GetSequenceCycleRate( CStudioHdr *pStudioHdr, int iSequence );
-	inline float	GetSequenceCycleRate( int iSequence ) { return GetSequenceCycleRate(GetModelPtr(),iSequence); }
-	float			SequenceDuration( CStudioHdr *pStudioHdr, int iSequence );
+	//bool			GetIntervalMovement( float flIntervalUsed, bool &bMoveSeqFinished, Vector &newPosition, QAngle &newAngles );
+	//float			GetSequenceCycleRate( CStudioHdr *pStudioHdr, int iSequence );
+	//inline float	GetSequenceCycleRate( int iSequence ) { return GetSequenceCycleRate(GetModelPtr(),iSequence); }
+	//float			SequenceDuration( CStudioHdr *pStudioHdr, int iSequence );
 	const float*	GetPoseParameterArray() { return *m_flPoseParameter.ptr; }
 	bool			IsOnFire() { return ( (GetFlags() & FL_ONFIRE) != 0 ); }
 	void Scorch( int rate, int floor );
@@ -49,17 +50,31 @@ public:
 	int		SelectWeightedSequence ( Activity activity );
 	int		SelectWeightedSequence ( Activity activity, int curSequence );
 
+	bool	HasPoseParameter( int iSequence, int iParameter );
+
+	float	SetPoseParameter( CStudioHdr *pStudioHdr, const char *szName, float flValue );
+	inline float SetPoseParameter( const char *szName, float flValue ) { return SetPoseParameter( GetModelPtr(), szName, flValue ); }
+	float	SetPoseParameter( CStudioHdr *pStudioHdr, int iParameter, float flValue );
+	inline float SetPoseParameter( int iParameter, float flValue ) { return SetPoseParameter( GetModelPtr(), iParameter, flValue ); }
+
+	float	GetPoseParameter( int iPoseParameter );
+
+	float GetSequenceMoveYaw( int iSequence );
+
+	inline bool IsSequenceFinished( void ) { return m_bSequenceFinished; }
+
 public:
 	CStudioHdr *		GetModelPtr();
 	inline int			GetSequence() { return m_nSequence; }
 
-
+	
 public:
 	DECLARE_DEFAULTHEADER(StudioFrameAdvance, void, ());
 	DECLARE_DEFAULTHEADER(Ignite, void,( float flFlameLifetime, bool bNPCOnly, float flSize , bool bCalledByLevelDesigner));
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(StudioFrameAdvanceManual, void, (float flInterval));
+	DECLARE_DEFAULTHEADER_DETOUR(GetModelPtr, CStudioHdr *, ());
 
 
 protected: //Sendprops
@@ -72,6 +87,9 @@ protected: //Datamaps
 	DECLARE_DATAMAP_OFFSET(CStudioHdr, m_pStudioHdr, 0x414);
 	DECLARE_DATAMAP(int, m_nSequence);
 	DECLARE_DATAMAP(bool, m_bSequenceLoops);
+	DECLARE_DATAMAP(float, m_flGroundSpeed);
+	DECLARE_DATAMAP(bool, m_bSequenceFinished);
+
 
 };
 
@@ -85,14 +103,6 @@ inline float CAnimating::GetCycle() const
 inline void CAnimating::SetCycle(float flCycle)
 {
 	m_flCycle = flCycle;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: return a pointer to an updated studiomdl cache cache
-//-----------------------------------------------------------------------------
-inline CStudioHdr *CAnimating::GetModelPtr( void ) 
-{ 
-	return ( m_pStudioHdr.ptr && m_pStudioHdr.ptr->IsValid() ) ? m_pStudioHdr.ptr : NULL;
 }
 
 

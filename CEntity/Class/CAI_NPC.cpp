@@ -15,6 +15,7 @@
 #include "ai_memory.h"
 */
 
+
 /*
 CAI_SchedulesManager *my_g_AI_SchedulesManager = NULL;
 CAI_GlobalScheduleNamespace *my_gm_SchedulingSymbols = NULL;
@@ -43,7 +44,7 @@ int				 CAI_NPC::m_iNumEvents	= 0;
 CE_LINK_ENTITY_TO_CLASS(CAI_BaseNPC, CAI_NPC);
 
 DECLARE_DETOUR(SetHullSizeNormal, CAI_NPC);
-DECLARE_DEFAULTHANDLER_DETOUR(CAI_NPC, SetHullSizeNormal, void, (bool force),(force));
+DECLARE_DEFAULTHANDLER_DETOUR_void(CAI_NPC, SetHullSizeNormal, (bool force),(force));
 
 
 SH_DECL_MANUALHOOK0(GetEnemies, 0, 0, 0, CEAI_Enemies *);
@@ -55,7 +56,7 @@ DECLARE_HOOK(NPCInit, CAI_NPC);
 DECLARE_DEFAULTHANDLER_void(CAI_NPC, NPCInit, (), ());
 
 DECLARE_DETOUR(SetState, CAI_NPC);
-DECLARE_DEFAULTHANDLER_DETOUR(CAI_NPC, SetState, void, (NPC_STATE State), (State));
+DECLARE_DEFAULTHANDLER_DETOUR_void(CAI_NPC, SetState, (NPC_STATE State), (State));
 
 SH_DECL_MANUALHOOK1_void(SetActivity, 0, 0, 0, Activity);
 DECLARE_HOOK(SetActivity, CAI_NPC);
@@ -76,8 +77,11 @@ SH_DECL_MANUALHOOK0(MaxYawSpeed, 0, 0, 0, float);
 DECLARE_HOOK(MaxYawSpeed, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, MaxYawSpeed, float,(), ());
 
+
 SH_DECL_MANUALHOOK0(GetClassScheduleIdSpace, 0, 0, 0, CAI_ClassScheduleIdSpace *);
 DECLARE_HOOK(GetClassScheduleIdSpace, CAI_NPC);
+//DECLARE_DEFAULTHANDLER(CAI_NPC,GetClassScheduleIdSpace, CAI_ClassScheduleIdSpace*, (), ());
+
 
 CAI_ClassScheduleIdSpace *CAI_NPC::GetClassScheduleIdSpace()
 {
@@ -97,8 +101,22 @@ CAI_ClassScheduleIdSpace *CAI_NPC::GetClassScheduleIdSpace()
 CAI_ClassScheduleIdSpace *CAI_NPC::InternalGetClassScheduleIdSpace()
 {
 	SET_META_RESULT(MRES_SUPERCEDE);
-	return &gm_ClassScheduleIdSpace;
+	CAI_NPC *pEnt = dynamic_cast<CAI_NPC *>(CEntity::Instance(META_IFACEPTR(CBaseEntity)));
+	if (!pEnt)
+	{
+		RETURN_META_VALUE(MRES_IGNORED, NULL);
+	}
+
+	int index = pEnt->entindex();
+	pEnt->m_bInGetClassScheduleIdSpace = true;
+	CAI_ClassScheduleIdSpace *space = pEnt->GetClassScheduleIdSpace();
+	if (pEnt == CEntity::Instance(index))
+		pEnt->m_bInGetClassScheduleIdSpace = false;
+
+	return space;
+	//return &gm_ClassScheduleIdSpace;
 }
+
 
 SH_DECL_MANUALHOOK0_void(NPCThink, 0, 0, 0);
 DECLARE_HOOK(NPCThink, CAI_NPC);
@@ -184,8 +202,26 @@ SH_DECL_MANUALHOOK1(NPC_TranslateActivity, 0, 0, 0, Activity, Activity);
 DECLARE_HOOK(NPC_TranslateActivity, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, NPC_TranslateActivity, Activity, (Activity eNewActivity), (eNewActivity));
 
+SH_DECL_MANUALHOOK2_void(PlayerHasIlluminatedNPC, 0, 0, 0, CBaseEntity *, float);
+DECLARE_HOOK(PlayerHasIlluminatedNPC, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, PlayerHasIlluminatedNPC, (CBaseEntity *pPlayer, float flDot), (pPlayer, flDot));
+
+SH_DECL_MANUALHOOK2(QuerySeeEntity, 0, 0, 0, bool, CBaseEntity *, bool);
+DECLARE_HOOK(QuerySeeEntity, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, QuerySeeEntity, bool, (CBaseEntity *pEntity, bool bOnlyHateOrFearIfNPC), (pEntity, bOnlyHateOrFearIfNPC));
+
+SH_DECL_MANUALHOOK0(GetSoundInterests, 0, 0, 0, int);
+DECLARE_HOOK(GetSoundInterests, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetSoundInterests, int, (), ());
+
+SH_DECL_MANUALHOOK0_void(BuildScheduleTestBits, 0, 0, 0);
+DECLARE_HOOK(BuildScheduleTestBits, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, BuildScheduleTestBits, (), ());
+
+
 SH_DECL_MANUALHOOK1(GetSchedule, 0, 0, 0, CAI_Schedule *, int);
 DECLARE_HOOK(GetSchedule, CAI_NPC);
+
 
 CAI_Schedule *CAI_NPC::GetSchedule(int schedule)
 {
@@ -205,46 +241,60 @@ CAI_Schedule *CAI_NPC::GetSchedule(int schedule)
 CAI_Schedule *CAI_NPC::InternalGetSchedule(int schedule)
 {
 	SET_META_RESULT(MRES_SUPERCEDE);
-
-	if (!GetClassScheduleIdSpace()->IsGlobalBaseSet())
+	
+	CAI_NPC *pEnt = dynamic_cast<CAI_NPC *>(CEntity::Instance(META_IFACEPTR(CBaseEntity)));
+	if (!pEnt)
 	{
-		return g_AI_SchedulesManager.GetScheduleFromID(SCHED_IDLE_STAND);
+		RETURN_META_VALUE(MRES_IGNORED, NULL);
+	}
+
+	int index = pEnt->entindex();
+	pEnt->m_bInGetSchedule = true;
+	CAI_Schedule *ret = NULL;
+
+	if (!pEnt->GetClassScheduleIdSpace()->IsGlobalBaseSet())
+	{
+		ret = g_AI_SchedulesManager.GetScheduleFromID(SCHED_IDLE_STAND);
+		if (pEnt == CEntity::Instance(index))
+			pEnt->m_bInGetSchedule = false;
+		return ret;
 	}
 	if ( AI_IdIsLocal( schedule ) )
 	{
-		schedule = GetClassScheduleIdSpace()->ScheduleLocalToGlobal(schedule);
+		schedule = pEnt->GetClassScheduleIdSpace()->ScheduleLocalToGlobal(schedule);
 	}
-
-	return g_AI_SchedulesManager.GetScheduleFromID( schedule );
-}
-
-
-SH_DECL_MANUALHOOK1(TaskName, 0, 0, 0, const char *, int);
-DECLARE_HOOK(TaskName, CAI_NPC);
-
-const char *CAI_NPC::TaskName(int taskID)
-{
-	if(!m_bInTaskName)
-	{
-		return SH_MCALL(BaseEntity(), TaskName)(taskID);
-	}
-
-	SET_META_RESULT(MRES_IGNORED);
-	SH_GLOB_SHPTR->DoRecall();
-	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
-	const char *ret = (thisptr->*(__SoureceHook_FHM_GetRecallMFPTaskName(thisptr)))(taskID);
-	SET_META_RESULT(MRES_SUPERCEDE);
+	
+	ret = g_AI_SchedulesManager.GetScheduleFromID( schedule );
+	if (pEnt == CEntity::Instance(index))
+		pEnt->m_bInGetSchedule = false;
 	return ret;
 }
 
-const char *CAI_NPC::InternalTaskName(int taskID)
-{
-	SET_META_RESULT(MRES_SUPERCEDE);
 
-	if ( AI_IdIsLocal( taskID ) )
-		taskID = GetClassScheduleIdSpace()->TaskLocalToGlobal(taskID);
-	return GetSchedulingSymbols()->TaskIdToSymbol( taskID );
-}
+DECLARE_DETOUR(SetEnemy, CAI_NPC);
+DECLARE_DEFAULTHANDLER_DETOUR_void(CAI_NPC, SetEnemy, (CBaseEntity *pEnemy, bool bSetCondNewEnemy), (pEnemy, bSetCondNewEnemy));
+
+SH_DECL_MANUALHOOK3(UpdateEnemyMemory, 0, 0, 0, bool, CBaseEntity *, const Vector &, CBaseEntity *);
+DECLARE_HOOK(UpdateEnemyMemory, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, UpdateEnemyMemory, bool, (CBaseEntity *pEnemy, const Vector &position, CBaseEntity *pInformer), (pEnemy, position, pInformer));
+
+SH_DECL_MANUALHOOK2(OverrideMoveFacing, 0, 0, 0, bool, const AILocalMoveGoal_t &, float );
+DECLARE_HOOK(OverrideMoveFacing, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, OverrideMoveFacing, bool, (const AILocalMoveGoal_t &move, float flInterval), (move, flInterval));
+
+
+SH_DECL_MANUALHOOK2(GetHitgroupDamageMultiplier, 0, 0, 0, float, int, const CTakeDamageInfo & );
+DECLARE_HOOK(GetHitgroupDamageMultiplier, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetHitgroupDamageMultiplier, float, (int iHitGroup, const CTakeDamageInfo &info), (iHitGroup, info));
+
+SH_DECL_MANUALHOOK2(OnBehaviorChangeStatus, 0, 0, 0, bool, CAI_BehaviorBase *, bool);
+DECLARE_HOOK(OnBehaviorChangeStatus, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, OnBehaviorChangeStatus, bool, (CAI_BehaviorBase *pBehavior, bool fCanFinishSchedule), (pBehavior, fCanFinishSchedule));
+
+SH_DECL_MANUALHOOK0(IsInterruptable, 0, 0, 0, bool);
+DECLARE_HOOK(IsInterruptable, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsInterruptable, bool, (), ());
+
 
 
 //Datamaps
@@ -267,6 +317,17 @@ DEFINE_PROP(m_iInteractionState, CAI_NPC);
 DEFINE_PROP(m_hCine, CAI_NPC);
 DEFINE_PROP(m_IdealActivity, CAI_NPC);
 DEFINE_PROP(m_pNavigator, CAI_NPC);
+DEFINE_PROP(m_pSquad, CAI_NPC);
+DEFINE_PROP(m_iMySquadSlot, CAI_NPC);
+DEFINE_PROP(m_afMemory, CAI_NPC);
+DEFINE_PROP(m_CustomInterruptConditions, CAI_NPC);
+DEFINE_PROP(m_IdealNPCState, CAI_NPC);
+DEFINE_PROP(m_poseMove_Yaw, CAI_NPC);
+DEFINE_PROP(m_InverseIgnoreConditions, CAI_NPC);
+DEFINE_PROP(m_flWaitFinished, CAI_NPC);
+
+
+
 
 
 //-----------------------------------------------------------------------------
@@ -277,7 +338,12 @@ DEFINE_PROP(m_pNavigator, CAI_NPC);
 
 //CAI_LocalIdSpace			CAI_NPC::gm_SquadSlotIdSpace( true );
 
-
+CAI_NPC::CAI_NPC()
+{
+	//unsigned char *obj = NULL;
+	//memcpy(&obj, reinterpret_cast<void*>(m_pMotor.ptr), sizeof(char*));
+	//m_pMotor.ptr = (CAI_Motor *)obj;
+}
 
 bool CAI_NPC::LoadDefaultSchedules()
 {
@@ -399,7 +465,7 @@ void CAI_NPC::SetCondition(int iCondition)
 		Assert(0);
 		return;
 	}	
-	(*m_Conditions).Set(interrupt);
+	m_Conditions->Set(interrupt);
 }
 
 //---------------------------------------------------------
@@ -414,7 +480,7 @@ bool CAI_NPC::HasCondition( int iCondition )
 		return false;
 	}
 	
-	bool bReturn = (*m_Conditions).IsBitSet(interrupt);
+	bool bReturn = m_Conditions->IsBitSet(interrupt);
 	return (bReturn);
 }
 
@@ -430,7 +496,7 @@ void CAI_NPC::ClearCondition( int iCondition )
 		return;
 	}
 	
-	(*m_Conditions).Clear(interrupt);
+	m_Conditions->Clear(interrupt);
 }
 
 bool CAI_NPC::AutoMovement(CEntity *pTarget, AIMoveTrace_t *pTraceResult)
@@ -473,29 +539,6 @@ void CAI_NPC::SetIdealActivity( Activity NewActivity )
 	g_helpfunc.SetIdealActivity(BaseEntity(), NewActivity);
 }
 
-
-void CAI_NPC::PlayerHasIlluminatedNPC( CPlayer *pPlayer, float flDot )
-{
-	//CE_TODO
-/*#ifdef HL2_DLL
-	if ( IsActiveDynamicInteraction() )
-	{
-		ScriptedNPCInteraction_t *pInteraction = GetRunningDynamicInteraction();
-		if ( pInteraction->iLoopBreakTriggerMethod & SNPCINT_LOOPBREAK_ON_FLASHLIGHT_ILLUM )
-		{
-			// Only do this in alyx darkness mode
-			if ( HL2GameRules()->IsAlyxInDarknessMode() )
-			{
-				// Can only break when we're in the action anim
-				if ( m_hCine->IsPlayingAction() )
-				{
-					m_hCine->StopActionLoop( true );
-				}
-			}
-		}
-	}
-#endif*/
-}
 
 bool CAI_NPC::CanBeAnEnemyOf( CEntity *pEnemy )	
 { 
@@ -753,7 +796,6 @@ int CAI_NPC::GetConditionID(const char* condName)
 //-----------------------------------------------------------------------------
 int CAI_NPC::GetActivityID(const char* actName) 
 {
-	//CE_TODO
 	Assert( m_pActivitySR );
 	if ( !m_pActivitySR )
 		return ACT_INVALID;
@@ -769,6 +811,146 @@ int CAI_NPC::GetTaskID(const char* taskName)
 	return GetSchedulingSymbols()->TaskSymbolToId( taskName );
 }
 
+//-----------------------------------------------------------------------------
+
+bool CAI_NPC::OccupyStrategySlotRange( int slotIDStart, int slotIDEnd )
+{
+	//CE_TODO untest
+	// If I'm not in a squad a I don't fill slots
+	return ( !GetSquad() || GetSquad()->OccupyStrategySlotRange( GetEnemy(), slotIDStart, slotIDEnd, m_iMySquadSlot.ptr ) );
+
+}
+
+void CAI_NPC::CallNPCThink()
+{
+	DUMP_FUNCTION();
+
+	g_helpfunc.CallNPCThink(BaseEntity());
+
+	SetThink(NULL);
+}
+
+Navigation_t CAI_NPC::GetNavType() const
+{
+	return GetNavigator()->GetNavType();
+}
+
+void CAI_NPC::SetNavType( Navigation_t navType )
+{
+	GetNavigator()->SetNavType( navType );
+}
+
+//-----------------------------------------------------------------------------
+bool CAI_NPC::IsCustomInterruptConditionSet( int nCondition )
+{
+	int interrupt = InterruptFromCondition( nCondition );
+	
+	if ( interrupt == -1 )
+	{
+		Assert(0);
+		return false;
+	}
+	
+	return m_CustomInterruptConditions->IsBitSet( interrupt );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Sets a flag in the custom interrupt flags, translating the condition
+//			to the proper global space, if necessary
+//-----------------------------------------------------------------------------
+void CAI_NPC::SetCustomInterruptCondition( int nCondition )
+{
+	int interrupt = InterruptFromCondition( nCondition );
+	
+	if ( interrupt == -1 )
+	{
+		Assert(0);
+		return;
+	}
+	
+	m_CustomInterruptConditions->Set( interrupt );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Clears a flag in the custom interrupt flags, translating the condition
+//			to the proper global space, if necessary
+//-----------------------------------------------------------------------------
+void CAI_NPC::ClearCustomInterruptCondition( int nCondition )
+{
+	int interrupt = InterruptFromCondition( nCondition );
+	
+	if ( interrupt == -1 )
+	{
+		Assert(0);
+		return;
+	}
+	
+	m_CustomInterruptConditions->Clear( interrupt );
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Clears all the custom interrupt flags.
+//-----------------------------------------------------------------------------
+void CAI_NPC::ClearCustomInterruptConditions()
+{
+	m_CustomInterruptConditions->ClearAll();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+// Input  :
+// Output :
+//-----------------------------------------------------------------------------
+bool CAI_NPC::IsMoving( void ) 
+{ 
+	return GetNavigator()->IsGoalSet(); 
+}
+
+
+//=========================================================
+// ClearSchedule - blanks out the caller's schedule pointer
+// and index.
+//=========================================================
+void CAI_NPC::ClearSchedule( const char *szReason )
+{
+	m_ScheduleState->timeCurTaskStarted = m_ScheduleState->timeStarted = 0;
+	m_ScheduleState->bScheduleWasInterrupted = true;
+	SetTaskStatus( TASKSTATUS_NEW );
+	m_IdealSchedule = SCHED_NONE;
+	m_pSchedule.ptr =  NULL;
+	ResetScheduleCurTaskIndex();
+	m_InverseIgnoreConditions->SetAll();
+
+}
+
+bool CAI_NPC::IsWaitFinished()
+{
+	return ( gpGlobals->curtime >= m_flWaitFinished );
+}
+
+//-----------------------------------------------------------------------------
+
+float CAI_NPC::SetWait( float minWait, float maxWait )
+{
+	int minThinks = Ceil2Int( minWait * 10 );
+
+	if ( maxWait == 0.0 )
+	{
+		m_flWaitFinished = gpGlobals->curtime + ( 0.1 * minThinks );
+	}
+	else
+	{
+		if ( minThinks == 0 ) // random 0..n is almost certain to not return 0
+			minThinks = 1;
+		int maxThinks = Ceil2Int( maxWait * 10 );
+
+		m_flWaitFinished = gpGlobals->curtime + ( 0.1 * random->RandomInt( minThinks, maxThinks ) );
+	}
+	return m_flWaitFinished;
+}
+
+
 
 
 
@@ -782,7 +964,7 @@ bool NPC_CheckBrushExclude( CEntity *pEntity, CEntity *pBrush )
 
 	if ( pNPC )
 	{
-	//	return pNPC->GetMoveProbe()->ShouldBrushBeIgnored( pBrush );
+		return pNPC->GetMoveProbe()->ShouldBrushBeIgnored( pBrush->BaseEntity() );
 	}
 
 	return false;

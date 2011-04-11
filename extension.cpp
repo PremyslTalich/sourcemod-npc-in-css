@@ -19,6 +19,9 @@ IVModelInfo *modelinfo = NULL;
 IPhysicsObjectPairHash *myg_EntityCollisionHash = NULL;
 ISpatialPartition *partition = NULL;
 IPhysicsSurfaceProps *physprops = NULL;
+IPhysicsCollision *physcollision = NULL;
+ISoundEmitterSystemBase *soundemitterbase = NULL;
+
 
 IGameConfig *g_pGameConf = NULL;
 
@@ -75,7 +78,7 @@ bool Monster::SDK_OnLoad(char *error, size_t maxlength, bool late)
 	//0EB829DE 
 
 
-	META_CONPRINTF("%p\n",reinterpret_cast<void *>(0x00031380+serverdll_addr));
+	META_CONPRINTF("%p\n",reinterpret_cast<void *>(0x00021BB0 +serverdll_addr));
 
 
 	return true;
@@ -110,6 +113,8 @@ bool Monster::SDK_OnMetamodLoad(ISmmAPI *ismm, char *error, size_t maxlen, bool 
 	GET_V_IFACE_CURRENT(GetEngineFactory, modelinfo, IVModelInfo, VMODELINFO_SERVER_INTERFACE_VERSION);
 	GET_V_IFACE_CURRENT(GetEngineFactory, partition, ISpatialPartition, INTERFACEVERSION_SPATIALPARTITION);
 	GET_V_IFACE_CURRENT(GetPhysicsFactory, physprops, IPhysicsSurfaceProps,  VPHYSICS_SURFACEPROPS_INTERFACE_VERSION);
+	GET_V_IFACE_CURRENT(GetEngineFactory, soundemitterbase, ISoundEmitterSystemBase,  SOUNDEMITTERSYSTEM_INTERFACE_VERSION);
+	GET_V_IFACE_CURRENT(GetPhysicsFactory, physcollision, IPhysicsCollision,  VPHYSICS_COLLISION_INTERFACE_VERSION);
 
 
 	g_pCVar = icvar;
@@ -149,9 +154,14 @@ void Monster::ServerActivate(edict_t *pEdictList, int edictCount, int clientMax)
 	CEAI_NetworkManager::InitializeAINetworks();
 
 	engine->PrecacheModel("models/headcrabclassic.mdl",true);
+	engine->PrecacheModel("models/headcrab.mdl",true);
+	engine->PrecacheModel("models/headcrabblack.mdl",true);
 
-	engine->PrecacheModel("models/roller_vehicledriver.mdl",true);
 
+	soundemitterbase->AddSoundOverrides("scripts/sm_monster/game_sounds_BaseNpc.txt");
+	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_headcrab.txt");
+	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_fastheadcrab.txt");
+	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_blackheadcrab.txt");
 
 	RETURN_META(MRES_IGNORED);
 }

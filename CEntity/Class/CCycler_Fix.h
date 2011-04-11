@@ -21,6 +21,7 @@ public:
 	virtual bool IsAlive(void);
 
 	virtual Disposition_t IRelationType ( CBaseEntity *pTarget );
+
 };
 
 #endif

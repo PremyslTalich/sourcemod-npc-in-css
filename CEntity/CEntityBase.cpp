@@ -22,6 +22,7 @@
 
 CEntity *pEntityData[MAX_EDICTS+1] = {NULL};
 
+
 CEntity *CEntityLookup::Instance(CBaseEntity *pEnt)
 {
 	if (!pEnt)
@@ -54,6 +55,7 @@ CEntity *CEntityLookup::Instance(int iEnt)
 CEntity *CEntityLookup::Instance(const edict_t *pEnt)
 {
 	return Instance(engine->IndexOfEdict(pEnt));
+	//return Instance((edict_t *)pEnt);
 }
 
 CEntity *CEntityLookup::Instance(const CBaseHandle &hEnt)
@@ -106,3 +108,4 @@ CEntity *CEntityLookup::Instance(edict_t *pEnt)
 {
 	return Instance(engine->IndexOfEdict(pEnt));
 }
+

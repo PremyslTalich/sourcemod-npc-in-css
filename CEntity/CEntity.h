@@ -108,20 +108,6 @@
 #include "vehicles.h"
 
 
-/*#include "vphysics_interface.h"
-#include <typeinfo>
-#include <variant_t.h>
-#include "EntityOutput.h"
-#include "macros.h"
-
-#include "worldsize.h"
-#include "cutil.h"
-#include "CECollisionProperty.h"
-#include "shareddefs.h"
-#include "collisionproperty.h"
-#include "ServerNetworkProperty.h"*/
-
-
 extern variant_t g_Variant;
 
 
@@ -171,7 +157,12 @@ class CAI_NPC;
 #undef DEFINE_INPUTFUNC
 #define DEFINE_INPUTFUNC( fieldtype, inputname, inputfunc ) { fieldtype, #inputfunc, { 0, 0 }, 1, FTYPEDESC_INPUT, inputname, NULL, (inputfunc_t)(&classNameTypedef::inputfunc) }
 
+
 extern CEntity *pEntityData[MAX_EDICTS+1];
+
+extern ConVar *sv_gravity;
+extern ConVar *phys_pushscale;
+
 
 typedef void (CEntity::*BASEPTR)(void);
 typedef void (CEntity::*ENTITYFUNCPTR)(CEntity *pOther);
@@ -196,6 +187,10 @@ class CFakeHandle;
 #define SetThink(a) ThinkSet(static_cast <void (CEntity::*)(void)> (a), 0, NULL)
 #define SetContextThink( a, b, context ) ThinkSet( static_cast <void (CEntity::*)(void)> (a), (b), context )
 
+#define SetTouch( a ) m_pfnTouch = static_cast <void (CEntity::*)(CEntity *)> (a)
+
+class CCombatCharacter;
+
 class CEntity // : public CBaseEntity  - almost.
 {
 public: // CEntity
@@ -209,6 +204,7 @@ public: // CEntity
 	void ClearAllFlags();
 	virtual void Destroy();
 	CBaseEntity *BaseEntity();
+	CBaseEntity *BaseEntity() const;
 
 	operator CBaseEntity* ()
 	{
@@ -247,6 +243,8 @@ public: // CEntity
 	static CEntity* Instance(int iEnt)  { return CEntityLookup::Instance(iEnt); }
 	static CEntity* Instance(CBaseEntity *pEnt)  { return CEntityLookup::Instance(pEnt); }
 
+	static HSOUNDSCRIPTHANDLE PrecacheScriptSound( const char *soundname );
+
 public: // CBaseEntity virtuals
 	virtual void Teleport(const Vector *origin, const QAngle* angles, const Vector *velocity);
 	virtual void UpdateOnRemove();
@@ -274,12 +272,18 @@ public: // CBaseEntity virtuals
 	virtual Vector BodyTarget( const Vector &posSrc, bool bNoisy = true);
 	virtual IServerVehicle *GetServerVehicle();
 	virtual bool IsAlive();
+	virtual const Vector &WorldSpaceCenter();
+	virtual void PhysicsSimulate();
+
 
 public:
 	void SetLocalOrigin(const Vector& origin);
 	void PhysicsTouchTriggers(const Vector *pPrevAbsOrigin = NULL);
 	void SetAbsOrigin(const Vector& absOrigin);
 	void SetLocalAngles( const QAngle& angles );
+
+public:
+	virtual CCombatCharacter *MyCombatCharacterPointer( void ) { return NULL; }
 
 public: // CBaseEntity non virtual helpers
 	BASEPTR	ThinkSet(BASEPTR func, float thinkTime, const char *szContext);
@@ -334,6 +338,7 @@ public: // CBaseEntity non virtual helpers
 	const Vector&			WorldAlignMaxs( ) const;
 	const Vector&			WorldAlignSize( ) const;
 
+	float BoundingRadius() const;
 
 	virtual	bool IsPlayer();
 
@@ -368,6 +373,8 @@ public: // CBaseEntity non virtual helpers
 	void	SetHealth( int amt )	{ m_iHealth = amt; }
 
 	void ApplyAbsVelocityImpulse( const Vector &vecImpulse );
+
+	void EmitSound( const char *soundname, float soundtime = 0.0f, float *duration = NULL );
 
 public: //custom
 	CECollisionProperty *col_ptr;
@@ -421,6 +428,8 @@ public: // custom
 	
 	CEntity *GetGroundEntity();
 
+	bool IsBSPModel() const;
+
 public: // All the internal hook implementations for the above virtuals
 	DECLARE_DEFAULTHEADER(Teleport, void, (const Vector *origin, const QAngle* angles, const Vector *velocity));
 	DECLARE_DEFAULTHEADER(UpdateOnRemove, void, ());
@@ -447,6 +456,8 @@ public: // All the internal hook implementations for the above virtuals
 	DECLARE_DEFAULTHEADER(BodyTarget, Vector, (const Vector &posSrc, bool bNoisy));
 	DECLARE_DEFAULTHEADER(GetServerVehicle, IServerVehicle *, ());
 	DECLARE_DEFAULTHEADER(IsAlive, bool, ());
+	DECLARE_DEFAULTHEADER(WorldSpaceCenter, const Vector &, ());
+	DECLARE_DEFAULTHEADER(PhysicsSimulate, void, ());
 
 	
 public:
@@ -504,52 +515,7 @@ protected: //Datamaps
 	DECLARE_DATAMAP(QAngle, m_angAbsRotation);
 	DECLARE_DATAMAP(float, m_flGravity);
 	DECLARE_DATAMAP(int, m_iMaxHealth);
-
-	//DECLARE_DATAMAP(int, m_fEffects);
-
-	Redirect<int> m_fEffects; 
-friend class m_fEffectsPropTracker; 
-class m_fEffectsPropTracker : public IPropTracker 
-{ 
-public: 
-	m_fEffectsPropTracker() 
-	{ 
-		lookup = false; 
-		found = false; 
-	} 
-	void InitProp(CEntity *pEnt) 
-	{ 
-		ThisClass *pThisType = dynamic_cast<ThisClass *>(pEnt); 
-		if (pThisType) 
-		{ 
-			if (!lookup) 
-			{ 
-				found = GetDataMapOffset(pEnt->BaseEntity(), "m_fEffects", offset); 
-				if (!found) 
-				{ 
-					g_pSM->LogError(myself,"[CENTITY] Failed lookup of prop %s on entity", "m_fEffects"); 
-				} 
-				lookup = true; 
-			} 
-			if (found) 
-			{ 
-				pThisType->m_fEffects.ptr = (int *)(((uint8_t *)(pEnt->BaseEntity())) + offset); 
-			} 
-			else 
-			{ 
-				pThisType->m_fEffects.ptr = NULL; 
-			} 
-		} 
-	} 
-private: 
-	unsigned int offset; 
-	bool lookup; 
-	bool found; 
-}; 
-static m_fEffectsPropTracker m_fEffectsPropTrackerObj;
-
-
-
+	DECLARE_DATAMAP(int, m_fEffects);
 
 public:
 	DECLARE_DATAMAP(char, m_takedamage);
@@ -688,6 +654,11 @@ inline const Vector& CEntity::WorldAlignSize( ) const
 	return CollisionProp_Actual()->OBBSize();
 }
 
+inline float CEntity::BoundingRadius() const
+{
+	return CollisionProp_Actual()->BoundingRadius();
+}
+
 inline void CEntity::SetGravity(float flGravity) 
 { 
 	m_flGravity = flGravity; 
@@ -698,16 +669,23 @@ inline float CEntity::GetGravity() const
 	return m_flGravity; 
 }
 
-
-
-void UTIL_PatchOutputRestoreOps(datamap_t *pMap);
-
-
 inline CEntity *GetWorldEntity()
 {
 	return g_WorldEntity;
 }
 
+
+
+void UTIL_PatchOutputRestoreOps(datamap_t *pMap);
+
+inline bool FClassnameIs( CEntity *pEntity, const char *szClassname )
+{ 
+	Assert( pEntity );
+	if ( pEntity == NULL )
+		return false;
+
+	return !strcmp( pEntity->GetClassname(), szClassname ) ? true : false; 
+}
 
 
 

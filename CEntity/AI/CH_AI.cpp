@@ -36,8 +36,8 @@ Vector VecCheckToss( CEntity *pEntity, ITraceFilter *pFilter, Vector vecSpot1, V
 	Vector			vecScale;
 	Vector			vecTossVel;
 	Vector			vecTemp;
-	//CE_TODO
-	float			flGravity = /*sv_gravity.GetFloat()*/ 800 * flGravityAdj;
+
+	float			flGravity = sv_gravity->GetFloat() * flGravityAdj;
 
 	if (vecSpot2.z - vecSpot1.z > 500)
 	{

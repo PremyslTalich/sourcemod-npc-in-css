@@ -78,6 +78,7 @@ public:
 	virtual int	OnTakeDamage_Dead( const CTakeDamageInfo &info );
 	virtual bool HandleInteraction( int interactionType, void *data, CCombatCharacter* sourceEnt);
 	virtual int OnTakeDamage(CEntityTakeDamageInfo &info);
+	virtual CCombatCharacter *MyCombatCharacterPointer( void ) { return this; }
 
 public:
 	DECLARE_DEFAULTHEADER(IRelationType, Disposition_t, (CBaseEntity *pTarget));
