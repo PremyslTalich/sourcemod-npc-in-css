@@ -1,7 +1,7 @@
 #ifndef _INCLUDE_CE_DEFINE_H_
 #define _INCLUDE_CE_DEFINE_H_
 
-
+#define		ENTITY_ARRAY_SIZE	8192
 
 // entity capabilities
 // These are caps bits to indicate what an object's capabilities (currently used for +USE, save/restore and level transitions)
@@ -41,6 +41,99 @@
 #define FVPHYSICS_NO_SELF_COLLISIONS	0x8000		// don't collide with other objects that are part of the same entity
 
 
+#define FLAME_DAMAGE_INTERVAL			0.2f // How often to deal damage.
+#define FLAME_DIRECT_DAMAGE_PER_SEC		5.0f
+#define FLAME_RADIUS_DAMAGE_PER_SEC		4.0f
 
+#define FLAME_DIRECT_DAMAGE ( FLAME_DIRECT_DAMAGE_PER_SEC * FLAME_DAMAGE_INTERVAL )
+#define FLAME_RADIUS_DAMAGE ( FLAME_RADIUS_DAMAGE_PER_SEC * FLAME_DAMAGE_INTERVAL )
+
+#define FLAME_MAX_LIFETIME_ON_DEAD_NPCS	10.0f
+
+
+typedef enum { expRandom = 0, expDirected, expUsePrecise} Explosions;
+typedef enum { matGlass = 0, matWood, matMetal, matFlesh, matCinderBlock, matCeilingTile, matComputer, matUnbreakableGlass, matRocks, matWeb, matNone, matLastMaterial } Materials;
+
+
+#define	NUM_SHARDS 6 // this many shards spawned when breakable objects break;
+
+// Spawnflags for func breakable
+#define SF_BREAK_TRIGGER_ONLY				0x0001	// may only be broken by trigger
+#define	SF_BREAK_TOUCH						0x0002	// can be 'crashed through' by running player (plate glass)
+#define SF_BREAK_PRESSURE					0x0004	// can be broken by a player standing on it
+#define SF_BREAK_PHYSICS_BREAK_IMMEDIATELY	0x0200	// the first physics collision this breakable has will immediately break it
+#define SF_BREAK_DONT_TAKE_PHYSICS_DAMAGE	0x0400	// this breakable doesn't take damage from physics collisions
+#define SF_BREAK_NO_BULLET_PENETRATION		0x0800  // don't allow bullets to penetrate
+
+// Spawnflags for func_pushable (it's also func_breakable, so don't collide with those flags)
+#define SF_PUSH_BREAKABLE					0x0080
+#define SF_PUSH_NO_USE						0x0100	// player cannot +use pickup this ent
+
+
+// useful cosines
+#define DOT_1DEGREE   0.9998476951564
+#define DOT_2DEGREE   0.9993908270191
+#define DOT_3DEGREE   0.9986295347546
+#define DOT_4DEGREE   0.9975640502598
+#define DOT_5DEGREE   0.9961946980917
+#define DOT_6DEGREE   0.9945218953683
+#define DOT_7DEGREE   0.9925461516413
+#define DOT_8DEGREE   0.9902680687416
+#define DOT_9DEGREE   0.9876883405951
+#define DOT_10DEGREE  0.9848077530122
+#define DOT_15DEGREE  0.9659258262891
+#define DOT_20DEGREE  0.9396926207859
+#define DOT_25DEGREE  0.9063077870367
+#define DOT_30DEGREE  0.866025403784
+#define DOT_45DEGREE  0.707106781187
+
+
+enum
+{
+	HL2COLLISION_GROUP_PLASMANODE = LAST_SHARED_COLLISION_GROUP,
+	HL2COLLISION_GROUP_SPIT,
+	HL2COLLISION_GROUP_HOMING_MISSILE,
+	HL2COLLISION_GROUP_COMBINE_BALL,
+
+	HL2COLLISION_GROUP_FIRST_NPC,
+	HL2COLLISION_GROUP_HOUNDEYE,
+	HL2COLLISION_GROUP_CROW,
+	HL2COLLISION_GROUP_HEADCRAB,
+	HL2COLLISION_GROUP_STRIDER,
+	HL2COLLISION_GROUP_GUNSHIP,
+	HL2COLLISION_GROUP_ANTLION,
+	HL2COLLISION_GROUP_LAST_NPC,
+	HL2COLLISION_GROUP_COMBINE_BALL_NPC,
+};
+
+typedef enum { GLOBAL_OFF = 0, GLOBAL_ON = 1, GLOBAL_DEAD = 2 } GLOBALESTATE;
+
+
+
+#define	SF_NORESPAWN	( 1 << 30 )
+
+
+// weapon respawning return codes
+enum
+{	
+	GR_NONE = 0,
+	
+	GR_WEAPON_RESPAWN_YES,
+	GR_WEAPON_RESPAWN_NO,
+	
+	GR_AMMO_RESPAWN_YES,
+	GR_AMMO_RESPAWN_NO,
+	
+	GR_ITEM_RESPAWN_YES,
+	GR_ITEM_RESPAWN_NO,
+
+	GR_PLR_DROP_GUN_ALL,
+	GR_PLR_DROP_GUN_ACTIVE,
+	GR_PLR_DROP_GUN_NO,
+
+	GR_PLR_DROP_AMMO_ALL,
+	GR_PLR_DROP_AMMO_ACTIVE,
+	GR_PLR_DROP_AMMO_NO,
+};
 
 #endif

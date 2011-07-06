@@ -353,3 +353,247 @@ bool Studio_AnimMovement( mstudioanimdesc_t *panim, float flCycleFrom, float flC
 
 
 
+//-----------------------------------------------------------------------------
+// Purpose: lookup attachment by name
+//-----------------------------------------------------------------------------
+
+int Studio_FindAttachment( const CStudioHdr *pStudioHdr, const char *pAttachmentName )
+{
+	if ( pStudioHdr && pStudioHdr->SequencesAvailable() )
+	{
+		// Extract the bone index from the name
+		for (int i = 0; i < pStudioHdr->GetNumAttachments(); i++)
+		{
+			if (!stricmp(pAttachmentName,pStudioHdr->pAttachment(i).pszName( ))) 
+			{
+				return i;
+			}
+		}
+	}
+
+	return -1;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+
+int	CStudioHdr::GetNumAttachments( void ) const
+{
+	if (m_pVModel == NULL)
+	{
+		return m_pStudioHdr->numlocalattachments;
+	}
+
+	Assert( m_pVModel );
+
+	return m_pVModel->m_attachment.Count();
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: lookup bone by name
+//-----------------------------------------------------------------------------
+
+int Studio_BoneIndexByName( const CStudioHdr *pStudioHdr, const char *pName )
+{
+	// binary search for the bone matching pName
+	int start = 0, end = pStudioHdr->numbones()-1;
+	const byte *pBoneTable = pStudioHdr->GetBoneTableSortedByName();
+	mstudiobone_t *pbones = pStudioHdr->pBone( 0 );
+	while (start <= end)
+	{
+		int mid = (start + end) >> 1;
+		int cmp = Q_stricmp( pbones[pBoneTable[mid]].pszName(), pName );
+		
+		if ( cmp < 0 )
+		{
+			start = mid + 1;
+		}
+		else if ( cmp > 0 )
+		{
+			end = mid - 1;
+		}
+		else
+		{
+			return pBoneTable[mid];
+		}
+	}
+	return -1;
+}
+
+matrix3x4_t *CBoneCache::BoneArray()
+{
+	return (matrix3x4_t *)( (char *)(this+1) + m_matrixOffset );
+}
+
+short *CBoneCache::StudioToCached()
+{
+	return (short *)( (char *)(this+1) );
+}
+
+matrix3x4_t *CBoneCache::GetCachedBone( int studioIndex )
+{
+	int cachedIndex = StudioToCached()[studioIndex];
+	if ( cachedIndex >= 0 )
+	{
+		return BoneArray() + cachedIndex;
+	}
+	return NULL;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: finds how much of an animation to play to move given linear distance
+//-----------------------------------------------------------------------------
+
+float Studio_FindAnimDistance( mstudioanimdesc_t *panim, float flDist )
+{
+	float	prevframe = 0;
+
+	if (flDist <= 0)
+		return 0.0;
+
+	for (int i = 0; i < panim->nummovements; i++)
+	{
+		mstudiomovement_t *pmove = panim->pMovement( i );
+
+		float flMove = (pmove->v0 + pmove->v1) * 0.5;
+
+		if (flMove >= flDist)
+		{
+			float root1, root2;
+
+			// d = V0 * t + 1/2 (V1-V0) * t^2
+			if (SolveQuadratic( 0.5 * (pmove->v1 - pmove->v0), pmove->v0, -flDist, root1, root2 ))
+			{
+				float cpf = 1.0 / (panim->numframes - 1);  // cycles per frame
+
+				return (prevframe + root1 * (pmove->endframe - prevframe)) * cpf;
+			}
+			return 0.0;
+		}
+		else
+		{
+			flDist -= flMove;
+			prevframe = pmove->endframe;
+		}
+	}
+	return 1.0;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: calculate instantaneous velocity in ips at a given point 
+//			in the animations cycle
+// Output:	velocity vector, relative to identity orientation
+//			returns false if animation is not a movement animation
+//-----------------------------------------------------------------------------
+
+bool Studio_AnimVelocity( mstudioanimdesc_t *panim, float flCycle, Vector &vecVelocity )
+{
+	float	prevframe = 0;
+
+	float	flFrame = flCycle * (panim->numframes - 1);
+	flFrame = flFrame - (int)(flFrame / (panim->numframes - 1));
+
+	for (int i = 0; i < panim->nummovements; i++)
+	{
+		mstudiomovement_t *pmove = panim->pMovement( i );
+
+		if (pmove->endframe >= flFrame)
+		{
+			float f = (flFrame - prevframe) / (pmove->endframe - prevframe);
+
+			float vel = pmove->v0 * (1 - f) + pmove->v1 * f;
+			// scale from per block to per sec velocity
+			vel = vel * panim->fps / (pmove->endframe - prevframe);
+
+			vecVelocity = pmove->vector * vel;
+			return true;
+		}
+		else
+		{
+			prevframe = pmove->endframe;
+		}
+	}
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: finds how much of an sequence to play to move given linear distance
+//-----------------------------------------------------------------------------
+
+float Studio_FindSeqDistance( const CStudioHdr *pStudioHdr, int iSequence, const float poseParameter[], float flDist )
+{
+	mstudioanimdesc_t *panim[4];
+	float	weight[4];
+
+	mstudioseqdesc_t &seqdesc = pStudioHdr->pSeqdesc( iSequence );
+	Studio_SeqAnims( pStudioHdr, seqdesc, iSequence, poseParameter, panim, weight );
+	
+	float flCycle = 0;
+
+	for (int i = 0; i < 4; i++)
+	{
+		if (weight[i])
+		{
+			float flLocalCycle = Studio_FindAnimDistance( panim[i], flDist );
+			flCycle = flCycle + flLocalCycle * weight[i];
+		}
+	}
+	return flCycle;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: calculate instantaneous velocity in ips at a given point in the sequence's cycle
+// Output:	velocity vector, relative to identity orientation
+//			returns false if sequence is not a movement sequence
+//-----------------------------------------------------------------------------
+
+bool Studio_SeqVelocity( const CStudioHdr *pStudioHdr, int iSequence, float flCycle, const float poseParameter[], Vector &vecVelocity )
+{
+	mstudioanimdesc_t *panim[4];
+	float	weight[4];
+
+	mstudioseqdesc_t &seqdesc = pStudioHdr->pSeqdesc( iSequence );
+	Studio_SeqAnims( pStudioHdr, seqdesc, iSequence, poseParameter, panim, weight );
+	
+	vecVelocity.Init( );
+
+	bool found = false;
+
+	for (int i = 0; i < 4; i++)
+	{
+		if (weight[i])
+		{
+			Vector vecLocalVelocity;
+
+			if (Studio_AnimVelocity( panim[i], flCycle, vecLocalVelocity ))
+			{
+				vecVelocity = vecVelocity + vecLocalVelocity * weight[i];
+				found = true;
+			}
+		}
+	}
+	return found;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: return pointer to sequence key value buffer
+//-----------------------------------------------------------------------------
+
+const char *Studio_GetKeyValueText( const CStudioHdr *pStudioHdr, int iSequence )
+{
+	if (pStudioHdr && pStudioHdr->SequencesAvailable())
+	{
+		if (iSequence >= 0 && iSequence < pStudioHdr->GetNumSeq())
+		{
+			return pStudioHdr->pSeqdesc( iSequence ).KeyValueText();
+		}
+	}
+	return NULL;
+}

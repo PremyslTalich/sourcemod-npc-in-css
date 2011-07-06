@@ -182,6 +182,7 @@ private:
 };
 
 class CAI_NPC;
+class CE_AI_Hint;
 
 //-----------------------------------------------------------------------------
 // CAI_HintManager
@@ -222,20 +223,20 @@ public:
 	static void			RemoveHintByType( CAI_Hint *pHintToRemove );
 
 	// Interface for searching the hint node list
-	static CAI_Hint		*FindHint( CAI_NPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria );
-	static CAI_Hint		*FindHint( CAI_NPC *pNPC, const CHintCriteria &hintCriteria );
-	static CAI_Hint		*FindHint( const Vector &position, const CHintCriteria &hintCriteria );
-	static CAI_Hint		*FindHint( CAI_NPC *pNPC, Hint_e nHintType, int nFlags, float flMaxDist, const Vector *pMaxDistFrom = NULL );
+	static CE_AI_Hint		*FindHint( CAI_NPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria );
+	static CE_AI_Hint		*FindHint( CAI_NPC *pNPC, const CHintCriteria &hintCriteria );
+	static CE_AI_Hint		*FindHint( const Vector &position, const CHintCriteria &hintCriteria );
+	static CE_AI_Hint		*FindHint( CAI_NPC *pNPC, Hint_e nHintType, int nFlags, float flMaxDist, const Vector *pMaxDistFrom = NULL );
 
 	// Purpose: Finds a random suitable hint within the requested radious of the npc
-	static CAI_Hint		*FindHintRandom( CAI_NPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria );
+	static CE_AI_Hint		*FindHintRandom( CAI_NPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria );
 	static int			FindAllHints( CAI_NPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria, CUtlVector<CAI_Hint *> *pResult );
 	static int			FindAllHints( const Vector &position, const CHintCriteria &hintCriteria, CUtlVector<CAI_Hint *> *pResult )	{ return FindAllHints( NULL, position, hintCriteria, pResult ); }
 //	static int			FindAllHints( CAI_NPC *pNPC, const CHintCriteria &hintCriteria, CUtlVector<CAI_Hint *> *pResult )		{ return FindAllHints( pNPC, pNPC->GetAbsOrigin(), hintCriteria, pResult ); }
 	static int			GetFlags( const char *token );
 
-	static CAI_Hint		*GetFirstHint( AIHintIter_t *pIter );					
-	static CAI_Hint		*GetNextHint( AIHintIter_t *pIter );
+	static CBaseEntity		*GetFirstHint( AIHintIter_t *pIter );					
+	static CBaseEntity		*GetNextHint( AIHintIter_t *pIter );
 
 	static void DumpHints();
 
@@ -267,7 +268,7 @@ private:
 // CAI_Hint
 //-----------------------------------------------------------------------------
 
-class CAI_Hint : public CServerOnlyEntity
+/*class CAI_Hint : public CServerOnlyEntity
 {
 	CE_DECLARE_CLASS( CAI_Hint, CServerOnlyEntity );
 
@@ -339,6 +340,41 @@ private:
 
 	//DECLARE_DATADESC();
 };
+*/
+
+class CE_AI_Hint : public CEntity
+{
+public:
+	CE_DECLARE_CLASS(CE_AI_Hint, CEntity);
+
+public:
+	bool				IsLocked( void );
+	bool				Lock( CBaseEntity* pNPC );
+	void				GetPosition(CCombatCharacter *pBCC, Vector *vPosition);
+	void				Unlock( float delay = 0.0 );
+	bool				IsLockedBy( CEntity *pNPC );
+	Hint_e				HintType( void ) const			{ return (Hint_e)m_NodeData.ptr->nHintType;  };
+	int					GetTargetNode( void ) const		{ return m_nTargetNodeID; }
+	string_t			GetGroup( void ) const		{ return m_NodeData.ptr->strGroup;	}
+	void				DisableForSeconds( float flSeconds );
+	bool				IsDisabled( void ) const		{ return (m_NodeData.ptr->iDisabled != 0); }
+	string_t			HintActivityName( void ) const	{ return m_NodeData.ptr->iszActivityName; }
+	HintIgnoreFacing_t	GetIgnoreFacing() const			{ return m_NodeData.ptr->fIgnoreFacing; }
+
+	Vector				GetDirection();
+	float				Yaw( void );
+
+public:
+	DECLARE_DATAMAP(HintNodeData, m_NodeData);
+	DECLARE_DATAMAP(float, m_flNextUseTime);
+	DECLARE_DATAMAP(CBaseEntity *, m_hHintOwner);
+	DECLARE_DATAMAP_OFFSET(int, m_nTargetNodeID); // "Node is visible to player"
+
+	
+
+
+};
+
 
 #define SF_ALLOW_JUMP_UP 65536
 

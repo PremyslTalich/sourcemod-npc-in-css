@@ -12,7 +12,7 @@
 #pragma once
 #endif
 
-class CAI_BaseNPC;
+enum Hull_t;
 class CAI_Enemies;
 typedef int AI_TaskFailureCode_t;
 struct Task_t;
@@ -30,18 +30,18 @@ public:
 	DECLARE_CLASS_NOBASE( CAI_Component );
 
 protected:
-	CAI_Component( CAI_BaseNPC *pOuter = NULL )
-	 : m_pOuter(pOuter)
+	CAI_Component( CBaseEntity *pOuter = NULL )
+		: m_pOuter(pOuter)
 	{
 	}
 
 	virtual ~CAI_Component() {}
 
 public:
-	virtual void SetOuter( CAI_BaseNPC *pOuter )	{ m_pOuter = pOuter; }
+	virtual void SetOuter( CBaseEntity *pOuter )	{ m_pOuter = pOuter; }
 
-	CAI_BaseNPC *		GetOuter() 			{ return m_pOuter; }
-	const CAI_BaseNPC *	GetOuter() const 	{ return m_pOuter; }
+	CAI_NPC *		GetOuter() 			{ return (CAI_NPC *)CEntity::Instance(m_pOuter); }
+	const CAI_NPC *	GetOuter() const 	{ return (CAI_NPC *)CEntity::Instance(m_pOuter); }
 
 	Hull_t				GetHullType() const;
 	float 				GetHullWidth() const;
@@ -76,11 +76,11 @@ protected:
 	float				GetGravity() const;
 	void				SetGravity( float );
 
-	CBaseEntity*		GetEnemy();
+	CEntity*			GetEnemy();
 	const Vector &		GetEnemyLKP() const;
-	void				TranslateNavGoal( CBaseEntity *pEnemy, Vector &chasePosition);
+	void				TranslateNavGoal( CEntity *pEnemy, Vector &chasePosition);
 	
-	CBaseEntity*		GetTarget();
+	CEntity*			GetTarget();
 	void				SetTarget( CBaseEntity *pTarget );
 	
 	const Task_t*		GetCurTask( void );
@@ -103,7 +103,7 @@ protected:
 
 	void				SetGroundEntity( CBaseEntity *ground );
 
-	CBaseEntity*		GetGoalEnt();
+	CEntity*			GetGoalEnt();
 	void				SetGoalEnt( CBaseEntity *pGoalEnt );
 	
 	void				Remember( int iMemory );
@@ -118,7 +118,7 @@ protected:
 
 	float				GetLastThink( const char *szContext = NULL );
 
-public:
+/*public:
 #if defined(new)
 #error
 #endif
@@ -138,9 +138,9 @@ public:
 		memset( pResult, 0, nBytes );
 		return pResult;
 	}
-
+*/
 private:
-	CAI_BaseNPC *m_pOuter;
+	CBaseEntity *m_pOuter;
 };
 
 //-----------------------------------------------------------------------------

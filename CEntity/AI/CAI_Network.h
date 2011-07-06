@@ -25,6 +25,23 @@ class CVarBitVec;
 #define	AI_MAX_NODE_LINKS 30
 #define MAX_NODES 1500
 
+
+abstract_class INearestNodeFilter
+{
+public:
+	virtual bool IsValid( CAI_Node *pNode ) = 0;
+	virtual bool ShouldContinue() = 0;
+};
+
+struct AI_NearNode_t
+{
+	AI_NearNode_t() {}
+	AI_NearNode_t( int index, float nodedist ) { dist = nodedist; nodeIndex = index; }
+	float	dist;
+	int		nodeIndex;
+};
+
+
 class CAI_Network : public IPartitionEnumerator
 {
 public:
@@ -61,7 +78,8 @@ public:
 			static int warningCount = 0;
 			if ( ++warningCount < 10 )
 			{
-				AssertMsg2( 0, "Node (%i) out of range (%i total)\n", id, m_iNumNodes ); 
+				//CE_assert
+				//AssertMsg2( 0, "Node (%i) out of range (%i total)\n", id, m_iNumNodes ); 
 			}
 		}
 		return NULL; 
@@ -113,6 +131,31 @@ private:
 	CUtlVector<int>		m_GatheredNodes;
 #endif
 };
+
+
+
+class CNodeList : public CUtlPriorityQueue<AI_NearNode_t>
+{
+public:
+	static bool IsLowerPriority( const AI_NearNode_t &node1, const AI_NearNode_t &node2 )
+	{
+		// nodes with greater distance are lower priority
+		return node1.dist > node2.dist;
+	}
+	static bool RevIsLowerPriority( const AI_NearNode_t &node1, const AI_NearNode_t &node2 )
+	{
+		// nodes with lower distance are lower priority
+		return node2.dist > node1.dist;
+	}
+
+	CNodeList( int growSize = 0, int initSize = 0 ) : CUtlPriorityQueue<AI_NearNode_t>( growSize, initSize, IsLowerPriority ) {}
+	CNodeList( AI_NearNode_t *pMemory, int count ) : CUtlPriorityQueue<AI_NearNode_t>( pMemory, count, IsLowerPriority ) {}
+};
+
+
+
+
+
 
 extern CEAI_NetworkManager   *g_pAINetworkManager;
 extern CAI_Network          *g_pBigAINet;

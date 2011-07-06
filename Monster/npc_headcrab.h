@@ -5,13 +5,13 @@
 #include "CEntity.h"
 #include "CCycler_Fix.h"
 #include "CAI_NPC.h"
-#include "soundent.h"
+#include "CSoundent.h"
 
 abstract_class CE_BaseHeadcrab : public CE_Cycler_Fix
 {
 public:
 	CE_DECLARE_CLASS(CE_BaseHeadcrab, CE_Cycler_Fix);
-	
+
 	CE_BaseHeadcrab();
 
 public:
@@ -27,7 +27,7 @@ public:
 	void ThrowAt( const Vector &vecPos );
 	void ThrowThink( void );
 	virtual void JumpAttack( bool bRandomJump, const Vector &vecPos = vec3_origin, bool bThrown = false );
-	void JumpToBurrowHint( CAI_Hint *pHint );
+	void JumpToBurrowHint( CE_AI_Hint *pHint );
 
 	bool	HasHeadroom();
 	void	LeapTouch ( CEntity *pOther );
@@ -49,7 +49,7 @@ public:
 	void	ClampRagdollForce( const Vector &vecForceIn, Vector *vecForceOut );
 	void	Event_Killed( const CTakeDamageInfo &info );
 	void	BuildScheduleTestBits( void );
-	bool	FValidateHintType( CAI_Hint *pHint );
+	bool	FValidateHintType( CBaseEntity *pHint );
 
 	bool	IsJumping( void ) { return m_bMidJump; }
 
@@ -64,13 +64,13 @@ public:
 
 	virtual float	GetReactionDelay( CBaseEntity *pEnemy ) { return 0.0; }
 
-	bool			HandleInteraction(int interactionType, void *data, CCombatCharacter* sourceEnt);
+	bool			HandleInteraction(int interactionType, void *data, CBaseEntity* sourceEnt);
 
 	void	CrawlFromCanister();
 
 	virtual	bool		AllowedToIgnite( void ) { return true; }
 
-	virtual bool CanBeAnEnemyOf( CEntity *pEnemy );
+	virtual bool CanBeAnEnemyOf( CBaseEntity *pEnemy );
 
 	bool IsHangingFromCeiling( void ) 
 	{ 
@@ -82,14 +82,14 @@ public:
 	void DropFromCeiling( void );
 
 	DEFINE_CUSTOM_AI;
-//	DECLARE_DATADESC();
+	DECLARE_DATADESC();
 
-protected:
+public:
 	void HeadcrabInit();
 
 	void Leap( const Vector &vecVel );
 
-	void GrabHintNode( CAI_Hint *pHint );
+	void GrabHintNode( CE_AI_Hint *pHint );
 	bool FindBurrow( const Vector &origin, float distance, bool excludeNear );
 	bool ValidBurrowPoint( const Vector &point );
 	void ClearBurrowPoint( const Vector &origin );
@@ -101,13 +101,12 @@ protected:
 	// Begins the climb from the canister
 	void BeginClimbFromCanister();
 
-	//CE_TODO WTF
-	//void InputBurrow( inputdata_t &inputdata );
-	//void InputBurrowImmediate( inputdata_t &inputdata );
-	//void InputUnburrow( inputdata_t &inputdata );
+	void InputBurrow( inputdata_t &inputdata );
+	void InputBurrowImmediate( inputdata_t &inputdata );
+	void InputUnburrow( inputdata_t &inputdata );
 
-	//void InputStartHangingFromCeiling( inputdata_t &inputdata );
-	//void InputDropFromCeiling( inputdata_t &inputdata );
+	void InputStartHangingFromCeiling( inputdata_t &inputdata );
+	void InputDropFromCeiling( inputdata_t &inputdata );
 
 	int CalcDamageInfo( CTakeDamageInfo *pInfo );
 	void CreateDust( bool placeDecal = true );
@@ -179,7 +178,7 @@ class CE_NPC_FastHeadcrab : public CE_BaseHeadcrab
 {
 public:
 	CE_DECLARE_CLASS( CE_NPC_FastHeadcrab, CE_BaseHeadcrab );
-	
+	DECLARE_DATADESC();
 	CE_NPC_FastHeadcrab();
 
 	void	Precache( void );
@@ -274,10 +273,9 @@ public:
 	virtual void Spawn( void );
 
 	DEFINE_CUSTOM_AI;
+	DECLARE_DATADESC();
 
 private:
-
-
 	void JumpFlinch( const Vector *pvecAwayFromPos );
 	void Panic( float flDuration );
 

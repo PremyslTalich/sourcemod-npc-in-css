@@ -1,116 +1,171 @@
 
 #include "command.h"
-#include "CEntity.h"
-#include "CAI_NetworkManager.h"
-#include "npc_headcrab.h"
+#include "CAI_NPC.h"
+
 
 ConVar *sv_gravity = NULL;
 ConVar *phys_pushscale = NULL;
+ConVar *npc_height_adjust = NULL;
+ConVar *ai_path_adjust_speed_on_immediate_turns = NULL;
+ConVar *ai_path_insert_pause_at_obstruction = NULL;
+ConVar *ai_path_insert_pause_at_est_end = NULL;
+ConVar *scene_flatturn = NULL;
+ConVar *ai_use_clipped_paths = NULL;
+ConVar *ai_moveprobe_usetracelist = NULL;
+ConVar *ai_use_visibility_cache = NULL;
+ConVar *ai_strong_optimizations = NULL;
 
-void endround_CommandCallback(const CCommand &command)
+ConVar *violence_hblood = NULL;
+ConVar *violence_ablood = NULL;
+ConVar *violence_hgibs = NULL;
+ConVar *violence_agibs = NULL;
+
+ConVar *sv_suppress_viewpunch = NULL;
+ConVar *ai_navigator_generate_spikes = NULL;
+ConVar *ai_navigator_generate_spikes_strength = NULL;
+
+ConVar *ai_no_node_cache = NULL;
+ConVar *sv_stepsize = NULL;
+ConVar *hl2_episodic = NULL;
+ConVar *ai_follow_use_points = NULL;
+ConVar *ai_LOS_mode = NULL;
+ConVar *ai_follow_use_points_when_moving = NULL;
+
+ConVar *ammo_hegrenade_max = NULL;
+
+
+void cmd1_CommandCallback(const CCommand &command)
 {
 	int client = g_Monster.GetCommandClient();
 	if(client)
 	{
-		if(command.ArgC() == 2)
-		{
-			CBaseEntity *cbase = g_helpfunc.CreateEntityByName("npc_headcrab_fast");
-			CEntity *cent = CEntity::Instance(cbase);
-
-			cent->Spawn();
-			Vector vec(501.0f,22.7f,70.21f);
-			cent->Teleport(&vec, NULL,NULL);
-			return;
-		}		
-		
-		CBaseEntity *cbase = g_helpfunc.CreateEntityByName("npc_headcrab");
-		CEntity *cent = CEntity::Instance(cbase);
-
-		cent->Spawn();
-		Vector vec(501.0f,22.7f,70.21f);
-		cent->Teleport(&vec, NULL,NULL);
 
 	} else {
+		Vector vec(501.0f,22.7f,70.21f);
 
-		
+		//vec.Init(6220.0f, 2813.0f, 1090.0f);
 
-		//engine->ServerCommand("developer 100\n");
+		//vec.Init(73.18,-54.81,-60.0);
 
-		//CBaseEntity *cc = g_helpfunc.CreateEntityByName("physics_npc_solver");
-	
-		//CEntity *dd = CEntity::Instance(cc);
-		//dd->Spawn();
+		//vec.Init(952.65466,61.566082,-58.339985);
 
 
-		//CBaseEntity *cbase = g_helpfunc.CreateEntityByName("npc_headcrab");
-		//CEntity *cent = CEntity::Instance(cbase);
+		//CEntity *cent = CreateEntityByName("npc_headcrab");
+		/*CEntity *cent2 = CEntity::Instance(cbase2);
+		cent2->Spawn();
+		cent2->Teleport(&vec, NULL,NULL);
+
+		CAI_NPC *hc2 = dynamic_cast<CAI_NPC *>(cent2);*/
 
 		//CE_NPC_Headcrab *hc = dynamic_cast<CE_NPC_Headcrab *>(cent);
 
-		CBaseEntity *cbase = g_helpfunc.CreateEntityByName("npc_headcrab_fast");
-		CEntity *cent = CEntity::Instance(cbase);
-		CE_NPC_FastHeadcrab *hc = dynamic_cast<CE_NPC_FastHeadcrab *>(cent);
+		//CEntity *cent = CreateEntityByName("npc_headcrab_fast");
+		//CEntity *cent = CEntity::Instance(cbase);
+		//CE_NPC_FastHeadcrab *hc = dynamic_cast<CE_NPC_FastHeadcrab *>(cent);
 
-		/*CBaseEntity *cbase = g_helpfunc.CreateEntityByName("npc_headcrab_black");
-		CEntity *cent = CEntity::Instance(cbase);
-		CE_NPC_BlackHeadcrab *hc = dynamic_cast<CE_NPC_BlackHeadcrab *>(cent);*/
+		//CEntity *cent = CreateEntityByName("npc_headcrab_black");
+		//CEntity *cent = CEntity::Instance(cbase);
+		//CE_NPC_BlackHeadcrab *hc = dynamic_cast<CE_NPC_BlackHeadcrab *>(cent);
 
-
+		//CEntity *cent = CreateEntityByName("npc_fastzombie");
+		//CEntity *cent = CreateEntityByName("npc_fastzombie_torso");
+		//CEntity *cent = CreateEntityByName("npc_zombie_torso");
+		CEntity *cent = CreateEntityByName("npc_zombie");
+		//CEntity *cent = CreateEntityByName("npc_poisonzombie");
 		
-		cent->Spawn();
+		//CEntity *cent = CreateEntityByName("npc_manhack");
+		//CEntity *cent = CreateEntityByName("npc_antlionguard");
 
-		Vector vec(501.0f,22.7f,70.21f);
-		cent->Teleport(&vec, NULL,NULL);
+		//CEntity *cent = CreateEntityByName("npc_stalker");
+		//CEntity *cent = CreateEntityByName("npc_antlion");
 
-		//hc->PlayerHasIlluminatedNPC(NULL, 0);	
+		//CEntity *cent = CreateEntityByName("npc_vortigaunt");
+
+		//CEntity *cent = CreateEntityByName("npc_rollermine");
+		
+		//CEntity *cent = CreateEntityByName("npc_test");
+
+		CBaseEntity *cbase = cent->BaseEntity();
+
+		CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);
+		
+		//DispatchSpawn(cbase);
+		
+		hc->Spawn();
+
+		hc->SetMoveType(MOVETYPE_NONE);
+
+		hc->Teleport(&vec, NULL,NULL);
 
 		edict_t *pEdict = servergameents->BaseEntityToEdict(cbase);
-		//DispatchSpawn(pEdict);
-		META_CONPRINTF("%p\n",cbase);
+		META_CONPRINTF("%p %d %d\n",cbase, cent->entindex_non_network(), engine->IndexOfEdict(pEdict));
+
 	}
 }
 
-
-void endround2_CommandCallback(const CCommand &command)
+void cmd2_CommandCallback(const CCommand &command)
 {
-	/*for (int i=0;i<=gpGlobals->maxEntities;i++)
+	for (int i=0;i<ENTITY_ARRAY_SIZE;i++)
 	{
-		edict_t *pEdict = engine->PEntityOfEntIndex(i);
-		if(IsValidEdict(pEdict) && IsValidEntity(pEdict))
+		CEntity *cent = CEntity::Instance(i);
+		if(cent != NULL)
 		{
-			const char *cls = pEdict->GetClassName();
-			META_CONPRINTF("%s\n",cls);
+			META_CONPRINTF("%s\n",cent->GetClassname());
+
 		}
-	}*/
+	}
+}
+
+void monster_dump_CommandCallback(const CCommand &command)
+{
+	GetEntityManager()->PrintDump();
+}
+
+#define GET_CONVAR(name) \
+	name = g_pCVar->FindVar(#name); \
+	if(name == NULL) { \
+		META_CONPRINTF("[%s] %s - FAIL\n",g_Monster.GetLogTag(), #name); \
+		return false; \
+	}
+
+
+bool CommandInitialize()
+{
+	//new ConCommand("e5",cmd1_CommandCallback, "", FCVAR_GAMEDLL);
+	//new ConCommand("e6",cmd2_CommandCallback, "", FCVAR_GAMEDLL);
+	new ConCommand("monster_dump",monster_dump_CommandCallback, "", FCVAR_GAMEDLL);
+
+	GET_CONVAR(sv_gravity);
+	GET_CONVAR(phys_pushscale);
+	GET_CONVAR(npc_height_adjust);
+
+	GET_CONVAR(ai_path_adjust_speed_on_immediate_turns);
+	GET_CONVAR(ai_path_insert_pause_at_obstruction);
+	GET_CONVAR(ai_path_insert_pause_at_est_end);
+	GET_CONVAR(ai_use_clipped_paths);
+	GET_CONVAR(ai_moveprobe_usetracelist);
+	GET_CONVAR(scene_flatturn);
+
+	GET_CONVAR(violence_hblood);
+	GET_CONVAR(violence_ablood);
+	GET_CONVAR(violence_hgibs);
+	GET_CONVAR(violence_agibs);
+
+	GET_CONVAR(sv_suppress_viewpunch);
+	GET_CONVAR(ai_use_visibility_cache);
+	GET_CONVAR(ai_strong_optimizations);
+	GET_CONVAR(ai_navigator_generate_spikes);
+	GET_CONVAR(ai_navigator_generate_spikes_strength);
+	GET_CONVAR(ai_no_node_cache);
+
+	GET_CONVAR(sv_stepsize);
+	GET_CONVAR(hl2_episodic);
+	GET_CONVAR(ai_follow_use_points);
+	GET_CONVAR(ai_LOS_mode);
+	GET_CONVAR(ai_follow_use_points_when_moving);
+
+	GET_CONVAR(ammo_hegrenade_max);
 	
 
-	CEAI_NetworkManager::InitializeAINetworks();
-
-	for (int i=1;i<=g_Monster.GetMaxClients();i++)
-	{
-		IGamePlayer *gPlayer = playerhelpers->GetGamePlayer(i);
-		if(gPlayer == NULL || !gPlayer->IsInGame())
-			continue;
-		CEntity *cent = CEntity::Instance(i);
-		if(cent->IsAlive())
-		{
-			META_CONPRINTF("%s\n",gPlayer->GetName());
-		}
-	}
-}
-
-void endround3_CommandCallback(const CCommand &command)
-{
-	engine->ServerCommand("exec 1.cfg\n");
-}
-
-void CommandInitialize()
-{
-	new ConCommand("e5",endround_CommandCallback, "", FCVAR_GAMEDLL);
-	new ConCommand("e6",endround2_CommandCallback, "", FCVAR_GAMEDLL);
-	new ConCommand("pp",endround3_CommandCallback, "", FCVAR_GAMEDLL);
-
-	sv_gravity = g_pCVar->FindVar("sv_gravity");
-
-	phys_pushscale = g_pCVar->FindVar("phys_pushscale");
+	return true;
 }

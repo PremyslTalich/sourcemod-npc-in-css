@@ -1,9 +1,11 @@
 #ifndef _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
 #define _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
 
+#include "datamap.h"
 #include "smsdk_ext.h"
 #include "sh_list.h"
 
+class CBasePlayer;
 
 #include <eiface.h>
 #include <igameevents.h>
@@ -12,19 +14,25 @@
 #include <IEngineTrace.h>
 #include <IEngineSound.h>
 #include <IStaticPropMgr.h>
+#include <IEffects.h>
 #include <filesystem.h>
 #include <inetchannelinfo.h>
 #include <vphysics_interface.h>
+#include <igamemovement.h>
+#include <decals.h>
 #include <random.h>
 #include <worldsize.h>
 #include <iplayerinfo.h>
+#include <itempents.h>
 #include <shareddefs.h>
 #include <mathlib.h>
+#include <itoolentity.h>
 
 #include "ehandle.h"
 class CBaseEntity;
 typedef CHandle<CBaseEntity> EHANDLE;
 
+class CBasePlayer;
 
 //#define GAME_DLL
 //#include "cbase.h"
@@ -40,7 +48,6 @@ typedef CHandle<CBaseEntity> EHANDLE;
 //#include "CEntity.h"
 
 #include "sign_func.h"
-#include "entitydata.h"
 
 
 class Monster :
@@ -59,11 +66,11 @@ public:
 public:
 	bool RegisterConCommandBase(ConCommandBase *pCommand);
 	void ServerActivate(edict_t *pEdictList, int edictCount, int clientMax);
+	bool LevelInit(char const *pMapName, char const *pMapEntities, char const *pOldLevel, char const *pLandmarkName, bool loadGame, bool background);
 	void OnLevelShutdown();
 	void SetCommandClient( int cmd );	
 	int GetCommandClient();
 	int GetMaxClients();
-
 };
 
 class CEntity;
@@ -81,15 +88,22 @@ extern IVModelInfo *modelinfo;
 extern ISpatialPartition *partition;
 extern IPhysicsSurfaceProps *physprops;
 extern IPhysicsCollision *physcollision;
+extern IPhysicsEnvironment *physenv;
+extern IPhysics *iphysics;
 extern ISoundEmitterSystemBase *soundemitterbase;
-
-
-extern IPhysicsObjectPairHash *myg_EntityCollisionHash;
+extern IFileSystem *filesystem;
+extern IDecalEmitterSystem *decalsystem;
+extern IEngineSound *enginesound;
+extern ITempEntsSystem *te;
+extern IPhysicsObjectPairHash *my_g_EntityCollisionHash;
+extern IGameMovement *g_pGameMovement;
+extern IServerTools *servertools;
 
 extern IGameConfig *g_pGameConf;
 extern CBaseEntityList *g_pEntityList;
 extern unsigned long serverdll_addr;
-extern CEntity *g_WorldEntity;
+extern CEntity *my_g_WorldEntity;
+extern CBaseEntity *my_g_WorldEntity_cbase;
 
 #endif
 

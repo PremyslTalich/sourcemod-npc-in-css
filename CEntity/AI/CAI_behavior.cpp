@@ -186,7 +186,7 @@ float CAI_BehaviorBase::GetDefaultNavGoalTolerance()
 
 //-------------------------------------
 
-bool CAI_BehaviorBase::FValidateHintType( CAI_Hint *pHint )
+bool CAI_BehaviorBase::FValidateHintType( CBaseEntity *pHint )
 {
 	m_fOverrode = false;
 	return false;
@@ -257,7 +257,7 @@ void CAI_BehaviorBase::OnSeeEntity( CBaseEntity *pEntity )
 
 //-------------------------------------
 
-void CAI_BehaviorBase::OnFriendDamaged( CCombatCharacter *pSquadmate, CBaseEntity *pAttacker )
+void CAI_BehaviorBase::OnFriendDamaged( CBaseEntity *pSquadmate, CBaseEntity *pAttacker )
 {
 	Assert( m_pBackBridge != NULL );
 
@@ -418,18 +418,10 @@ bool CAI_BehaviorBase::NotifyChangeBehaviorStatus( bool fCanFinishSchedule )
 		
 	if ( fInterrupt )
 	{
-		if ( GetOuter()->m_hCine )
+		CEAI_ScriptedSequence *m_hCine = GetOuter()->Get_m_hCine();
+		if ( m_hCine)
 		{
-			/*if( GetOuter()->m_hCine->PlayedSequence() )
-			{
-				DevWarning( "NPC: %s canceled running script %s due to behavior change\n", GetOuter()->GetDebugName(), GetOuter()->m_hCine->GetDebugName() );
-			}
-			else
-			{
-				DevWarning( "NPC: %s canceled script %s without playing, due to behavior change\n", GetOuter()->GetDebugName(), GetOuter()->m_hCine->GetDebugName() );
-			}*/
-
-			GetOuter()->m_hCine->CancelScript();
+			m_hCine->CancelScript();
 		}
 
 		//!!!HACKHACK
@@ -444,14 +436,14 @@ bool CAI_BehaviorBase::NotifyChangeBehaviorStatus( bool fCanFinishSchedule )
 
 int	CAI_BehaviorBase::Save( ISave &save )				
 { 
-	return save.WriteAll( this, /*GetDataDescMap() */NULL);	
+	return save.WriteAll( this, GetDataDescMap());	
 }
 
 //-------------------------------------
 
 int	CAI_BehaviorBase::Restore( IRestore &restore )
 { 
-	return restore.ReadAll( this, /*GetDataDescMap() */NULL);	
+	return restore.ReadAll( this, GetDataDescMap());	
 }
 
 //-------------------------------------

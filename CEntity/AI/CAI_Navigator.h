@@ -18,6 +18,8 @@
 #include "ai_navgoaltype.h"
 #include "ai_navtype.h"
 #include "CAI_motor.h"
+#include "CAI_localnavigator.h"
+#include "CAI_pathfinder.h"
 
 class CEntity;
 class CAI_NPC;
@@ -278,7 +280,7 @@ class CAI_Navigator : public CAI_Component,
 public:
 	// --------------------------------
 	
-	CAI_Navigator(CAI_BaseNPC *pOuter);
+	CAI_Navigator(CAI_NPC *pOuter);
 	virtual ~CAI_Navigator();
 
 	virtual void Init( CAI_Network *pNetwork );
@@ -336,7 +338,7 @@ public:
 	// Set the facing direction at arrival
 	void				SetArrivalDirection( const Vector &goalDirection );
 	void				SetArrivalDirection( const QAngle &goalAngle );
-	void				SetArrivalDirection( CBaseEntity *pTarget );
+	void				SetArrivalDirection( CEntity *pTarget );
 	Vector				GetArrivalDirection( );
 
 	// Set the speed to reach at arrival (
@@ -439,7 +441,7 @@ public:
 
 	float				CalcYawSpeed();
 	float				GetStepDownMultiplier();
-	CBaseEntity *		GetNextPathcorner( CBaseEntity *pPathCorner );
+	CEntity *			GetNextPathcorner( CEntity *pPathCorner );
 	virtual void		OnScheduleChange();
 	
 	// --------------------------------
@@ -449,14 +451,14 @@ public:
 
 	// --------------------------------
 
-	CBaseEntity *		GetBlockingEntity()	{ return m_hLastBlockingEnt; }
+	CEntity *			GetBlockingEntity()	{ return CEntity::Instance(m_hLastBlockingEnt); }
 	
 protected:
 	// --------------------------------
 	//
 	// Common services provided by CAI_BaseNPC
 	//
-	CBaseEntity *		GetNavTargetEntity();
+	CEntity *			GetNavTargetEntity();
 	void				TaskMovementComplete();
 	float				MaxYawSpeed();
 	void				SetSpeed( float );
@@ -539,7 +541,7 @@ public:
 
 private:
 	bool				DoFindPath( void );							// Find a route
-	bool				DoFindPathToPathcorner( CBaseEntity *pPathCorner );
+	bool				DoFindPathToPathcorner( CEntity *pPathCorner );
 
 protected:
 	virtual bool		DoFindPathToPos(void);

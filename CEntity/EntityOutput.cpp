@@ -20,6 +20,8 @@
 #include "EntityOutput.h"
 #include "isaverestore.h"
 
+#include <mempool.h>
+
 /*
 extern ISaveRestoreOps *variantFuncs;
 
@@ -31,11 +33,10 @@ BEGIN_SIMPLE_DATADESC( CEventAction )
 	DEFINE_FIELD( m_nTimesToFire, FIELD_INTEGER ),
 	DEFINE_FIELD( m_iIDStamp, FIELD_INTEGER ),
 END_DATADESC()
-
-BEGIN_SIMPLE_DATADESC( CBaseEntityOutput )
-	//DEFINE_CUSTOM_FIELD( m_Value, variantFuncs ),
-END_DATADESC()
 */
+
+CMemoryPool *g_EntityListPool = NULL;
+
 FireOutputFuncType FireOutputFunc = NULL;
 
 void CBaseEntityOutput::FireOutput(variant_t Value, CBaseEntity *pActivator, CBaseEntity *pCaller, float fDelay)
@@ -47,6 +48,8 @@ void CBaseEntityOutput::FireOutput(variant_t Value, CBaseEntity *pActivator, CBa
 	FireOutputFunc(this, NULL, Value, pActivator, pCaller, fDelay);
 #endif
 }
+
+
 
 void COutputEvent::FireOutput(CBaseEntity *pActivator, CBaseEntity *pCaller, float fDelay)
 {
@@ -88,3 +91,21 @@ void COutputEvent::FireOutput(CEntity *pActivator, CBaseEntity *pCaller, float f
 	else
 		FireOutput(*pActivator, pCaller, fDelay);
 }
+
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Destructor.
+//-----------------------------------------------------------------------------
+
+CBaseEntityOutput::~CBaseEntityOutput()
+{
+	CEventAction *ev = m_ActionList;
+	while (ev != NULL)
+	{
+		CEventAction *pNext = ev->m_pNext;	
+		g_EntityListPool->Free(ev);
+		ev = pNext;
+	}
+}
+

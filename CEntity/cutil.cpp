@@ -23,6 +23,50 @@
 #include "vphysics/object_hash.h"
 #include "model_types.h"
 #include "CPlayer.h"
+#include "CAI_NPC.h"
+#include "effect_dispatch_data.h"
+#include "CE_recipientfilter.h"
+
+
+int ENTINDEX( CBaseEntity *pEnt )
+{
+	CEntity *cent = CEntity::Instance(pEnt);
+	// This works just like ENTINDEX for edicts.
+	if ( cent )
+		return cent->entindex();
+	else
+		return 0;
+}
+
+IChangeInfoAccessor *CBaseEdict::GetChangeAccessor()
+{
+	return engine->GetChangeAccessor( (const edict_t *)this );
+}
+
+bool IsValidEdict(edict_t *pEdict)
+{
+	if (!pEdict)
+	{
+		return false;
+	}
+	return pEdict->IsFree() ? false : true;
+}
+
+bool IsValidEntity(edict_t *pEdict)
+{
+	if(!pEdict)
+	{
+		return false;
+	}
+
+	IServerUnknown *pUnknown = pEdict->GetUnknown();
+	if (!pUnknown)
+	{
+		return false;
+	}
+	CBaseEntity *pEntity = pUnknown->GetBaseEntity();
+	return (pEntity != NULL) ? true : false;
+}
 
 const char *variant_t::ToString( void ) const
 {
@@ -136,6 +180,232 @@ void variant_t::Set( fieldtype_t ftype, void *data )
 	}
 }
 
+void variant_t::SetOther( void *data )
+{
+	switch ( fieldType )
+	{
+	case FIELD_BOOLEAN:		*((bool *)data) = bVal != 0;		break;
+	case FIELD_CHARACTER:	*((char *)data) = iVal;				break;
+	case FIELD_SHORT:		*((short *)data) = iVal;			break;
+	case FIELD_INTEGER:		*((int *)data) = iVal;				break;
+	case FIELD_STRING:		*((string_t *)data) = iszVal;		break;
+	case FIELD_FLOAT:		*((float *)data) = flVal;			break;
+	case FIELD_COLOR32:		*((color32 *)data) = rgbaVal;		break;
+
+	case FIELD_VECTOR:
+	case FIELD_POSITION_VECTOR:
+	{
+		((float *)data)[0] = vecVal[0];
+		((float *)data)[1] = vecVal[1];
+		((float *)data)[2] = vecVal[2];
+		break;
+	}
+
+	case FIELD_EHANDLE:		*((EHANDLE *)data) = eVal;			break;
+	case FIELD_CLASSPTR:	*((CBaseEntity **)data) = eVal;		break;
+	default:	break;
+	}
+}
+
+bool variant_t::Convert( fieldtype_t newType )
+{
+	if ( newType == fieldType )
+	{
+		return true;
+	}
+
+	//
+	// Converting to a null value is easy.
+	//
+	if ( newType == FIELD_VOID )
+	{
+		Set( FIELD_VOID, NULL );
+		return true;
+	}
+
+	//
+	// FIELD_INPUT accepts the variant type directly.
+	//
+	if ( newType == FIELD_INPUT )
+	{
+		return true;
+	}
+
+	switch ( fieldType )
+	{
+		case FIELD_INTEGER:
+		{
+			switch ( newType )
+			{
+				case FIELD_FLOAT:
+				{
+					SetFloat( (float) iVal );
+					return true;
+				}
+
+				case FIELD_BOOLEAN:
+				{
+					SetBool( iVal != 0 );
+					return true;
+				}
+
+				default:
+					break;
+			}
+			break;
+
+			default:
+				break;
+		}
+
+		case FIELD_FLOAT:
+		{
+			switch ( newType )
+			{
+				case FIELD_INTEGER:
+				{
+					SetInt( (int) flVal );
+					return true;
+				}
+
+				case FIELD_BOOLEAN:
+				{
+					SetBool( flVal != 0 );
+					return true;
+				}
+
+				default:
+					break;
+			}
+			break;
+		}
+
+		//
+		// Everyone must convert from FIELD_STRING if possible, since
+		// parameter overrides are always passed as strings.
+		//
+		case FIELD_STRING:
+		{
+			switch ( newType )
+			{
+				case FIELD_INTEGER:
+				{
+					if (iszVal != NULL_STRING)
+					{
+						SetInt(atoi(STRING(iszVal)));
+					}
+					else
+					{
+						SetInt(0);
+					}
+					return true;
+				}
+
+				case FIELD_FLOAT:
+				{
+					if (iszVal != NULL_STRING)
+					{
+						SetFloat(atof(STRING(iszVal)));
+					}
+					else
+					{
+						SetFloat(0);
+					}
+					return true;
+				}
+
+				case FIELD_BOOLEAN:
+				{
+					if (iszVal != NULL_STRING)
+					{
+						SetBool( atoi(STRING(iszVal)) != 0 );
+					}
+					else
+					{
+						SetBool(false);
+					}
+					return true;
+				}
+
+				case FIELD_VECTOR:
+				{
+					Vector tmpVec = vec3_origin;
+					if (sscanf(STRING(iszVal), "[%f %f %f]", &tmpVec[0], &tmpVec[1], &tmpVec[2]) == 0)
+					{
+						// Try sucking out 3 floats with no []s
+						sscanf(STRING(iszVal), "%f %f %f", &tmpVec[0], &tmpVec[1], &tmpVec[2]);
+					}
+					SetVector3D( tmpVec );
+					return true;
+				}
+
+				case FIELD_COLOR32:
+				{
+					int nRed = 0;
+					int nGreen = 0;
+					int nBlue = 0;
+					int nAlpha = 255;
+
+					sscanf(STRING(iszVal), "%d %d %d %d", &nRed, &nGreen, &nBlue, &nAlpha);
+					SetColor32( nRed, nGreen, nBlue, nAlpha );
+					return true;
+				}
+
+				case FIELD_EHANDLE:
+				{
+					// convert the string to an entity by locating it by classname
+					CBaseEntity *ent = NULL;
+					if ( iszVal != NULL_STRING )
+					{
+						// FIXME: do we need to pass an activator in here?
+						CEntity *cent = g_helpfunc.FindEntityByName( (CBaseEntity *)NULL, iszVal );
+						ent = (cent)? cent->BaseEntity() : NULL;
+					}
+					SetEntity( ent );
+					return true;
+				}
+
+				default:
+					break;
+			}
+		
+			break;
+		}
+
+		case FIELD_EHANDLE:
+		{
+			switch ( newType )
+			{
+				case FIELD_STRING:
+				{
+					// take the entities targetname as the string
+					string_t iszStr = NULL_STRING;
+					if ( eVal != NULL )
+					{
+						SetString( MAKE_STRING(CEntity::Instance(eVal)->GetEntityName()) );
+					}
+					return true;
+				}
+
+				default:
+					break;
+			}
+			break;
+		}
+	}
+
+	// invalid conversion
+	return false;
+}
+
+void variant_t::SetEntity( CBaseEntity *val ) 
+{ 
+	eVal = val;
+	fieldType = FIELD_EHANDLE; 
+}
+
+
+
 /**
  * This is the worst util ever, incredibly specific usage.
  * Searches a datamap for output types and swaps the SaveRestoreOps pointer for the global eventFuncs one.
@@ -145,7 +415,7 @@ void UTIL_PatchOutputRestoreOps(datamap_t *pMap)
 {
 	for (int i=0; i<pMap->dataNumFields; i++)
 	{
-		if (pMap->dataDesc[i].flags & FTYPEDESC_OUTPUT)
+		if (pMap->dataDesc[i].flags & FTYPEDESC_OUTPUT && pMap->dataDesc[i].pSaveRestoreOps == NULL)
 		{
 			pMap->dataDesc[i].pSaveRestoreOps = eventFuncs;
 		}
@@ -156,6 +426,13 @@ void UTIL_PatchOutputRestoreOps(datamap_t *pMap)
 		}
 	}
 }
+
+bool CGameTrace::DidHitWorld() const
+{
+	return m_pEnt == GetWorldEntity()->BaseEntity();
+}
+
+
 
 
 //-----------------------------------------------------------------------------
@@ -225,6 +502,72 @@ bool StandardFilterRules( IHandleEntity *pHandleEntity, int fContentsMask )
 
 
 
+class CTracePassFilter : public CTraceFilter
+{
+public:
+	CTracePassFilter( IHandleEntity *pPassEnt ) : m_pPassEnt( pPassEnt ) {}
+
+	bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
+	{
+		if ( !StandardFilterRules( pHandleEntity, contentsMask ) )
+			return false;
+
+		if (!PassServerEntityFilter( pHandleEntity, m_pPassEnt ))
+			return false;
+
+		return true;
+	}
+
+private:
+	IHandleEntity *m_pPassEnt;
+};
+
+bool CTraceFilterOnlyNPCsAndPlayer::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
+{
+	if ( CE_CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask ) )
+	{
+		CEntity *pEntity = CE_EntityFromEntityHandle( pHandleEntity );
+		if ( !pEntity )
+			return false;
+
+//#ifdef CSTRIKE_DLL
+		if ( pEntity->Classify() == CLASS_PLAYER_ALLY )
+			return true; // CS hostages are CLASS_PLAYER_ALLY but not IsNPC()
+//#endif // CSTRIKE_DLL
+		return (pEntity->IsNPC() || pEntity->IsPlayer());
+	}
+	return false;
+}
+
+
+//-----------------------------------------------------------------------------
+// Trace filter that can take a list of entities to ignore
+//-----------------------------------------------------------------------------
+CTraceFilterSimpleList::CTraceFilterSimpleList( int collisionGroup ) :
+	CE_CTraceFilterSimple( NULL, collisionGroup )
+{
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CTraceFilterSimpleList::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
+{
+	if ( m_PassEntities.Find(pHandleEntity) != m_PassEntities.InvalidIndex() )
+		return false;
+
+	return CE_CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask );
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Add an entity to my list of entities to ignore in the trace
+//-----------------------------------------------------------------------------
+void CTraceFilterSimpleList::AddEntityToIgnore( IHandleEntity *pEntity )
+{
+	m_PassEntities.AddToTail( pEntity );
+}
 
 
 
@@ -241,7 +584,7 @@ public:
 	{
 		m_pRootParent = CEntity::Instance(pEntity)->GetRootMoveParent();
 		m_pEntity = CEntity::Instance(pEntity);
-		m_checkHash = myg_EntityCollisionHash->IsObjectInHash(pEntity);
+		m_checkHash = my_g_EntityCollisionHash->IsObjectInHash(pEntity);
 	}
 
 	bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
@@ -257,7 +600,7 @@ public:
 
 		if ( m_checkHash )
 		{
-			if ( myg_EntityCollisionHash->IsObjectPairInHash( m_pEntity, pEntity ) )
+			if ( my_g_EntityCollisionHash->IsObjectPairInHash( m_pEntity->BaseEntity(), pEntity->BaseEntity() ) )
 				return false;
 		}
 
@@ -339,6 +682,7 @@ bool CE_CTraceFilterSimple::ShouldHitEntity( IHandleEntity *pHandleEntity, int c
 	return true;
 }
 
+
 void UTIL_TraceLine( const Vector& vecAbsStart, const Vector& vecAbsEnd, unsigned int mask, 
 					 const IHandleEntity *ignore, int collisionGroup, trace_t *ptr )
 {
@@ -380,6 +724,18 @@ void UTIL_TraceHull( const Vector &vecAbsStart, const Vector &vecAbsEnd, const V
 
 }
 
+void UTIL_TraceEntity( CEntity *pEntity, const Vector &vecAbsStart, const Vector &vecAbsEnd, unsigned int mask, trace_t *ptr )
+{
+	ICollideable *pCollision = pEntity->GetCollideable();
+
+	// Adding this assertion here so game code catches it, but really the assertion belongs in the engine
+	// because one day, rotated collideables will work!
+	//Assert( pCollision->GetCollisionAngles() == vec3_angle );
+
+	CTraceFilterEntity traceFilter( pEntity->BaseEntity(), pCollision->GetCollisionGroup() );
+
+	enginetrace->SweepCollideable( pCollision, vecAbsStart, vecAbsEnd, pCollision->GetCollisionAngles(), mask, &traceFilter, ptr );
+}
 
 void UTIL_TraceEntity( CEntity *pEntity, const Vector &vecAbsStart, const Vector &vecAbsEnd, 
 					  unsigned int mask, const IHandleEntity *pIgnore, int nCollisionGroup, trace_t *ptr )
@@ -389,13 +745,19 @@ void UTIL_TraceEntity( CEntity *pEntity, const Vector &vecAbsStart, const Vector
 
 	// Adding this assertion here so game code catches it, but really the assertion belongs in the engine
 	// because one day, rotated collideables will work!
-	Assert( pCollision->GetCollisionAngles() == vec3_angle );
+	//Assert( pCollision->GetCollisionAngles() == vec3_angle );
 
 	CTraceFilterEntityIgnoreOther traceFilter( pEntity->BaseEntity(), pIgnore, nCollisionGroup );
 
 	enginetrace->SweepCollideable( pCollision, vecAbsStart, vecAbsEnd, pCollision->GetCollisionAngles(), mask, &traceFilter, ptr );
 }
 
+void UTIL_TraceLineFilterEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Vector &vecAbsEnd, 
+					   unsigned int mask, int nCollisionGroup, trace_t *ptr )
+{
+	CTraceFilterEntity traceFilter( pEntity, nCollisionGroup );
+	UTIL_TraceLine( vecAbsStart, vecAbsEnd, mask, &traceFilter, ptr );
+}
 
 void UTIL_SetOrigin(CEntity *entity, const Vector &vecOrigin, bool bFireTriggers)
 {
@@ -616,6 +978,14 @@ void UTIL_ScreenShake( const Vector &center, float amplitude, float frequency, f
 		UTIL_ScreenShake(players, total, localAmplitude, frequency, duration, eCommand );
 }
 
+void UTIL_CreateDust(const Vector &pos, const QAngle &angle, float size, float speed)
+{
+	Vector dir;
+	AngleVectors(angle, &dir);
+	CPVSFilter filter( pos );
+	te->Dust(filter, 0.0f, pos, dir, size, speed);
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -636,4 +1006,939 @@ int UTIL_EntitiesInSphere( const Vector &center, float radius, CFlaggedEntitiesE
 {
 	partition->EnumerateElementsInSphere( PARTITION_ENGINE_NON_STATIC_EDICTS, center, radius, false, pEnum );
 	return pEnum->GetCount();
+}
+
+
+bool UTIL_ShouldShowBlood( int color )
+{
+	if ( color != DONT_BLEED )
+	{
+		return true;
+	}
+	return false;
+}
+
+void UTIL_BloodDrips( const Vector &origin, const Vector &direction, int color, int amount )
+{
+	//fixed!!
+	IPredictionSystem::SuppressHostEvents(NULL);
+
+	if ( !UTIL_ShouldShowBlood( color ) )
+		return;
+
+	if ( color == DONT_BLEED || amount == 0 )
+		return;
+
+	amount *= 5;
+
+	if ( amount > 255 )
+		amount = 255;
+
+	if (color == BLOOD_COLOR_MECH)
+	{
+		g_pEffects->Sparks(origin);
+		if (random->RandomFloat(0, 2) >= 1)
+		{
+			UTIL_Smoke(origin, random->RandomInt(10, 15), 10);
+		}
+	}
+	else
+	{
+		// Normal blood impact
+		UTIL_BloodImpact( origin, direction, color, amount );
+	}
+}	
+
+extern int g_sModelIndexSmoke;
+void UTIL_Smoke( const Vector &origin, const float scale, const float framerate )
+{
+	g_pEffects->Smoke( origin, g_sModelIndexSmoke, scale, framerate );
+}
+
+void UTIL_BloodImpact( const Vector &pos, const Vector &dir, int color, int amount )
+{
+	CEffectData	data;
+
+	data.m_vOrigin = pos;
+	data.m_vNormal = dir;
+	data.m_flScale = (float)amount;
+	data.m_nColor = (unsigned char)color;
+
+	g_helpfunc.DispatchEffect("bloodimpact", data );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Spawn some blood particles
+//-----------------------------------------------------------------------------
+void SpawnBlood(Vector vecSpot, const Vector &vecDir, int bloodColor, float flDamage)
+{
+	UTIL_BloodDrips( vecSpot, vecDir, bloodColor, (int)flDamage );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Slightly modified strtok. Does not modify the input string. Does
+//			not skip over more than one separator at a time. This allows parsing
+//			strings where tokens between separators may or may not be present:
+//
+//			Door01,,,0 would be parsed as "Door01"  ""  ""  "0"
+//			Door01,Open,,0 would be parsed as "Door01"  "Open"  ""  "0"
+//
+// Input  : token - Returns with a token, or zero length if the token was missing.
+//			str - String to parse.
+//			sep - Character to use as separator. UNDONE: allow multiple separator chars
+// Output : Returns a pointer to the next token to be parsed.
+//-----------------------------------------------------------------------------
+const char *nexttoken(char *token, const char *str, char sep)
+{
+	if ((str == NULL) || (*str == '\0'))
+	{
+		*token = '\0';
+		return(NULL);
+	}
+
+	//
+	// Copy everything up to the first separator into the return buffer.
+	// Do not include separators in the return buffer.
+	//
+	while ((*str != sep) && (*str != '\0'))
+	{
+		*token++ = *str++;
+	}
+	*token = '\0';
+
+	//
+	// Advance the pointer unless we hit the end of the input string.
+	//
+	if (*str == '\0')
+	{
+		return(str);
+	}
+
+	return(++str);
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void UTIL_BloodSpray( const Vector &pos, const Vector &dir, int color, int amount, int flags )
+{
+	if( color == DONT_BLEED )
+		return;
+
+	CEffectData	data;
+
+	data.m_vOrigin = pos;
+	data.m_vNormal = dir;
+	data.m_flScale = (float)amount;
+	data.m_fFlags = flags;
+	data.m_nColor = color;
+
+	g_helpfunc.DispatchEffect("bloodspray", data );
+}
+
+void UTIL_BloodDecalTrace( trace_t *pTrace, int bloodColor )
+{
+	if ( UTIL_ShouldShowBlood( bloodColor ) )
+	{
+		if ( bloodColor == BLOOD_COLOR_RED )
+		{
+			UTIL_DecalTrace( pTrace, "Blood" );
+		}
+		else
+		{
+			UTIL_DecalTrace( pTrace, "YellowBlood" );
+		}
+	}
+}
+
+extern ConVar *violence_hblood;
+extern ConVar *violence_ablood;
+extern ConVar *violence_hgibs;
+extern ConVar *violence_agibs;
+
+bool UTIL_IsLowViolence( void )
+{
+	// These convars are no longer necessary -- the engine is the final arbiter of
+	// violence settings -- but they're here for legacy support and for testing low
+	// violence when the engine is in normal violence mode.
+	if ( !violence_hblood->GetBool() || !violence_ablood->GetBool() || !violence_hgibs->GetBool() || !violence_agibs->GetBool() )
+		return true;
+
+	return engine->IsLowViolence();
+}
+
+Vector UTIL_YawToVector( float yaw )
+{
+	Vector ret;
+	
+	ret.z = 0;
+	float angle = DEG2RAD( yaw );
+	SinCos( angle, &ret.y, &ret.x );
+
+	return ret;
+}
+
+CEntity *CreateRagGib( const char *szModel, const Vector &vecOrigin, const QAngle &vecAngles, const Vector &vecForce, float flFadeTime, bool bShouldIgnite )
+{
+	return g_helpfunc.CreateRagGib(szModel,vecOrigin, vecAngles,vecForce, flFadeTime, bShouldIgnite);
+}
+
+void UTIL_SetSize( CBaseEntity *pEnt, const Vector &vecMin, const Vector &vecMax )
+{
+	g_helpfunc.SetMinMaxSize (pEnt, vecMin, vecMax);
+}
+
+void StopSoundByHandle( int entindex, const char *soundname, HSOUNDSCRIPTHANDLE& handle )
+{
+	if ( handle == SOUNDEMITTER_INVALID_HANDLE )
+	{
+		handle = (HSOUNDSCRIPTHANDLE)soundemitterbase->GetSoundIndex( soundname );
+	}
+
+	if ( handle == SOUNDEMITTER_INVALID_HANDLE )
+		return;
+
+	CSoundParametersInternal *params;
+
+	params = soundemitterbase->InternalGetParametersForSound( (int)handle );
+	if ( !params )
+	{
+		return;
+	}
+
+	// HACK:  we have to stop all sounds if there are > 1 in the rndwave section...
+	int c = params->NumSoundNames();
+	for ( int i = 0; i < c; ++i )
+	{
+		char const *wavename = soundemitterbase->GetWaveName( params->GetSoundNames()[ i ].symbol );
+		Assert( wavename );
+
+		enginesound->StopSound( 
+			entindex, 
+			params->GetChannel(), 
+			wavename );
+
+	}
+}
+
+void Sound_StopSound( int entindex, const char *soundname )
+{
+	HSOUNDSCRIPTHANDLE handle = (HSOUNDSCRIPTHANDLE)soundemitterbase->GetSoundIndex( soundname );
+	if ( handle == SOUNDEMITTER_INVALID_HANDLE )
+	{
+		return;
+	}
+	StopSoundByHandle( entindex, soundname, handle );
+}
+
+void Sound_StopSound( int iEntIndex, int iChannel, const char *pSample )
+{
+	if ( pSample && ( Q_stristr( pSample, ".wav" ) || Q_stristr( pSample, ".mp3" ) || pSample[0] == '!' ) )
+	{
+		enginesound->StopSound( iEntIndex, iChannel, pSample );
+	} else {
+		// Look it up in sounds.txt and ignore other parameters
+		Sound_StopSound( iEntIndex, pSample );
+	}
+}
+
+bool UTIL_CheckBottom( CEntity *pEntity, ITraceFilter *pTraceFilter, float flStepSize )
+{
+	Vector	mins, maxs, start, stop;
+	trace_t	trace;
+	int		x, y;
+	float	mid, bottom;
+
+	Assert( pEntity );
+
+	CTracePassFilter traceFilter(pEntity->BaseEntity());
+	if ( !pTraceFilter )
+	{
+		pTraceFilter = &traceFilter;
+	}
+
+	unsigned int mask = pEntity->PhysicsSolidMaskForEntity();
+
+	VectorAdd (pEntity->GetAbsOrigin(), pEntity->WorldAlignMins(), mins);
+	VectorAdd (pEntity->GetAbsOrigin(), pEntity->WorldAlignMaxs(), maxs);
+
+	// if all of the points under the corners are solid world, don't bother
+	// with the tougher checks
+	// the corners must be within 16 of the midpoint
+	start[2] = mins[2] - 1;
+	for	(x=0 ; x<=1 ; x++)
+	{
+		for	(y=0 ; y<=1 ; y++)
+		{
+			start[0] = x ? maxs[0] : mins[0];
+			start[1] = y ? maxs[1] : mins[1];
+			if (enginetrace->GetPointContents(start) != CONTENTS_SOLID)
+				goto realcheck;
+		}
+	}
+	return true;		// we got out easy
+
+realcheck:
+	// check it for real...
+	start[2] = mins[2] + flStepSize; // seems to help going up/down slopes.
+	
+	// the midpoint must be within 16 of the bottom
+	start[0] = stop[0] = (mins[0] + maxs[0])*0.5;
+	start[1] = stop[1] = (mins[1] + maxs[1])*0.5;
+	stop[2] = start[2] - 2*flStepSize;
+	
+	UTIL_TraceLine( start, stop, mask, pTraceFilter, &trace );
+
+	if (trace.fraction == 1.0)
+		return false;
+	mid = bottom = trace.endpos[2];
+
+	// the corners must be within 16 of the midpoint	
+	for	(x=0 ; x<=1 ; x++)
+	{
+		for	(y=0 ; y<=1 ; y++)
+		{
+			start[0] = stop[0] = x ? maxs[0] : mins[0];
+			start[1] = stop[1] = y ? maxs[1] : mins[1];
+			
+			UTIL_TraceLine( start, stop, mask, pTraceFilter, &trace );
+			
+			if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
+				bottom = trace.endpos[2];
+			if (trace.fraction == 1.0 || mid - trace.endpos[2] > flStepSize)
+				return false;
+		}
+	}
+	return true;
+}
+
+
+void PropBreakableCreateAll( int modelindex, IPhysicsObject *pPhysics, const breakablepropparams_t &params, CBaseEntity *pEntity, int iPrecomputedBreakableCount, bool bIgnoreGibLimit, bool defaultLocation )
+{
+	g_helpfunc.PropBreakableCreateAll(modelindex, pPhysics, params, pEntity, iPrecomputedBreakableCount, bIgnoreGibLimit, defaultLocation);
+}
+
+void PropBreakableCreateAll( int modelindex, IPhysicsObject *pPhysics, const Vector &origin, const QAngle &angles, const Vector &velocity, const AngularImpulse &angularVelocity, float impactEnergyScale, float defBurstScale, int defCollisionGroup, CBaseEntity *pEntity, bool defaultLocation )
+{
+	breakablepropparams_t params( origin, angles, velocity, angularVelocity );
+	params.impactEnergyScale = impactEnergyScale;
+	params.defBurstScale = defBurstScale;
+	params.defCollisionGroup = defCollisionGroup;
+	PropBreakableCreateAll( modelindex, pPhysics, params, pEntity, -1, false, defaultLocation );
+}
+
+int PropBreakablePrecacheAll( string_t modelName )
+{
+	return g_helpfunc.PropBreakablePrecacheAll(modelName);
+}
+
+
+void UTIL_Remove(CEntity *pEntity)
+{
+	if ( !pEntity )
+		return;
+	UTIL_Remove(pEntity->NetworkProp());
+}
+
+void UTIL_Remove(IServerNetworkable *oldObj)
+{
+	g_helpfunc.UTIL_Remove(oldObj);
+}
+
+CPlayer *UTIL_GetNearestPlayer( const Vector &origin )
+{
+    float distToNearest = 999999.0f;
+    CPlayer *pNearest = NULL;
+
+    for (int i = 1; i <= gpGlobals->maxClients; i++ )
+    {
+        CPlayer *pPlayer = UTIL_PlayerByIndex( i );
+        if ( !pPlayer )
+            continue;
+
+        float flDist = (pPlayer->GetAbsOrigin() - origin).LengthSqr();
+        if ( flDist < distToNearest )
+
+        {
+            pNearest = pPlayer;
+            distToNearest = flDist;
+
+        }
+    }
+    return pNearest;
+}
+
+CPlayer *UTIL_GetNearestVisiblePlayer(CEntity *pLooker, int mask)
+{
+	float distToNearest = 999999.0f;
+    CPlayer *pNearest = NULL;
+
+    for (int i = 1; i <= gpGlobals->maxClients; i++ )
+    {
+        CPlayer *pPlayer = UTIL_PlayerByIndex( i );
+        if ( !pPlayer )
+            continue;
+
+        float flDist = (pPlayer->GetAbsOrigin() - pLooker->GetAbsOrigin()).LengthSqr();
+		if ( flDist < distToNearest && pLooker->FVisible_Entity( pPlayer->BaseEntity(), mask ) )
+        {
+            pNearest = pPlayer;
+            distToNearest = flDist;
+        }  
+    }
+
+    return pNearest;
+}
+
+float UTIL_VecToPitch( const Vector &vec )
+{
+	if (vec.y == 0 && vec.x == 0)
+	{
+		if (vec.z < 0)
+			return 180.0;
+		else
+			return -180.0;
+	}
+
+	float dist = vec.Length2D();
+	float pitch = atan2( -vec.z, dist );
+
+	pitch = RAD2DEG(pitch);
+
+	return pitch;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Get the predicted postion of an entity of a certain number of seconds
+//			Use this function with caution, it has great potential for annoying the player, especially
+//			if used for target firing predition
+// Input  : *pTarget - target entity to predict
+//			timeDelta - amount of time to predict ahead (in seconds)
+//			&vecPredictedPosition - output
+//-----------------------------------------------------------------------------
+void UTIL_PredictedPosition( CEntity *pTarget, float flTimeDelta, Vector *vecPredictedPosition )
+{
+	if ( ( pTarget == NULL ) || ( vecPredictedPosition == NULL ) )
+		return;
+
+	Vector	vecPredictedVel;
+
+	//FIXME: Should we look at groundspeed or velocity for non-clients??
+
+	//Get the proper velocity to predict with
+	CPlayer	*pPlayer = ToBasePlayer( pTarget );
+
+	//Player works differently than other entities
+	if ( pPlayer != NULL )
+	{
+		if ( pPlayer->IsInAVehicle() )
+		{
+			//Calculate the predicted position in this vehicle
+			vecPredictedVel = CEntity::Instance(pPlayer->GetVehicleEntity())->GetSmoothedVelocity();
+		}
+		else
+		{
+			//Get the player's stored velocity
+			vecPredictedVel = pPlayer->GetSmoothedVelocity();
+		}
+	}
+	else
+	{
+		// See if we're a combat character in a vehicle
+		CCombatCharacter *pCCTarget = pTarget->MyCombatCharacterPointer();
+		if ( pCCTarget != NULL && pCCTarget->IsInAVehicle() )
+		{
+			//Calculate the predicted position in this vehicle
+			vecPredictedVel = CEntity::Instance(pCCTarget->GetVehicleEntity())->GetSmoothedVelocity();
+		}
+		else
+		{
+			// See if we're an animating entity
+			CAnimating *pAnimating = dynamic_cast<CAnimating *>(pTarget);
+			if ( pAnimating != NULL )
+			{
+				vecPredictedVel = pAnimating->GetGroundSpeedVelocity();
+			}
+			else
+			{
+				// Otherwise we're a vanilla entity
+				vecPredictedVel = pTarget->GetSmoothedVelocity();				
+			}
+		}
+	}
+
+	//Get the result
+	(*vecPredictedPosition) = pTarget->GetAbsOrigin() + ( vecPredictedVel * flTimeDelta );
+}
+
+static unsigned short FixedUnsigned16( float value, float scale )
+{
+	int output;
+
+	output = (int)(value * scale);
+	if ( output < 0 )
+		output = 0;
+	if ( output > 0xFFFF )
+		output = 0xFFFF;
+
+	return (unsigned short)output;
+}
+
+void UTIL_ScreenFadeBuild( ScreenFade_t &fade, const color32 &color, float fadeTime, float fadeHold, int flags )
+{
+	fade.duration = FixedUnsigned16( fadeTime, 1<<SCREENFADE_FRACBITS );		// 7.9 fixed
+	fade.holdTime = FixedUnsigned16( fadeHold, 1<<SCREENFADE_FRACBITS );		// 7.9 fixed
+	fade.r = color.r;
+	fade.g = color.g;
+	fade.b = color.b;
+	fade.a = color.a;
+	fade.fadeFlags = flags;
+}
+
+void UTIL_ScreenFadeWrite( const ScreenFade_t &fade, CEntity *pEntity )
+{
+	if ( !pEntity || !pEntity->IsNetClient() )
+		return;
+
+	static int fade_id = -1;
+	if(fade_id == -1)
+	{
+		fade_id = usermsgs->GetMessageIndex("Fade");
+	}
+
+	int players[1] = {pEntity->entindex()};
+	bf_write *pBitBuf = usermsgs->StartMessage(fade_id, players, 1, USERMSG_RELIABLE);
+	if(pBitBuf == NULL) return;
+	
+	pBitBuf->WriteShort(fade.duration);
+	pBitBuf->WriteShort(fade.holdTime);
+	pBitBuf->WriteShort(fade.fadeFlags);
+	pBitBuf->WriteByte(fade.r);
+	pBitBuf->WriteByte(fade.g);
+	pBitBuf->WriteByte(fade.b);
+	pBitBuf->WriteByte(fade.a);
+	usermsgs->EndMessage();
+}
+
+void UTIL_ScreenFade( CEntity *pEntity, const color32 &color, float fadeTime, float fadeHold, int flags )
+{
+	ScreenFade_t	fade;
+
+	UTIL_ScreenFadeBuild( fade, color, fadeTime, fadeHold, flags );
+	UTIL_ScreenFadeWrite( fade, pEntity );
+}
+
+float UTIL_WaterLevel( const Vector &position, float minz, float maxz )
+{
+	Vector midUp = position;
+	midUp.z = minz;
+
+	if ( !(UTIL_PointContents(midUp) & MASK_WATER) )
+		return minz;
+
+	midUp.z = maxz;
+	if ( UTIL_PointContents(midUp) & MASK_WATER )
+		return maxz;
+
+	float diff = maxz - minz;
+	while (diff > 1.0)
+	{
+		midUp.z = minz + diff/2.0;
+		if ( UTIL_PointContents(midUp) & MASK_WATER )
+		{
+			minz = midUp.z;
+		}
+		else
+		{
+			maxz = midUp.z;
+		}
+		diff = maxz - minz;
+	}
+
+	return midUp.z;
+}
+
+
+extern short	g_sModelIndexBubbles;
+
+void UTIL_Bubbles( const Vector& mins, const Vector& maxs, int count )
+{
+	Vector mid =  (mins + maxs) * 0.5;
+
+	float flHeight = UTIL_WaterLevel( mid,  mid.z, mid.z + 1024 );
+	flHeight = flHeight - mins.z;
+
+	CPASFilter filter( mid );
+
+	te->Bubbles( filter, 0.0,
+		&mins, &maxs, flHeight, g_sModelIndexBubbles, count, 8.0 );
+}
+
+class CWaterTraceFilter : public CTraceFilter
+{
+public:
+	bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
+	{
+		CEntity *pCollide = CE_EntityFromEntityHandle( pHandleEntity );
+
+		// Static prop case...
+		if ( !pCollide )
+			return false;
+
+		// Only impact water stuff...
+		if ( pCollide->GetSolidFlags() & FSOLID_VOLUME_CONTENTS )
+			return true;
+
+		return false;
+	}
+};
+
+
+float UTIL_FindWaterSurface( const Vector &position, float minz, float maxz )
+{
+	Vector vecStart, vecEnd;
+	vecStart.Init( position.x, position.y, maxz );
+	vecEnd.Init( position.x, position.y, minz );
+
+	Ray_t ray;
+	trace_t tr;
+	CWaterTraceFilter waterTraceFilter;
+	ray.Init( vecStart, vecEnd );
+	enginetrace->TraceRay( ray, MASK_WATER, &waterTraceFilter, &tr );
+
+	return tr.endpos.z;
+}
+
+void UTIL_StringToVector( float *pVector, const char *pString )
+{
+	UTIL_StringToFloatArray( pVector, 3, pString );
+}
+
+void UTIL_StringToColor32( color32 *color, const char *pString )
+{
+	int tmp[4];
+	UTIL_StringToIntArray( tmp, 4, pString );
+	color->r = tmp[0];
+	color->g = tmp[1];
+	color->b = tmp[2];
+	color->a = tmp[3];
+}
+
+void UTIL_StringToFloatArray( float *pVector, int count, const char *pString )
+{
+	char *pstr, *pfront, tempString[128];
+	int	j;
+
+	Q_strncpy( tempString, pString, sizeof(tempString) );
+	pstr = pfront = tempString;
+
+	for ( j = 0; j < count; j++ )			// lifted from pr_edict.c
+	{
+		pVector[j] = atof( pfront );
+
+		// skip any leading whitespace
+		while ( *pstr && *pstr <= ' ' )
+			pstr++;
+
+		// skip to next whitespace
+		while ( *pstr && *pstr > ' ' )
+			pstr++;
+
+		if (!*pstr)
+			break;
+
+		pstr++;
+		pfront = pstr;
+	}
+	for ( j++; j < count; j++ )
+	{
+		pVector[j] = 0;
+	}
+}
+
+
+void UTIL_StringToIntArray( int *pVector, int count, const char *pString )
+{
+	char *pstr, *pfront, tempString[128];
+	int	j;
+
+	Q_strncpy( tempString, pString, sizeof(tempString) );
+	pstr = pfront = tempString;
+
+	for ( j = 0; j < count; j++ )			// lifted from pr_edict.c
+	{
+		pVector[j] = atoi( pfront );
+
+		while ( *pstr && *pstr != ' ' )
+			pstr++;
+		if (!*pstr)
+			break;
+		pstr++;
+		pfront = pstr;
+	}
+
+	for ( j++; j < count; j++ )
+	{
+		pVector[j] = 0;
+	}
+}
+
+char *UTIL_VarArgs( const char *format, ... )
+{
+	va_list		argptr;
+	static char		string[1024];
+	
+	va_start (argptr, format);
+	Q_vsnprintf(string, sizeof(string), format,argptr);
+	va_end (argptr);
+
+	return string;	
+}
+
+
+EmitSound_t::EmitSound_t( const CSoundParameters &src )
+{
+	m_nChannel = src.channel;
+	m_pSoundName = src.soundname;
+	m_flVolume = src.volume;
+	m_SoundLevel = src.soundlevel;
+	m_nFlags = 0;
+	m_nPitch = src.pitch;
+	m_pOrigin = 0;
+	m_flSoundTime = ( src.delay_msec == 0 ) ? 0.0f : gpGlobals->curtime + ( (float)src.delay_msec / 1000.0f );
+	m_pflSoundDuration = 0;
+	m_bEmitCloseCaption = true;
+	m_bWarnOnMissingCloseCaption = false;
+	m_bWarnOnDirectWaveReference = false;
+	m_nSpeakerEntity = -1;
+}
+
+int UTIL_DropToFloor( CEntity *pEntity, unsigned int mask, CEntity *pIgnore)
+{
+	if(!pEntity)
+		return -1;
+
+	CBaseEntity *cbase_pIgnore = (pIgnore) ? pIgnore->BaseEntity() : NULL;
+
+	// Assume no ground
+	pEntity->SetGroundEntity( NULL );
+
+	trace_t	trace;
+	// HACK: is this really the only sure way to detect crossing a terrain boundry?
+	UTIL_TraceEntity( pEntity, pEntity->GetAbsOrigin(), pEntity->GetAbsOrigin(), mask, cbase_pIgnore, pEntity->GetCollisionGroup(), &trace );
+	if (trace.fraction == 0.0)
+		return -1;
+
+	UTIL_TraceEntity( pEntity, pEntity->GetAbsOrigin(), pEntity->GetAbsOrigin() - Vector(0,0,256), mask, cbase_pIgnore, pEntity->GetCollisionGroup(), &trace );
+
+	if (trace.allsolid)
+		return -1;
+
+	if (trace.fraction == 1)
+		return 0;
+
+	pEntity->SetAbsOrigin( trace.endpos );
+	pEntity->SetGroundEntity( trace.m_pEnt );
+
+	return 1;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Used to tell whether an item may be picked up by the player.  This
+//			accounts for solid obstructions being in the way.
+// Input  : *pItem - item in question
+//			*pPlayer - player attempting the pickup
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool UTIL_ItemCanBeTouchedByPlayer( CEntity *pItem, CPlayer *pPlayer )
+{
+	if ( pItem == NULL || pPlayer == NULL )
+		return false;
+
+	// For now, always allow a vehicle riding player to pick up things they're driving over
+	if ( pPlayer->IsInAVehicle() )
+		return true;
+
+	// Get our test positions
+	Vector vecStartPos;
+	IPhysicsObject *pPhysObj = pItem->VPhysicsGetObject();
+	if ( pPhysObj != NULL )
+	{
+		// Use the physics hull's center
+		QAngle vecAngles;
+		pPhysObj->GetPosition( &vecStartPos, &vecAngles );
+	}
+	else
+	{
+		// Use the generic bbox center
+		vecStartPos = pItem->WorldSpaceCenter();
+	}
+
+	Vector vecEndPos = pPlayer->EyePosition();
+
+	// FIXME: This is the simple first try solution towards the problem.  We need to take edges and shape more into account
+	//		  for this to be fully robust.
+
+	// Trace between to see if we're occluded
+	trace_t tr;
+	CTraceFilterSkipTwoEntities filter( pPlayer->BaseEntity(), pItem->BaseEntity(), COLLISION_GROUP_PLAYER_MOVEMENT );
+	UTIL_TraceLine( vecStartPos, vecEndPos, MASK_SOLID, &filter, &tr );
+
+	// Occluded
+	// FIXME: For now, we exclude starting in solid because there are cases where this doesn't matter
+	if ( tr.fraction < 1.0f )
+		return false;
+
+	return true;
+}
+
+AngularImpulse WorldToLocalRotation( const VMatrix &localToWorld, const Vector &worldAxis, float rotation )
+{
+	// fix axes of rotation to match axes of vector
+	Vector rot = worldAxis * rotation;
+	// since the matrix maps local to world, do a transpose rotation to get world to local
+	AngularImpulse ang = localToWorld.VMul3x3Transpose( rot );
+
+	return ang;
+}
+
+CEntity *CreateEntityByName(const char *entityname)
+{
+	CBaseEntity *cbase = (CBaseEntity *)servertools->CreateEntityByName(entityname);
+	return CEntity::Instance(cbase);
+}
+
+void DispatchSpawn(CBaseEntity *pEntity)
+{
+	servertools->DispatchSpawn(pEntity);
+}
+
+
+extern INetworkStringTable *g_pStringTableParticleEffectNames;
+
+
+//-----------------------------------------------------------------------------
+// Particle attachment methods
+//-----------------------------------------------------------------------------
+enum ParticleAttachment_t
+{
+	PATTACH_ABSORIGIN = 0,			// Create at absorigin, but don't follow
+	PATTACH_ABSORIGIN_FOLLOW,		// Create at absorigin, and update to follow the entity
+	PATTACH_CUSTOMORIGIN,			// Create at a custom origin, but don't follow
+	PATTACH_POINT,					// Create on attachment point, but don't follow
+	PATTACH_POINT_FOLLOW,			// Create on attachment point, and update to follow the entity
+
+	PATTACH_WORLDORIGIN,			// Used for control points that don't attach to an entity
+
+	MAX_PATTACH_TYPES,
+};
+
+#define PARTICLE_DISPATCH_FROM_ENTITY		(1<<0)
+#define PARTICLE_DISPATCH_RESET_PARTICLES	(1<<1)
+
+int GetParticleSystemIndex( const char *pParticleSystemName )
+{
+	if ( pParticleSystemName )
+	{
+		int nIndex = g_pStringTableParticleEffectNames->FindStringIndex( pParticleSystemName );
+		if (nIndex != INVALID_STRING_INDEX )
+			return nIndex;
+
+		DevWarning("Server: Missing precache for particle system \"%s\"!\n", pParticleSystemName );
+	}
+
+	// This is the invalid string index
+	return 0;
+}
+
+void DispatchParticleEffect( const char *pszParticleName, Vector vecOrigin, QAngle vecAngles, CEntity *pEntity )
+{
+	int iIndex = GetParticleSystemIndex( pszParticleName );
+	DispatchParticleEffect( iIndex, vecOrigin, vecOrigin, vecAngles, pEntity );
+}
+
+void DispatchParticleEffect( int iEffectIndex, Vector vecOrigin, Vector vecStart, QAngle vecAngles, CEntity *pEntity )
+{
+	CEffectData	data;
+
+	data.m_nHitBox = iEffectIndex;
+	data.m_vOrigin = vecOrigin;
+	data.m_vStart = vecStart;
+	data.m_vAngles = vecAngles;
+
+	if ( pEntity )
+	{
+		data.m_nEntIndex = pEntity->entindex();
+		data.m_fFlags |= PARTICLE_DISPATCH_FROM_ENTITY;
+		data.m_nDamageType = PATTACH_CUSTOMORIGIN;
+	}
+	else
+	{
+		data.m_nEntIndex = 0;
+	}
+
+	g_helpfunc.DispatchEffect( "ParticleEffect", data );
+}
+
+extern INetworkStringTable *g_pStringTableParticleEffectNames;
+
+void PrecacheParticleSystem( const char *pParticleSystemName )
+{
+	g_pStringTableParticleEffectNames->AddString(true, pParticleSystemName );
+}
+
+bool UTIL_IsMasterTriggered(string_t sMaster, CEntity *pActivator)
+{
+	if (sMaster != NULL_STRING)
+	{
+		CEntity *pMaster = g_helpfunc.FindEntityByName( (CBaseEntity *)NULL, sMaster, NULL, (pActivator)?pActivator->BaseEntity():NULL );
+	
+		if ( pMaster && (pMaster->ObjectCaps() & FCAP_MASTER) )
+		{
+			return pMaster->IsTriggered( (pActivator)?pActivator->BaseEntity():NULL );
+		}
+
+		Warning( "Master was null or not a master!\n");
+	}
+
+	// if this isn't a master entity, just say yes.
+	return true;
+}
+
+void EntityMatrix::InitFromEntity( CEntity *pEntity, int iAttachment )
+{
+	/*static void *func = reinterpret_cast<void *>(0x002069A0  +serverdll_addr);
+
+	typedef void (__fastcall *_func)(void *,int, void *, int);
+	_func thisfunc = (_func)(func);
+	(thisfunc)(this,0,(pEntity)?pEntity->BaseEntity():NULL, iAttachment);
+*/
+
+	if ( !pEntity )
+	{
+		Identity();
+		return;
+	}
+
+	// Get an attachment's matrix?
+	if ( iAttachment != 0 )
+	{
+		CAnimating *pAnimating = pEntity->GetBaseAnimating();
+		if ( pAnimating && pAnimating->GetModelPtr() )
+		{
+			Vector vOrigin;
+			QAngle vAngles;
+			if ( pAnimating->GetAttachment( iAttachment, vOrigin, vAngles ) )
+			{
+				((VMatrix *)this)->SetupMatrixOrgAngles( vOrigin, vAngles );
+				return;
+			}
+		}
+	}
+
+	((VMatrix *)this)->SetupMatrixOrgAngles( pEntity->GetAbsOrigin(), pEntity->GetAbsAngles() );
+	
 }

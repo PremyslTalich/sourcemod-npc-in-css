@@ -20,7 +20,7 @@
 #include "CEntityBase.h"
 #include "CEntity.h"
 
-CEntity *pEntityData[MAX_EDICTS+1] = {NULL};
+CEntity *pEntityData[ENTITY_ARRAY_SIZE];
 
 
 CEntity *CEntityLookup::Instance(CBaseEntity *pEnt)
@@ -29,33 +29,34 @@ CEntity *CEntityLookup::Instance(CBaseEntity *pEnt)
 	{
 		return NULL;
 	}
+	
+	return Instance(pEnt->GetRefEHandle());
 
-	IServerNetworkable *pNetwork = pEnt->GetNetworkable();
+	/*IServerNetworkable *pNetwork = pEnt->GetNetworkable();
 
-	if  (!pNetwork)
+	if (!pNetwork)
 	{
 		return NULL;
 	}
 
-	edict_t *pEdict = pNetwork->GetEdict();
-
-	if (!pEdict)
-	{
-		return NULL;
-	}
-
-	return Instance(pEdict);
+	return Instance(pEnt->GetRefEHandle().GetEntryIndex());*/
 }
 
 CEntity *CEntityLookup::Instance(int iEnt)
 {
+	if(iEnt < 0 || iEnt >= ENTITY_ARRAY_SIZE)
+	{
+		return NULL;
+	}
+#ifdef _DEBUG
+	CEntityManager::count++;
+#endif
 	return pEntityData[iEnt];
 }
 
 CEntity *CEntityLookup::Instance(const edict_t *pEnt)
 {
-	return Instance(engine->IndexOfEdict(pEnt));
-	//return Instance((edict_t *)pEnt);
+	return Instance((edict_t *)pEnt);
 }
 
 CEntity *CEntityLookup::Instance(const CBaseHandle &hEnt)
@@ -64,44 +65,7 @@ CEntity *CEntityLookup::Instance(const CBaseHandle &hEnt)
 	{
 		return NULL;
 	}
-
-	int index = hEnt.GetEntryIndex();
-
-	edict_t *pStoredEdict;
-	CBaseEntity *pStoredEntity;
-
-	pStoredEdict = engine->PEntityOfEntIndex(index);
-	if (!pStoredEdict || pStoredEdict->IsFree())
-	{
-		return NULL;
-	}
-
-	IServerUnknown *pUnk;
-	if ((pUnk = pStoredEdict->GetUnknown()) == NULL)
-	{
-		return NULL;
-	}
-
-	pStoredEntity = pUnk->GetBaseEntity();
-
-	if (pStoredEntity == NULL)
-	{
-		return NULL;
-	}
-
-	IServerEntity *pSE = pStoredEdict->GetIServerEntity();
-
-	if (pSE == NULL)
-	{
-		return NULL;
-	}
-
-	if (pSE->GetRefEHandle() != hEnt)
-	{
-		return NULL;
-	}
-
-	return Instance(index);
+	return Instance(hEnt.GetEntryIndex());
 }
 
 CEntity *CEntityLookup::Instance(edict_t *pEnt)

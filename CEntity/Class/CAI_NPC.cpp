@@ -1,45 +1,74 @@
 
 #include "CAI_NPC.h"
 #include "stringregistry.h"
+#include "CPropDoor.h"
+#include "CPlayer.h"
+#include "in_buttons.h"
+#include "CESoundEnt.h"
 
-/*
-#define GAME_DLL
-#include "cbase.h"
+CAI_Manager g_AI_Manager;
 
-#include "ai_default.h"
-#include "ai_schedule.h"
-#include "ai_hint.h"
-#include "ai_hull.h"
-#include "ai_navigator.h"
-#include "ai_moveprobe.h"
-#include "ai_memory.h"
-*/
+//-------------------------------------
+
+CAI_Manager::CAI_Manager()
+{
+	m_AIs.EnsureCapacity( MAX_AIS );
+}
+
+//-------------------------------------
+
+CAI_NPC **CAI_Manager::AccessAIs()
+{
+	if (m_AIs.Count())
+		return &m_AIs[0];
+	return NULL;
+}
+
+//-------------------------------------
+
+int CAI_Manager::NumAIs()
+{
+	return m_AIs.Count();
+}
+
+//-------------------------------------
+
+void CAI_Manager::AddAI( CAI_NPC *pAI )
+{
+	m_AIs.AddToTail( pAI );
+}
+
+//-------------------------------------
+
+void CAI_Manager::RemoveAI( CAI_NPC *pAI )
+{
+	int i = m_AIs.Find( pAI );
+
+	if ( i != -1 )
+		m_AIs.FastRemove( i );
+}
+
+//-------------------------------------
 
 
-/*
-CAI_SchedulesManager *my_g_AI_SchedulesManager = NULL;
-CAI_GlobalScheduleNamespace *my_gm_SchedulingSymbols = NULL;
-CAI_ClassScheduleIdSpace *my_gm_ClassScheduleIdSpace = NULL;
-
-CAI_LocalIdSpace    *my_gm_SquadSlotIdSpace = NULL;
-CAI_GlobalNamespace *my_gm_SquadSlotNamespace = NULL;
-
-CAI_GlobalNamespace CAI_NPC::gm_SquadSlotNamespace;
-CAI_LocalIdSpace    CAI_NPC::gm_SquadSlotIdSpace;
-CAI_ClassScheduleIdSpace CAI_NPC::gm_ClassScheduleIdSpace;
-
-*/
+extern ConVar *ai_strong_optimizations;
+extern ConVar *sv_stepsize;
 
 CAI_ClassScheduleIdSpace	CAI_NPC::gm_ClassScheduleIdSpace( true );
 CAI_GlobalScheduleNamespace CAI_NPC::gm_SchedulingSymbols;
 CAI_LocalIdSpace			CAI_NPC::gm_SquadSlotIdSpace( true );
 CAI_GlobalNamespace			CAI_NPC::gm_SquadSlotNamespace;
 
-CStringRegistry* CAI_NPC::m_pActivitySR	= NULL;
-int				 CAI_NPC::m_iNumActivities = 0;
+CStringRegistry*		CAI_NPC::m_pActivitySR		= NULL;
+int						*CAI_NPC::m_iNumActivities  = NULL;
 
-CStringRegistry* CAI_NPC::m_pEventSR	= NULL;
-int				 CAI_NPC::m_iNumEvents	= 0;
+CStringRegistry*		CAI_NPC::m_pEventSR			= NULL;
+int						*CAI_NPC::m_iNumEvents		= NULL;
+
+string_t CAI_NPC::gm_iszPlayerSquad;
+
+
+
 
 CE_LINK_ENTITY_TO_CLASS(CAI_BaseNPC, CAI_NPC);
 
@@ -101,13 +130,13 @@ CAI_ClassScheduleIdSpace *CAI_NPC::GetClassScheduleIdSpace()
 CAI_ClassScheduleIdSpace *CAI_NPC::InternalGetClassScheduleIdSpace()
 {
 	SET_META_RESULT(MRES_SUPERCEDE);
-	CAI_NPC *pEnt = dynamic_cast<CAI_NPC *>(CEntity::Instance(META_IFACEPTR(CBaseEntity)));
+	CAI_NPC *pEnt = (CAI_NPC *)(CEntity::Instance(META_IFACEPTR(CBaseEntity)));
 	if (!pEnt)
 	{
 		RETURN_META_VALUE(MRES_IGNORED, NULL);
 	}
 
-	int index = pEnt->entindex();
+	int index = pEnt->entindex_non_network();
 	pEnt->m_bInGetClassScheduleIdSpace = true;
 	CAI_ClassScheduleIdSpace *space = pEnt->GetClassScheduleIdSpace();
 	if (pEnt == CEntity::Instance(index))
@@ -121,10 +150,6 @@ CAI_ClassScheduleIdSpace *CAI_NPC::InternalGetClassScheduleIdSpace()
 SH_DECL_MANUALHOOK0_void(NPCThink, 0, 0, 0);
 DECLARE_HOOK(NPCThink, CAI_NPC);
 DECLARE_DEFAULTHANDLER_void(CAI_NPC, NPCThink,(), ());
-
-SH_DECL_MANUALHOOK1_void(HandleAnimEvent, 0, 0, 0, animevent_t *);
-DECLARE_HOOK(HandleAnimEvent, CAI_NPC);
-DECLARE_DEFAULTHANDLER_void(CAI_NPC, HandleAnimEvent,(animevent_t *pEvent), (pEvent));
 
 SH_DECL_MANUALHOOK0(IsActivityFinished, 0, 0, 0, bool);
 DECLARE_HOOK(IsActivityFinished, CAI_NPC);
@@ -157,10 +182,6 @@ DECLARE_DEFAULTHANDLER_void(CAI_NPC, PainSound, (const CTakeDamageInfo &info), (
 SH_DECL_MANUALHOOK1_void(DeathSound, 0, 0, 0, const CTakeDamageInfo &);
 DECLARE_HOOK(DeathSound, CAI_NPC);
 DECLARE_DEFAULTHANDLER_void(CAI_NPC, DeathSound, (const CTakeDamageInfo &info), (info));
-
-SH_DECL_MANUALHOOK1(FValidateHintType, 0, 0, 0, bool, CAI_Hint *);
-DECLARE_HOOK(FValidateHintType, CAI_NPC);
-DECLARE_DEFAULTHANDLER(CAI_NPC, FValidateHintType, bool, (CAI_Hint *pHint), (pHint));
 
 SH_DECL_MANUALHOOK1(FInAimCone_Vector, 0, 0, 0, bool, const Vector &);
 DECLARE_HOOK(FInAimCone_Vector, CAI_NPC);
@@ -242,13 +263,13 @@ CAI_Schedule *CAI_NPC::InternalGetSchedule(int schedule)
 {
 	SET_META_RESULT(MRES_SUPERCEDE);
 	
-	CAI_NPC *pEnt = dynamic_cast<CAI_NPC *>(CEntity::Instance(META_IFACEPTR(CBaseEntity)));
+	CAI_NPC *pEnt = (CAI_NPC *)(CEntity::Instance(META_IFACEPTR(CBaseEntity)));
 	if (!pEnt)
 	{
 		RETURN_META_VALUE(MRES_IGNORED, NULL);
 	}
 
-	int index = pEnt->entindex();
+	int index = pEnt->entindex_non_network();
 	pEnt->m_bInGetSchedule = true;
 	CAI_Schedule *ret = NULL;
 
@@ -278,10 +299,13 @@ SH_DECL_MANUALHOOK3(UpdateEnemyMemory, 0, 0, 0, bool, CBaseEntity *, const Vecto
 DECLARE_HOOK(UpdateEnemyMemory, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, UpdateEnemyMemory, bool, (CBaseEntity *pEnemy, const Vector &position, CBaseEntity *pInformer), (pEnemy, position, pInformer));
 
+SH_DECL_MANUALHOOK1(OverrideMove, 0, 0, 0, bool, float);
+DECLARE_HOOK(OverrideMove, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, OverrideMove, bool, (float flInterval), (flInterval));
+
 SH_DECL_MANUALHOOK2(OverrideMoveFacing, 0, 0, 0, bool, const AILocalMoveGoal_t &, float );
 DECLARE_HOOK(OverrideMoveFacing, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, OverrideMoveFacing, bool, (const AILocalMoveGoal_t &move, float flInterval), (move, flInterval));
-
 
 SH_DECL_MANUALHOOK2(GetHitgroupDamageMultiplier, 0, 0, 0, float, int, const CTakeDamageInfo & );
 DECLARE_HOOK(GetHitgroupDamageMultiplier, CAI_NPC);
@@ -294,6 +318,415 @@ DECLARE_DEFAULTHANDLER(CAI_NPC, OnBehaviorChangeStatus, bool, (CAI_BehaviorBase 
 SH_DECL_MANUALHOOK0(IsInterruptable, 0, 0, 0, bool);
 DECLARE_HOOK(IsInterruptable, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, IsInterruptable, bool, (), ());
+
+SH_DECL_MANUALHOOK2_void(MakeAIFootstepSound, 0, 0, 0, float , float );
+DECLARE_HOOK(MakeAIFootstepSound, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, MakeAIFootstepSound, (float volume, float duration), (volume, duration));
+
+SH_DECL_MANUALHOOK0_void(OnScheduleChange, 0, 0, 0);
+DECLARE_HOOK(OnScheduleChange, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnScheduleChange, (), ());
+
+SH_DECL_MANUALHOOK2_void(TranslateNavGoal, 0, 0, 0, CBaseEntity *, Vector &);
+DECLARE_HOOK(TranslateNavGoal, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, TranslateNavGoal, (CBaseEntity *pEnemy, Vector &chasePosition), (pEnemy, chasePosition));
+
+SH_DECL_MANUALHOOK2(MeleeAttack1Conditions, 0, 0, 0, int, float, float);
+DECLARE_HOOK(MeleeAttack1Conditions, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, MeleeAttack1Conditions, int, (float flDot, float flDist), (flDot, flDist));
+
+DECLARE_DETOUR(SetupVPhysicsHull, CAI_NPC);
+DECLARE_DEFAULTHANDLER_DETOUR_void(CAI_NPC, SetupVPhysicsHull, (), ());
+
+SH_DECL_MANUALHOOK1(IsUnreachable, 0, 0, 0, bool, CBaseEntity* );
+DECLARE_HOOK(IsUnreachable, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsUnreachable, bool, (CBaseEntity* pEntity) , (pEntity));
+
+SH_DECL_MANUALHOOK4(OnObstructingDoor, 0, 0, 0, bool, AILocalMoveGoal_t *, CBaseEntity *, float , AIMoveResult_t *);
+DECLARE_HOOK(OnObstructingDoor, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, OnObstructingDoor, bool, (AILocalMoveGoal_t *pMoveGoal, CBaseEntity *pDoor, float distClear, AIMoveResult_t *pResult), (pMoveGoal, pDoor, distClear, pResult));
+
+SH_DECL_MANUALHOOK1(IsHeavyDamage, 0, 0, 0, bool, const CTakeDamageInfo &);
+DECLARE_HOOK(IsHeavyDamage, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsHeavyDamage, bool, (const CTakeDamageInfo &info), (info));
+
+SH_DECL_MANUALHOOK0(GetTimeToNavGoal, 0, 0, 0, float);
+DECLARE_HOOK(GetTimeToNavGoal, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetTimeToNavGoal, float,(), ());
+
+SH_DECL_MANUALHOOK0(StepHeight, 0, 0, 0, float);
+DECLARE_HOOK(StepHeight, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, StepHeight, float,() const, ());
+
+SH_DECL_MANUALHOOK0(GetJumpGravity, 0, 0, 0, float);
+DECLARE_HOOK(GetJumpGravity, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetJumpGravity, float,() const, ());
+
+SH_DECL_MANUALHOOK0(ShouldPlayerAvoid, 0, 0, 0, bool);
+DECLARE_HOOK(ShouldPlayerAvoid, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ShouldPlayerAvoid, bool,(), ());
+
+SH_DECL_MANUALHOOK1(ShouldProbeCollideAgainstEntity, 0, 0, 0, bool, CBaseEntity *);
+DECLARE_HOOK(ShouldProbeCollideAgainstEntity, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ShouldProbeCollideAgainstEntity, bool,(CBaseEntity *pEntity), (pEntity));
+
+SH_DECL_MANUALHOOK0(CapabilitiesGet, 0, 0, 0, int);
+DECLARE_HOOK(CapabilitiesGet, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CapabilitiesGet, int,() const, ());
+
+SH_DECL_MANUALHOOK0(IsCrouching, 0, 0, 0, bool);
+DECLARE_HOOK(IsCrouching, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsCrouching, bool,() , ());
+
+DECLARE_DETOUR(CineCleanup, CAI_NPC);
+DECLARE_DEFAULTHANDLER_DETOUR(CAI_NPC, CineCleanup, bool, (), ());
+
+SH_DECL_MANUALHOOK2_void(OnChangeHintGroup, 0, 0, 0, string_t , string_t);
+DECLARE_HOOK(OnChangeHintGroup, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnChangeHintGroup,(string_t oldGroup, string_t newGroup) , (oldGroup,newGroup));
+
+SH_DECL_MANUALHOOK3(IsJumpLegal, 0, 0, 0, bool, const Vector &, const Vector &, const Vector &);
+DECLARE_HOOK(IsJumpLegal, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsJumpLegal, bool, (const Vector &startPos, const Vector &apex, const Vector &endPos ) const, (startPos,  apex,  endPos ));
+
+SH_DECL_MANUALHOOK1(ShouldFailNav, 0, 0, 0, bool , bool);
+DECLARE_HOOK(ShouldFailNav, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ShouldFailNav, bool, (bool bMovementFailed), (bMovementFailed));
+
+SH_DECL_MANUALHOOK0(IsNavigationUrgent, 0, 0, 0, bool);
+DECLARE_HOOK(IsNavigationUrgent, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsNavigationUrgent, bool, (), ());
+
+SH_DECL_MANUALHOOK0(GetDefaultNavGoalTolerance, 0, 0, 0, float);
+DECLARE_HOOK(GetDefaultNavGoalTolerance, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetDefaultNavGoalTolerance, float, (), ());
+
+SH_DECL_MANUALHOOK0_void(OnMovementFailed, 0, 0, 0);
+DECLARE_HOOK(OnMovementFailed, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnMovementFailed, (), ());
+
+SH_DECL_MANUALHOOK0(ShouldBruteForceFailedNav, 0, 0, 0, bool);
+DECLARE_HOOK(ShouldBruteForceFailedNav, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ShouldBruteForceFailedNav,bool, (), ());
+
+SH_DECL_MANUALHOOK2(IsUnusableNode, 0, 0, 0, bool, int , CBaseEntity *);
+DECLARE_HOOK(IsUnusableNode, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsUnusableNode,bool, (int iNodeID, CBaseEntity *pHint), (iNodeID, pHint));
+
+SH_DECL_MANUALHOOK4(MovementCost, 0, 0, 0, bool, int , const Vector &, const Vector &, float *);
+DECLARE_HOOK(MovementCost, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, MovementCost, bool, (int moveType, const Vector &vecStart, const Vector &vecEnd, float *pCost), (moveType,  vecStart, vecEnd, pCost));
+
+SH_DECL_MANUALHOOK0(GetNodeViewOffset, 0, 0, 0, Vector);
+DECLARE_HOOK(GetNodeViewOffset, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetNodeViewOffset, Vector, (), ());
+
+SH_DECL_MANUALHOOK0_void(PostNPCInit, 0, 0, 0);
+DECLARE_HOOK(PostNPCInit, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, PostNPCInit, (), ());
+
+SH_DECL_MANUALHOOK0(InnateRange1MaxRange, 0, 0, 0, float);
+DECLARE_HOOK(InnateRange1MaxRange, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, InnateRange1MaxRange, float, (), ());
+
+SH_DECL_MANUALHOOK0(InnateRange1MinRange, 0, 0, 0, float);
+DECLARE_HOOK(InnateRange1MinRange, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, InnateRange1MinRange, float, (), ());
+
+SH_DECL_MANUALHOOK2(RangeAttack1Conditions, 0, 0, 0, int, float, float );
+DECLARE_HOOK(RangeAttack1Conditions, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, RangeAttack1Conditions, int, (float flDot, float flDist), (flDot, flDist));
+
+SH_DECL_MANUALHOOK2(RangeAttack2Conditions, 0, 0, 0, int, float, float );
+DECLARE_HOOK(RangeAttack2Conditions, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, RangeAttack2Conditions, int, (float flDot, float flDist), (flDot, flDist));
+
+SH_DECL_MANUALHOOK2_void(OnStateChange, 0, 0, 0, NPC_STATE, NPC_STATE );
+DECLARE_HOOK(OnStateChange, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnStateChange, ( NPC_STATE OldState, NPC_STATE NewState ), (OldState, NewState));
+
+SH_DECL_MANUALHOOK0(ShouldPlayIdleSound, 0, 0, 0, bool);
+DECLARE_HOOK(ShouldPlayIdleSound, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ShouldPlayIdleSound, bool, (), ());
+
+SH_DECL_MANUALHOOK1(IsLightDamage, 0, 0, 0, bool, const CTakeDamageInfo &);
+DECLARE_HOOK(IsLightDamage, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsLightDamage, bool, (const CTakeDamageInfo &info), (info));
+
+SH_DECL_MANUALHOOK1(CanBeAnEnemyOf, 0, 0, 0, bool, CBaseEntity *);
+DECLARE_HOOK(CanBeAnEnemyOf, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CanBeAnEnemyOf, bool, (CBaseEntity *pEnemy), (pEnemy));
+
+SH_DECL_MANUALHOOK0(AllowedToIgnite, 0, 0, 0, bool);
+DECLARE_HOOK(AllowedToIgnite, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, AllowedToIgnite, bool, (), ());
+
+SH_DECL_MANUALHOOK1_void(GatherEnemyConditions, 0, 0, 0, CBaseEntity *);
+DECLARE_HOOK(GatherEnemyConditions, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, GatherEnemyConditions, (CBaseEntity *pEnemy), (pEnemy));
+
+SH_DECL_MANUALHOOK0(IsSilentSquadMember, 0, 0, 0, bool);
+DECLARE_HOOK(IsSilentSquadMember, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsSilentSquadMember, bool, () const, ());
+
+SH_DECL_MANUALHOOK0_void(OnMovementComplete, 0, 0, 0);
+DECLARE_HOOK(OnMovementComplete, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnMovementComplete, (), ());
+
+SH_DECL_MANUALHOOK5_void(AddFacingTarget_E_V_F_F_F, 0, 0, 0, CBaseEntity *, const Vector &, float , float, float);
+DECLARE_HOOK(AddFacingTarget_E_V_F_F_F, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, AddFacingTarget_E_V_F_F_F, (CBaseEntity *pTarget, const Vector &vecPosition, float flImportance, float flDuration, float flRamp), (pTarget, vecPosition, flImportance, flDuration, flRamp));
+
+SH_DECL_MANUALHOOK1(QueryHearSound, 0, 0, 0, bool, CSound *);
+DECLARE_HOOK(QueryHearSound, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, QueryHearSound, bool, (CSound *pSound), (pSound));
+
+SH_DECL_MANUALHOOK1(IsPlayerAlly, 0, 0, 0, bool, CBaseEntity *);
+DECLARE_HOOK(IsPlayerAlly, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsPlayerAlly, bool, (CBaseEntity *pPlayer), (pPlayer));
+
+SH_DECL_MANUALHOOK0(GetRunningBehavior, 0, 0, 0, CAI_BehaviorBase *);
+DECLARE_HOOK(GetRunningBehavior, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetRunningBehavior, CAI_BehaviorBase *, (), ());
+
+
+SH_DECL_MANUALHOOK0_void(OnUpdateShotRegulator, 0, 0, 0);
+DECLARE_HOOK(OnUpdateShotRegulator, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnUpdateShotRegulator, (), ());
+
+SH_DECL_MANUALHOOK2_void(CleanupOnDeath, 0, 0, 0, CBaseEntity *, bool);
+DECLARE_HOOK(CleanupOnDeath, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, CleanupOnDeath, (CBaseEntity *pCulprit, bool bFireDeathOutput), (pCulprit, bFireDeathOutput));
+
+SH_DECL_MANUALHOOK1_void(OnStartSchedule, 0, 0, 0, int);
+DECLARE_HOOK(OnStartSchedule, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnStartSchedule, (int scheduleType), (scheduleType));
+
+SH_DECL_MANUALHOOK0_void(AimGun, 0, 0, 0);
+DECLARE_HOOK(AimGun, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, AimGun, (), ());
+
+SH_DECL_MANUALHOOK0(GetSchedulingErrorName, 0, 0, 0, const char *);
+DECLARE_HOOK(GetSchedulingErrorName, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetSchedulingErrorName, const char *, (), ());
+
+SH_DECL_MANUALHOOK0(IsCurTaskContinuousMove, 0, 0, 0, bool);
+DECLARE_HOOK(IsCurTaskContinuousMove, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsCurTaskContinuousMove, bool, (), ());
+
+SH_DECL_MANUALHOOK1(IsValidEnemy, 0, 0, 0, bool, CBaseEntity *);
+DECLARE_HOOK(IsValidEnemy, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsValidEnemy, bool, (CBaseEntity *pEnemy), (pEnemy));
+
+SH_DECL_MANUALHOOK2(IsValidCover, 0, 0, 0, bool, const Vector &, CAI_Hint const *);
+DECLARE_HOOK(IsValidCover, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsValidCover, bool, (const Vector &vLocation, CAI_Hint const *pHint), (vLocation, pHint));
+
+SH_DECL_MANUALHOOK3(IsValidShootPosition, 0, 0, 0, bool, const Vector &, CAI_Node *, CAI_Hint const *);
+DECLARE_HOOK(IsValidShootPosition, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsValidShootPosition, bool, (const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint), (vLocation, pNode, pHint));
+
+SH_DECL_MANUALHOOK0(GetMaxTacticalLateralMovement, 0, 0, 0, float);
+DECLARE_HOOK(GetMaxTacticalLateralMovement, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetMaxTacticalLateralMovement, float, (), ());
+
+SH_DECL_MANUALHOOK1(ShouldIgnoreSound, 0, 0, 0, bool, CSound *);
+DECLARE_HOOK(ShouldIgnoreSound, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ShouldIgnoreSound, bool, (CSound *pSound), (pSound));
+
+SH_DECL_MANUALHOOK1_void(OnSeeEntity, 0, 0, 0, CBaseEntity *);
+DECLARE_HOOK(OnSeeEntity, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnSeeEntity, (CBaseEntity *pEntity), (pEntity));
+
+SH_DECL_MANUALHOOK0(GetReasonableFacingDist, 0, 0, 0, float);
+DECLARE_HOOK(GetReasonableFacingDist, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetReasonableFacingDist, float, (), ());
+
+SH_DECL_MANUALHOOK0(CanFlinch, 0, 0, 0, bool);
+DECLARE_HOOK(CanFlinch, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CanFlinch, bool, (), ());
+
+SH_DECL_MANUALHOOK1(IsCrouchedActivity, 0, 0, 0, bool, Activity);
+DECLARE_HOOK(IsCrouchedActivity, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsCrouchedActivity, bool, (Activity activity), (activity));
+
+SH_DECL_MANUALHOOK1(CanRunAScriptedNPCInteraction, 0, 0, 0, bool, bool);
+DECLARE_HOOK(CanRunAScriptedNPCInteraction, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CanRunAScriptedNPCInteraction, bool, (bool bForced), (bForced));
+
+SH_DECL_MANUALHOOK2(GetFlinchActivity, 0, 0, 0, Activity, bool, bool);
+DECLARE_HOOK(GetFlinchActivity, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetFlinchActivity, Activity, (bool bHeavyDamage, bool bGesture ), (bHeavyDamage, bGesture));
+
+SH_DECL_MANUALHOOK3(OnCalcBaseMove, 0, 0, 0, bool, AILocalMoveGoal_t *, float , AIMoveResult_t *);
+DECLARE_HOOK(OnCalcBaseMove, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, OnCalcBaseMove, bool, (AILocalMoveGoal_t *pMoveGoal, float distClear, AIMoveResult_t *pResult ), (pMoveGoal, distClear, pResult));
+
+SH_DECL_MANUALHOOK0(ShouldAlwaysThink, 0, 0, 0, bool);
+DECLARE_HOOK(ShouldAlwaysThink, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ShouldAlwaysThink, bool, (), ());
+
+SH_DECL_MANUALHOOK3(ScheduledMoveToGoalEntity, 0, 0, 0, bool, int , CBaseEntity *, Activity);
+DECLARE_HOOK(ScheduledMoveToGoalEntity, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ScheduledMoveToGoalEntity, bool, (int scheduleType, CBaseEntity *pGoalEntity, Activity movementActivity), (scheduleType, pGoalEntity, movementActivity));
+
+SH_DECL_MANUALHOOK3(ScheduledFollowPath, 0, 0, 0, bool, int , CBaseEntity *, Activity);
+DECLARE_HOOK(ScheduledFollowPath, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ScheduledFollowPath, bool, (int scheduleType, CBaseEntity *pPathStart, Activity movementActivity), (scheduleType, pPathStart, movementActivity));
+
+SH_DECL_MANUALHOOK1(TaskName, 0, 0, 0, const char *, int);
+DECLARE_HOOK(TaskName, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, TaskName, const char *, (int taskID), (taskID));
+
+SH_DECL_MANUALHOOK0(GetNewSchedule, 0, 0, 0, CAI_Schedule *);
+DECLARE_HOOK(GetNewSchedule, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetNewSchedule, CAI_Schedule *, (), ());
+
+SH_DECL_MANUALHOOK0(GetFailSchedule, 0, 0, 0, CAI_Schedule *);
+DECLARE_HOOK(GetFailSchedule, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetFailSchedule, CAI_Schedule *, (), ());
+
+SH_DECL_MANUALHOOK0(AccessBehaviors, 0, 0, 0, CAI_BehaviorBase **);
+DECLARE_HOOK(AccessBehaviors, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, AccessBehaviors, CAI_BehaviorBase **, (), ());
+
+SH_DECL_MANUALHOOK0(NumBehaviors, 0, 0, 0, int);
+DECLARE_HOOK(NumBehaviors, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, NumBehaviors, int, (), ());
+
+SH_DECL_MANUALHOOK0(GetExpresser, 0, 0, 0, CAI_Expresser *);
+DECLARE_HOOK(GetExpresser, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetExpresser, CAI_Expresser *, (), ());
+
+SH_DECL_MANUALHOOK0(ValidateNavGoal, 0, 0, 0, bool);
+DECLARE_HOOK(ValidateNavGoal, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ValidateNavGoal, bool, (), ());
+
+SH_DECL_MANUALHOOK1_void(NotifyDeadFriend, 0, 0, 0, CBaseEntity *);
+DECLARE_HOOK(NotifyDeadFriend, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, NotifyDeadFriend, (CBaseEntity *pFriend), (pFriend));
+
+SH_DECL_MANUALHOOK1_void(SetAim, 0, 0, 0, const Vector &);
+DECLARE_HOOK(SetAim, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, SetAim, (const Vector &aimDir), (aimDir));
+
+SH_DECL_MANUALHOOK0_void(RelaxAim, 0, 0, 0);
+DECLARE_HOOK(RelaxAim, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, RelaxAim, (), ());
+
+SH_DECL_MANUALHOOK2(GetHintActivity, 0, 0, 0, Activity, short , Activity );
+DECLARE_HOOK(GetHintActivity, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetHintActivity, Activity, (short sHintType, Activity HintsActivity), (sHintType, HintsActivity));
+
+SH_DECL_MANUALHOOK1(FValidateHintType, 0, 0, 0, bool, CBaseEntity *);
+DECLARE_HOOK(FValidateHintType, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, FValidateHintType, bool, (CBaseEntity *pHint), (pHint));
+
+SH_DECL_MANUALHOOK1(GetHintDelay, 0, 0, 0, float, short);
+DECLARE_HOOK(GetHintDelay, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetHintDelay, float, (short sHintType), (sHintType));
+
+SH_DECL_MANUALHOOK3(InnateWeaponLOSCondition, 0, 0, 0, bool, const Vector &, const Vector &, bool);
+DECLARE_HOOK(InnateWeaponLOSCondition, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, InnateWeaponLOSCondition, bool, (const Vector &ownerPos, const Vector &targetPos, bool bSetConditions), (ownerPos, targetPos, bSetConditions));
+
+SH_DECL_MANUALHOOK3(OnObstructionPreSteer, 0, 0, 0, bool, AILocalMoveGoal_t *, float , AIMoveResult_t *);
+DECLARE_HOOK(OnObstructionPreSteer, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, OnObstructionPreSteer, bool, (AILocalMoveGoal_t *pMoveGoal, float distClear, AIMoveResult_t *pResult), (pMoveGoal, distClear, pResult));
+
+SH_DECL_MANUALHOOK0(CoverRadius, 0, 0, 0, float);
+DECLARE_HOOK(CoverRadius, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CoverRadius, float, (), ());
+
+SH_DECL_MANUALHOOK0_void(SetTurnActivity, 0, 0, 0);
+DECLARE_HOOK(SetTurnActivity, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, SetTurnActivity, (), ());
+
+SH_DECL_MANUALHOOK0(FCanCheckAttacks, 0, 0, 0, bool);
+DECLARE_HOOK(FCanCheckAttacks, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, FCanCheckAttacks, bool, (), ());
+
+SH_DECL_MANUALHOOK1(GetGlobalScheduleId, 0, 0, 0, int, int);
+DECLARE_HOOK(GetGlobalScheduleId, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetGlobalScheduleId, int, (int localScheduleID), (localScheduleID));
+
+SH_DECL_MANUALHOOK4_void(AddFacingTarget_V_F_F_F, 0, 0, 0, const Vector &, float , float , float  );
+DECLARE_HOOK(AddFacingTarget_V_F_F_F, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, AddFacingTarget_V_F_F_F, (const Vector &vecPosition, float flImportance, float flDuration, float flRamp), (vecPosition, flImportance, flDuration, flRamp));
+
+SH_DECL_MANUALHOOK1_void(SetSquad, 0, 0, 0, CAI_Squad *);
+DECLARE_HOOK(SetSquad, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, SetSquad, (CAI_Squad *pSquad), (pSquad));
+
+SH_DECL_MANUALHOOK0_void(ClearCommandGoal, 0, 0, 0);
+DECLARE_HOOK(ClearCommandGoal, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, ClearCommandGoal, (), ());
+
+SH_DECL_MANUALHOOK4(FindCoverPosInRadius, 0, 0, 0, bool, CBaseEntity *, const Vector &, float , Vector *);
+DECLARE_HOOK(FindCoverPosInRadius, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, FindCoverPosInRadius, bool, (CBaseEntity *pEntity, const Vector &goalPos, float coverRadius, Vector *pResult), (pEntity, goalPos, coverRadius, pResult));
+
+SH_DECL_MANUALHOOK0_void(CheckAmmo, 0, 0, 0);
+DECLARE_HOOK(CheckAmmo, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, CheckAmmo, (), ());
+
+SH_DECL_MANUALHOOK0_void(OnRangeAttack1, 0, 0, 0);
+DECLARE_HOOK(OnRangeAttack1, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnRangeAttack1, (), ());
+
+SH_DECL_MANUALHOOK2(GetShootEnemyDir, 0, 0, 0, Vector, const Vector &, bool );
+DECLARE_HOOK(GetShootEnemyDir, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetShootEnemyDir, Vector, (const Vector &shootOrigin, bool bNoisy), (shootOrigin, bNoisy));
+
+SH_DECL_MANUALHOOK1_void(SetScriptedScheduleIgnoreConditions, 0, 0, 0, Interruptability_t);
+DECLARE_HOOK(SetScriptedScheduleIgnoreConditions, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, SetScriptedScheduleIgnoreConditions, (Interruptability_t interrup), (interrup));
+
+SH_DECL_MANUALHOOK0_void(OnStartScene, 0, 0, 0);
+DECLARE_HOOK(OnStartScene, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnStartScene, (), ());
+
+SH_DECL_MANUALHOOK0(SelectIdealState, 0, 0, 0, NPC_STATE);
+DECLARE_HOOK(SelectIdealState, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, SelectIdealState, NPC_STATE, (), ());
+
+SH_DECL_MANUALHOOK0_void(RunAI, 0, 0, 0);
+DECLARE_HOOK(RunAI, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, RunAI, (), ());
+
+SH_DECL_MANUALHOOK0(ShouldMoveAndShoot, 0, 0, 0, bool);
+DECLARE_HOOK(ShouldMoveAndShoot, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ShouldMoveAndShoot, bool, (), ());
+
+SH_DECL_MANUALHOOK0(CanBeUsedAsAFriend, 0, 0, 0, bool);
+DECLARE_HOOK(CanBeUsedAsAFriend, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CanBeUsedAsAFriend, bool, (), ());
+
+SH_DECL_MANUALHOOK2_void(OnClearGoal, 0, 0, 0, CAI_BehaviorBase *, CE_AI_GoalEntity *);
+DECLARE_HOOK(OnClearGoal, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnClearGoal, (CAI_BehaviorBase *pBehavior, CE_AI_GoalEntity *pGoal), (pBehavior, pGoal));
+
+SH_DECL_MANUALHOOK2(ShouldAcceptGoal, 0, 0, 0, bool, CAI_BehaviorBase *, CE_AI_GoalEntity *);
+DECLARE_HOOK(ShouldAcceptGoal, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ShouldAcceptGoal, bool, (CAI_BehaviorBase *pBehavior, CE_AI_GoalEntity *pGoal), (pBehavior, pGoal));
+
+SH_DECL_MANUALHOOK1_void(Wake, 0, 0, 0, bool);
+DECLARE_HOOK(Wake, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, Wake, (bool bFireOutput), (bFireOutput));
+
+SH_DECL_MANUALHOOK1(GetReactionDelay, 0, 0, 0, float, CBaseEntity * );
+DECLARE_HOOK(GetReactionDelay, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetReactionDelay, float, (CBaseEntity *pEnemy ), (pEnemy));
+
+SH_DECL_MANUALHOOK1(SquadSlotName, 0, 0, 0, const char*, int);
+DECLARE_HOOK(SquadSlotName, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, SquadSlotName, const char*, (int slotID), (slotID));
+
+SH_DECL_MANUALHOOK5(PlayerInSpread, 0, 0, 0, bool, const Vector &, const Vector &, float , float , bool );
+DECLARE_HOOK(PlayerInSpread, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, PlayerInSpread, bool, (const Vector &sourcePos, const Vector &targetPos, float flSpread, float maxDistOffCenter, bool ignoreHatedPlayers), (sourcePos, targetPos, flSpread, maxDistOffCenter, ignoreHatedPlayers));
+
+
 
 
 
@@ -325,116 +758,61 @@ DEFINE_PROP(m_IdealNPCState, CAI_NPC);
 DEFINE_PROP(m_poseMove_Yaw, CAI_NPC);
 DEFINE_PROP(m_InverseIgnoreConditions, CAI_NPC);
 DEFINE_PROP(m_flWaitFinished, CAI_NPC);
-
+DEFINE_PROP(m_hInteractionPartner, CAI_NPC);
+DEFINE_PROP(m_SquadName, CAI_NPC);
+DEFINE_PROP(m_vDefaultEyeOffset, CAI_NPC);
+DEFINE_PROP(m_pLocalNavigator, CAI_NPC);
+DEFINE_PROP(m_iszSceneCustomMoveSeq, CAI_NPC);
+DEFINE_PROP(m_hTargetEnt, CAI_NPC);
+DEFINE_PROP(m_scriptState, CAI_NPC);
+DEFINE_PROP(m_hGoalEnt, CAI_NPC);
+DEFINE_PROP(m_pTacticalServices, CAI_NPC);
+DEFINE_PROP(m_bHintGroupNavLimiting, CAI_NPC);
+DEFINE_PROP(m_flMoveWaitFinished, CAI_NPC);
+DEFINE_PROP(m_pPathfinder, CAI_NPC);
+DEFINE_PROP(m_flLastDamageTime, CAI_NPC);
+DEFINE_PROP(m_vSavePosition, CAI_NPC);
+DEFINE_PROP(m_UnreachableEnts, CAI_NPC);
+DEFINE_PROP(m_EnemiesSerialNumber, CAI_NPC);
+DEFINE_PROP(m_hEnemyOccluder, CAI_NPC);
+DEFINE_PROP(m_pSenses, CAI_NPC);
+DEFINE_PROP(m_OnLostPlayer, CAI_NPC);
+DEFINE_PROP(m_OnLostEnemy, CAI_NPC);
+DEFINE_PROP(m_bInAScript, CAI_NPC);
+DEFINE_PROP(m_flDistTooFar, CAI_NPC);
+DEFINE_PROP(m_flLastAttackTime, CAI_NPC);
+DEFINE_PROP(m_spawnEquipment, CAI_NPC);
+DEFINE_PROP(m_ShotRegulator, CAI_NPC);
+DEFINE_PROP(m_vInterruptSavePosition, CAI_NPC);
+DEFINE_PROP(m_Efficiency, CAI_NPC);
+DEFINE_PROP(m_MoveEfficiency, CAI_NPC);
+DEFINE_PROP(m_iDesiredWeaponState, CAI_NPC);
+DEFINE_PROP(m_flEyeIntegRate, CAI_NPC);
+DEFINE_PROP(m_bConditionsGathered, CAI_NPC);
+DEFINE_PROP(m_iInteractionPlaying, CAI_NPC);
+DEFINE_PROP(m_ScriptedInteractions, CAI_NPC);
+DEFINE_PROP(m_bCannotDieDuringInteraction, CAI_NPC);
+DEFINE_PROP(m_OnDamaged, CAI_NPC);
+DEFINE_PROP(m_OnDamagedByPlayer, CAI_NPC);
+DEFINE_PROP(m_OnDamagedByPlayerSquad, CAI_NPC);
+DEFINE_PROP(m_OnHalfHealth, CAI_NPC);
+DEFINE_PROP(m_bForceConditionsGather, CAI_NPC);
+DEFINE_PROP(m_flSumDamage, CAI_NPC);
+DEFINE_PROP(m_flLastPlayerDamageTime, CAI_NPC);
 
 
 
 
 //-----------------------------------------------------------------------------
 
-// ================================================================
-//  Init static data
-// ================================================================
-
-//CAI_LocalIdSpace			CAI_NPC::gm_SquadSlotIdSpace( true );
-
 CAI_NPC::CAI_NPC()
 {
-	//unsigned char *obj = NULL;
-	//memcpy(&obj, reinterpret_cast<void*>(m_pMotor.ptr), sizeof(char*));
-	//m_pMotor.ptr = (CAI_Motor *)obj;
+	g_AI_Manager.AddAI( this );
 }
 
-bool CAI_NPC::LoadDefaultSchedules()
+CAI_NPC::~CAI_NPC()
 {
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_IDLE_STAND);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_IDLE_WALK);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_IDLE_WANDER);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_WAKE_ANGRY);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_ALERT_FACE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_ALERT_FACE_BESTSOUND);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_ALERT_REACT_TO_COMBAT_SOUND);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_ALERT_SCAN);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_ALERT_STAND);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_ALERT_WALK);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_INVESTIGATE_SOUND);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_COMBAT_FACE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_COMBAT_SWEEP);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_COMBAT_WALK);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_FEAR_FACE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_COMBAT_STAND);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_CHASE_ENEMY);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_CHASE_ENEMY_FAILED);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_VICTORY_DANCE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_TARGET_FACE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_TARGET_CHASE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SMALL_FLINCH);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_BIG_FLINCH);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_BACK_AWAY_FROM_ENEMY);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_MOVE_AWAY_FROM_ENEMY);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_BACK_AWAY_FROM_SAVE_POSITION);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_TAKE_COVER_FROM_ENEMY);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_TAKE_COVER_FROM_BEST_SOUND);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_FLEE_FROM_BEST_SOUND);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_TAKE_COVER_FROM_ORIGIN);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_FAIL_TAKE_COVER);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_RUN_FROM_ENEMY);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_RUN_FROM_ENEMY_FALLBACK);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_MOVE_TO_WEAPON_RANGE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_ESTABLISH_LINE_OF_FIRE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SHOOT_ENEMY_COVER);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_ESTABLISH_LINE_OF_FIRE_FALLBACK);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_PRE_FAIL_ESTABLISH_LINE_OF_FIRE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_FAIL_ESTABLISH_LINE_OF_FIRE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_COWER);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_MELEE_ATTACK1);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_MELEE_ATTACK2);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_RANGE_ATTACK1);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_RANGE_ATTACK2);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SPECIAL_ATTACK1);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SPECIAL_ATTACK2);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_STANDOFF);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_ARM_WEAPON);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_DISARM_WEAPON);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_HIDE_AND_RELOAD);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_RELOAD);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_AMBUSH);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_DIE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_DIE_RAGDOLL);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_WAIT_FOR_SCRIPT);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SCRIPTED_WALK);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SCRIPTED_RUN);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SCRIPTED_CUSTOM_MOVE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SCRIPTED_WAIT);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SCRIPTED_FACE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SCENE_GENERIC);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_NEW_WEAPON);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_NEW_WEAPON_CHEAT);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SWITCH_TO_PENDING_WEAPON);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_GET_HEALTHKIT);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_MOVE_AWAY);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_MOVE_AWAY_FAIL);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_MOVE_AWAY_END);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_WAIT_FOR_SPEAK_FINISH);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_FORCED_GO);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_FORCED_GO_RUN);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_PATROL_WALK);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_COMBAT_PATROL);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_PATROL_RUN);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_RUN_RANDOM);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_FAIL);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_FAIL_NOSTOP);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_FALL_TO_GROUND);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_DROPSHIP_DUSTOFF);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_FLINCH_PHYSICS);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_RUN_FROM_ENEMY_MOB );
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_DUCK_DODGE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_NPC_FREEZE);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_INTERACTION_MOVE_TO_PARTNER);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_INTERACTION_WAIT_FOR_PARTNER);
-	AI_LOAD_DEF_SCHEDULE( CAI_NPC,					SCHED_SLEEP );
-
-	return true;
+	g_AI_Manager.RemoveAI( this );
 }
 
 void CAI_NPC::CapabilitiesClear()
@@ -499,6 +877,25 @@ void CAI_NPC::ClearCondition( int iCondition )
 	m_Conditions->Clear(interrupt);
 }
 
+//---------------------------------------------------------
+//---------------------------------------------------------
+void CAI_NPC::ClearConditions( int *pConditions, int nConditions )
+{
+	for ( int i = 0; i < nConditions; ++i )
+	{
+		int iCondition = pConditions[i];
+		int interrupt = InterruptFromCondition( iCondition );
+		
+		if ( interrupt == -1 )
+		{
+			Assert(0);
+			continue;
+		}
+		
+		m_Conditions->Clear( interrupt );
+	}
+}
+
 bool CAI_NPC::AutoMovement(CEntity *pTarget, AIMoveTrace_t *pTraceResult)
 {
 	return AutoMovement( GetAnimTimeInterval(), pTarget, pTraceResult );
@@ -513,7 +910,7 @@ bool CAI_NPC::AutoMovement(CEntity *pTarget, AIMoveTrace_t *pTraceResult)
 //-----------------------------------------------------------------------------
 bool CAI_NPC::AutoMovement( float flInterval, CEntity *pTarget, AIMoveTrace_t *pTraceResult )
 {
-	return g_helpfunc.AutoMovement(BaseEntity(), flInterval, pTarget->BaseEntity(), pTraceResult);
+	return g_helpfunc.AutoMovement(BaseEntity(), flInterval, (pTarget) ? pTarget->BaseEntity() : NULL, pTraceResult);
 }
 
 //-----------------------------------------------------------------------------
@@ -539,19 +936,9 @@ void CAI_NPC::SetIdealActivity( Activity NewActivity )
 	g_helpfunc.SetIdealActivity(BaseEntity(), NewActivity);
 }
 
-
-bool CAI_NPC::CanBeAnEnemyOf( CEntity *pEnemy )	
-{ 
-	if ( GetSleepState() > AISS_WAITING_FOR_THREAT )
-		return false;
-
-	return true; 
-}
-
-
 bool CAI_NPC::IsCurSchedule( int schedId, bool fIdeal )	
 { 
-	if ( !m_pSchedule )
+	if ( GetCurSchedule() == NULL )
 		return ( schedId == SCHED_NONE || schedId == AI_RemapToGlobal(SCHED_NONE) );
 
 	schedId = ( AI_IdIsLocal( schedId ) ) ? 
@@ -560,7 +947,7 @@ bool CAI_NPC::IsCurSchedule( int schedId, bool fIdeal )
 	if ( fIdeal )
 		return ( schedId == m_IdealSchedule );
 
-	return ( m_pSchedule->GetId() == schedId ); 
+	return ( GetCurSchedule()->GetId() == schedId ); 
 }
 
 
@@ -675,7 +1062,7 @@ Activity CAI_NPC::TranslateActivity( Activity idealActivity, Activity *pIdealWea
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-bool CAI_NPC::HandleInteraction(int interactionType, void *data, CCombatCharacter* sourceEnt)
+bool CAI_NPC::HandleInteraction(int interactionType, void *data, CBaseEntity* sourceEnt)
 {
 	//CE_WTF
 #ifdef HL2_DLL
@@ -708,18 +1095,20 @@ bool CAI_NPC::HandleInteraction(int interactionType, void *data, CCombatCharacte
 //-----------------------------------------------------------------------------
 void CAI_NPC::ClearHintNode( float reuseDelay )
 {
-	if ( m_pHintNode )
+	if ( *(m_pHintNode.ptr) )
 	{
-		if ( m_pHintNode->IsLockedBy(this) )
-			m_pHintNode->Unlock(reuseDelay);
+		CE_AI_Hint *phint = (CE_AI_Hint *)CEntity::Instance(m_pHintNode);
+		if ( phint->IsLockedBy(this) )
+			phint->Unlock(reuseDelay);
 		m_pHintNode.ptr = NULL;
 	}
 }
 
 
-void CAI_NPC::SetHintNode( CAI_Hint *pHintNode )
+void CAI_NPC::SetHintNode( CBaseEntity *pHintNode )
 {
-	m_pHintNode.ptr = pHintNode;
+	m_pHintNode.ptr->Set(pHintNode);
+	//*(m_pHintNode.ptr) = pHintNode;
 }
 
 
@@ -755,24 +1144,21 @@ void CAI_NPC::AddActivityToSR(const char *actName, int actID)
 	//			game_shared/ai_activity.h
 	//			game_shared/activitylist.cpp
 	//			dlls/ai_activity.cpp
-	MEM_ALLOC_CREDIT();
 
 	static int lastActID = -2;
 	Assert( actID >= LAST_SHARED_ACTIVITY || actID == lastActID + 1 || actID == ACT_INVALID );
 	lastActID = actID;
 
 	m_pActivitySR->AddString(actName, actID);
-	m_iNumActivities++;
+	*(m_iNumActivities) += 1;
 }
 
 void CAI_NPC::AddEventToSR(const char *eventName, int eventID) 
 {
-	//g_helpfunc.AddEventToSR(eventName,eventID);
-	MEM_ALLOC_CREDIT();
 	Assert( m_pEventSR );
 
 	m_pEventSR->AddString( eventName, eventID );
-	m_iNumEvents++;
+	*(m_iNumEvents) += 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -815,7 +1201,6 @@ int CAI_NPC::GetTaskID(const char* taskName)
 
 bool CAI_NPC::OccupyStrategySlotRange( int slotIDStart, int slotIDEnd )
 {
-	//CE_TODO untest
 	// If I'm not in a squad a I don't fill slots
 	return ( !GetSquad() || GetSquad()->OccupyStrategySlotRange( GetEnemy(), slotIDStart, slotIDEnd, m_iMySquadSlot.ptr ) );
 
@@ -823,11 +1208,7 @@ bool CAI_NPC::OccupyStrategySlotRange( int slotIDStart, int slotIDEnd )
 
 void CAI_NPC::CallNPCThink()
 {
-	DUMP_FUNCTION();
-
 	g_helpfunc.CallNPCThink(BaseEntity());
-
-	SetThink(NULL);
 }
 
 Navigation_t CAI_NPC::GetNavType() const
@@ -918,7 +1299,7 @@ void CAI_NPC::ClearSchedule( const char *szReason )
 	m_ScheduleState->bScheduleWasInterrupted = true;
 	SetTaskStatus( TASKSTATUS_NEW );
 	m_IdealSchedule = SCHED_NONE;
-	m_pSchedule.ptr =  NULL;
+	*(m_pSchedule.ptr) =  NULL;
 	ResetScheduleCurTaskIndex();
 	m_InverseIgnoreConditions->SetAll();
 
@@ -951,6 +1332,773 @@ float CAI_NPC::SetWait( float minWait, float maxWait )
 }
 
 
+CAI_NPC *CAI_NPC::GetInteractionPartner( void )
+{
+	if ( m_hInteractionPartner.ptr->Get() == NULL )
+		return NULL;
+
+	return m_hInteractionPartner.ptr->Get()->MyNPCPointer();
+}
+
+
+
+
+//=========================================================
+// SetEyePosition
+//
+// queries the npc's model for $eyeposition and copies
+// that vector to the npc's m_vDefaultEyeOffset and m_vecViewOffset
+//
+//=========================================================
+void CAI_NPC::SetDefaultEyeOffset ( void )
+{
+	if  ( GetModelPtr() )
+	{
+		GetEyePosition( GetModelPtr(), m_vDefaultEyeOffset );
+
+		if ( *(m_vDefaultEyeOffset) == vec3_origin )
+		{
+			if ( Classify() != CLASS_NONE )
+			{
+				DevMsg( "WARNING: %s(%s) has no eye offset in .qc!\n", GetClassname(), STRING(GetModelName()) );
+			}
+			VectorAdd( WorldAlignMins(), WorldAlignMaxs(), m_vDefaultEyeOffset );
+			*(m_vDefaultEyeOffset)  *= 0.75;
+		}
+	}
+	else
+		m_vDefaultEyeOffset = vec3_origin;
+
+	SetViewOffset( m_vDefaultEyeOffset );
+
+}
+
+
+//---------------------------------------------------------
+//---------------------------------------------------------
+bool CAI_NPC::ConditionInterruptsCurSchedule( int iCondition )
+{	
+	if( !GetCurSchedule() )
+	{
+		return false;
+	}
+
+	int interrupt = InterruptFromCondition( iCondition );
+	
+	if ( interrupt == -1 )
+	{
+		Assert(0);
+		return false;
+	}
+	return ( GetCurSchedule()->HasInterrupt( interrupt ) );
+}
+
+const Vector &CAI_NPC::GetEnemyLKP() const
+{
+	CBaseEntity *cbase = (const_cast<CAI_NPC *>(this))->GetEnemy_CBase();
+	return (const_cast<CAI_NPC *>(this))->GetEnemies()->LastKnownPosition( cbase );
+}
+
+float CAI_NPC::GetEnemyLastTimeSeen() const
+{
+	CBaseEntity *cbase = (const_cast<CAI_NPC *>(this))->GetEnemy_CBase();
+	return (const_cast<CAI_NPC *>(this))->GetEnemies()->LastTimeSeen(cbase);
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: For non-looping animations that may be replayed sequentially (like attacks)
+//			Set the activity to ACT_RESET if this is a replay, otherwise just set ideal activity
+// Input  : newIdealActivity - desired ideal activity
+//-----------------------------------------------------------------------------
+void CAI_NPC::ResetIdealActivity( Activity newIdealActivity )
+{
+	if ( m_Activity == newIdealActivity )
+	{
+		m_Activity = ACT_RESET;
+	}
+
+	SetIdealActivity( newIdealActivity );
+}
+
+float CAI_NPC::GetStepDownMultiplier() const
+{
+	return (*(m_pNavigator.ptr))->GetStepDownMultiplier();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: For a specific delta, add a turn gesture and set the yaw speed
+// Input  : yaw delta
+//-----------------------------------------------------------------------------
+
+
+bool CAI_NPC::UpdateTurnGesture( void )
+{
+	float flYD = GetMotor()->DeltaIdealYaw();
+	return GetMotor()->AddTurnGesture( flYD );
+}
+
+Activity CAI_NPC::GetStoppedActivity( void )
+{
+	if (GetNavigator()->IsGoalActive())
+	{
+		Activity activity = GetNavigator()->GetArrivalActivity();
+
+		if (activity > ACT_RESET)
+		{
+			return activity;
+		}
+	}
+
+	return ACT_IDLE;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : int
+//-----------------------------------------------------------------------------
+int CAI_NPC::GetScriptCustomMoveSequence( void )
+{
+	int iSequence = ACTIVITY_NOT_AVAILABLE;
+
+	CEAI_ScriptedSequence *_m_hCine = Get_m_hCine();
+	// If we have a scripted sequence entity, use it's custom move
+	if ( _m_hCine != NULL )
+	{
+		iSequence = LookupSequence( STRING( *(_m_hCine->m_iszCustomMove) ) );
+		if ( iSequence == ACTIVITY_NOT_AVAILABLE )
+		{
+			DevMsg( "SCRIPT_CUSTOM_MOVE: %s has no sequence:%s\n", GetClassname(), STRING(*(_m_hCine->m_iszCustomMove)) );
+		}
+	}
+	else if ( *(m_iszSceneCustomMoveSeq) != NULL_STRING )
+	{
+		// Otherwise, use the .vcd custom move
+		iSequence = LookupSequence( STRING( *(m_iszSceneCustomMoveSeq) ) );
+		if ( iSequence == ACTIVITY_NOT_AVAILABLE )
+		{
+			Warning( "SCRIPT_CUSTOM_MOVE: %s failed scripted custom move. Has no sequence called: %s\n", GetClassname(), STRING(*(m_iszSceneCustomMoveSeq)) );
+		}
+	}
+
+	// Failed? Use walk.
+	if ( iSequence == ACTIVITY_NOT_AVAILABLE )
+	{
+		iSequence = SelectWeightedSequence( ACT_WALK );
+	}
+
+	return iSequence;
+}
+
+void CAI_NPC::SetTarget( CBaseEntity *pTarget )
+{
+	m_hTargetEnt.ptr->Set(pTarget);
+}
+
+//-----------------------------------------------------------------------------
+
+void CAI_NPC::SetHintGroup( string_t newGroup, bool bHintGroupNavLimiting )	
+{ 
+	string_t oldGroup = m_strHintGroup;
+	m_strHintGroup = newGroup;
+	m_bHintGroupNavLimiting = bHintGroupNavLimiting;
+
+	if ( oldGroup != newGroup )
+		OnChangeHintGroup( oldGroup, newGroup );
+
+}
+
+
+//-----------------------------------------------------------------------------
+
+bool CAI_NPC::IsJumpLegal( const Vector &startPos, const Vector &apex, const Vector &endPos, 
+							   float maxUp, float maxDown, float maxDist ) const
+{
+	if ((endPos.z - startPos.z) > maxUp + 0.1) 
+		return false;
+	if ((startPos.z - endPos.z) > maxDown + 0.1) 
+		return false;
+
+	if ((apex.z - startPos.z) > maxUp * 1.25 ) 
+		return false;
+
+	float dist = (startPos - endPos).Length();
+	if ( dist > maxDist + 0.1) 
+		return false;
+	return true;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns the target entity
+// Input  :
+// Output :
+//-----------------------------------------------------------------------------
+CEntity *CAI_NPC::GetNavTargetEntity(void)
+{
+	if ( GetNavigator()->GetGoalType() == GOALTYPE_ENEMY )
+		return m_hEnemy;
+	else if ( GetNavigator()->GetGoalType() == GOALTYPE_TARGETENT )
+		return m_hTargetEnt;
+	return NULL;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Called by the navigator to initiate the opening of a prop_door
+//			that is in our way.
+//-----------------------------------------------------------------------------
+void CAI_NPC::OpenPropDoorBegin( CPropDoor *pDoor )
+{
+	OpenPropDoorNow( pDoor );
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Called when we are trying to open a prop_door and it's time to start
+//			the door moving. This is called either in response to an anim event
+//			or as a fallback when we don't have an appropriate open activity.
+//-----------------------------------------------------------------------------
+void CAI_NPC::OpenPropDoorNow( CPropDoor *pDoor )
+{
+	pDoor->NPCOpenDoor(this);
+
+	m_flMoveWaitFinished = gpGlobals->curtime + pDoor->GetOpenInterval();
+}
+
+//=========================================================
+// VecToYaw - turns a directional vector into a yaw value
+// that points down that vector.
+//=========================================================
+float CAI_NPC::VecToYaw( const Vector &vecDir )
+{
+	if (vecDir.x == 0 && vecDir.y == 0 && vecDir.z == 0)
+		return GetLocalAngles().y;
+
+	return UTIL_VecToYaw( vecDir );
+}
+
+int CAI_NPC::FlyMove( const Vector& pfPosition, unsigned int mask )
+{
+	Vector		oldorg, neworg;
+	trace_t		trace;
+
+	// try the move	
+	VectorCopy( GetAbsOrigin(), oldorg );
+	VectorAdd( oldorg, pfPosition, neworg );
+	UTIL_TraceEntity( this, oldorg, neworg, mask, &trace );				
+	if (trace.fraction == 1)
+	{
+		if ( (GetFlags() & FL_SWIM) && enginetrace->GetPointContents(trace.endpos) == CONTENTS_EMPTY )
+			return false;	// swim monster left water
+
+		SetAbsOrigin( trace.endpos );
+		PhysicsTouchTriggers();
+		return true;
+	}
+
+	return false;
+}
+
+
+
+int CAI_NPC::WalkMove( const Vector& vecPosition, unsigned int mask )
+{	
+	if ( GetFlags() & (FL_FLY | FL_SWIM) )
+	{
+		return FlyMove( vecPosition, mask );
+	}
+
+	if ( (GetFlags() & FL_ONGROUND) == 0 )
+	{
+		return 0;
+	}
+
+	trace_t	trace;
+	Vector oldorg, neworg, end;
+	Vector move( vecPosition[0], vecPosition[1], 0.0f );
+	VectorCopy( GetAbsOrigin(), oldorg );
+	VectorAdd( oldorg, move, neworg );
+
+	// push down from a step height above the wished position
+	float flStepSize = sv_stepsize->GetFloat();
+	neworg[2] += flStepSize;
+	VectorCopy(neworg, end);
+	end[2] -= flStepSize*2;
+
+	UTIL_TraceEntity( this, neworg, end, mask, &trace );
+	if ( trace.allsolid )
+		return false;
+
+	if (trace.startsolid)
+	{
+		neworg[2] -= flStepSize;
+		UTIL_TraceEntity( this, neworg, end, mask, &trace );
+		if ( trace.allsolid || trace.startsolid )
+			return false;
+	}
+
+	if (trace.fraction == 1)
+	{
+		// if monster had the ground pulled out, go ahead and fall
+		if ( GetFlags() & FL_PARTIALGROUND )
+		{
+			SetAbsOrigin( oldorg + move );
+			PhysicsTouchTriggers();
+			SetGroundEntity( NULL );
+			return true;
+		}
+	
+		return false;		// walked off an edge
+	}
+
+	// check point traces down for dangling corners
+	SetAbsOrigin( trace.endpos );
+
+	if (UTIL_CheckBottom( this, NULL, flStepSize ) == 0)
+	{
+		if ( GetFlags() & FL_PARTIALGROUND )
+		{	
+			// entity had floor mostly pulled out from underneath it
+			// and is trying to correct
+			PhysicsTouchTriggers();
+			return true;
+		}
+
+		// Reset to original position
+		SetAbsOrigin( oldorg );
+		return false;
+	}
+
+	if ( GetFlags() & FL_PARTIALGROUND )
+	{
+		// Con_Printf ("back on ground\n"); 
+		RemoveFlag( FL_PARTIALGROUND );
+	}
+
+	// the move is ok
+	SetGroundEntity( trace.m_pEnt );
+	PhysicsTouchTriggers();
+	return true;
+}
+
+
+void CAI_NPC::RememberUnreachable(CEntity *pEntity, float duration )
+{
+	if ( pEntity == GetEnemy() )
+	{
+		ForceChooseNewEnemy();
+	}
+
+	CBaseEntity *cbase = (pEntity) ? pEntity->BaseEntity() : NULL;
+
+	const float NPC_UNREACHABLE_TIMEOUT = ( duration > 0.0 ) ? duration : 3;
+	
+	CUtlVector<UnreachableEnt_t> *data = m_UnreachableEnts;
+	// Only add to list if not already on it
+	for (int i=data->Size()-1;i>=0;i--)
+	{
+		// If record already exists just update mark time
+		if (cbase == data->Element(i).hUnreachableEnt)
+		{
+			data->Element(i).fExpireTime	 = gpGlobals->curtime + NPC_UNREACHABLE_TIMEOUT;
+			data->Element(i).vLocationWhenUnreachable = pEntity->GetAbsOrigin();
+			return;
+		}
+	}
+
+	// Add new unreachabe entity to list
+	int nNewIndex = data->AddToTail();
+	data->Element(nNewIndex).hUnreachableEnt = cbase;
+	data->Element(nNewIndex).fExpireTime	 = gpGlobals->curtime + NPC_UNREACHABLE_TIMEOUT;
+	data->Element(nNewIndex).vLocationWhenUnreachable = pEntity->GetAbsOrigin();
+}
+
+bool CAI_NPC::HasStrategySlotRange( int slotIDStart, int slotIDEnd )
+{
+	// If I wasn't taking up a squad slot I'm done
+	if (m_iMySquadSlot < slotIDStart || m_iMySquadSlot > slotIDEnd)
+	{
+		return false;
+	}
+	return true;
+}
+
+void CAI_NPC::TaskMovementComplete( void )
+{
+	switch( GetTaskStatus() )
+	{
+	case TASKSTATUS_NEW:
+	case TASKSTATUS_RUN_MOVE_AND_TASK:
+		SetTaskStatus( TASKSTATUS_RUN_TASK );
+		break;
+
+	case TASKSTATUS_RUN_MOVE:
+		TaskComplete();
+		break;
+
+	case TASKSTATUS_RUN_TASK:
+		// FIXME: find out how to safely restart movement
+		//Warning( "Movement completed twice!\n" );
+		//Assert( 0 );
+		break;
+
+	case TASKSTATUS_COMPLETE:
+		break;
+	}
+
+	// JAY: Put this back in.
+	// UNDONE: Figure out how much of the timestep was consumed by movement
+	// this frame and restart the movement/schedule engine if necessary
+	if ( m_scriptState != SCRIPT_CUSTOM_MOVE_TO_MARK )
+	{
+		SetIdealActivity( GetStoppedActivity() );
+	}
+
+	// Advance past the last node (in case there is some event at this node)
+	if ( GetNavigator()->IsGoalActive() )
+	{
+		GetNavigator()->AdvancePath();
+	}
+
+	// Now clear the path, it's done.
+	GetNavigator()->ClearGoal();
+
+	OnMovementComplete();
+}
+
+bool CAI_NPC::OccupyStrategySlot( int squadSlotID )
+{
+	return OccupyStrategySlotRange( squadSlotID, squadSlotID );
+}
+
+bool CAI_NPC::IsStrategySlotRangeOccupied( int slotIDStart, int slotIDEnd )
+{
+	return (GetSquad() && GetSquad()->IsStrategySlotRangeOccupied( GetEnemy(), slotIDStart, slotIDEnd ));
+}
+
+void CAI_NPC::VacateStrategySlot(void)
+{
+	if (GetSquad())
+	{
+		GetSquad()->VacateStrategySlot(GetEnemy(), m_iMySquadSlot);
+		m_iMySquadSlot = SQUAD_SLOT_NONE;
+	}
+}
+
+CCombatCharacter* CAI_NPC::GetEnemyCombatCharacterPointer()
+{
+	CEntity *enemy = GetEnemy();
+	if ( enemy == NULL )
+		return NULL;
+
+	return enemy->MyCombatCharacterPointer();
+}
+
+int CAI_NPC::TaskIsRunning( void )
+{
+	if ( GetTaskStatus() != TASKSTATUS_COMPLETE &&
+		 GetTaskStatus() != TASKSTATUS_RUN_MOVE )
+		 return 1;
+
+	return 0;
+}
+
+void CAI_NPC::SetEnemyOccluder(CEntity *pBlocker)
+{
+	m_hEnemyOccluder.ptr->Set((pBlocker) ? pBlocker->BaseEntity() : NULL);
+}
+
+void CAI_NPC::ClearEnemyMemory()
+{
+	GetEnemies()->ClearMemory( GetEnemy_CBase() );
+}
+
+void CAI_NPC::TestPlayerPushing( CBaseEntity *pPlayer )
+{
+	g_helpfunc.TestPlayerPushing(BaseEntity(), pPlayer);
+}
+
+void CAI_NPC::TestPlayerPushing( CEntity *pEntity )
+{
+	if ( HasSpawnFlags( SF_NPC_NO_PLAYER_PUSHAWAY ) )
+		return;
+
+	// Heuristic for determining if the player is pushing me away
+	CPlayer *pPlayer = ToBasePlayer( pEntity );
+	if ( pPlayer && !( pPlayer->GetFlags() & FL_NOTARGET ) )
+	{
+		if ( (pPlayer->m_nButtons & (IN_FORWARD|IN_BACK|IN_MOVELEFT|IN_MOVERIGHT)) || 
+			 pPlayer->GetAbsVelocity().AsVector2D().LengthSqr() > 50*50 )
+		{
+			SetCondition( COND_PLAYER_PUSHING );
+			Vector vecPush = GetAbsOrigin() - pPlayer->GetAbsOrigin();
+			VectorNormalize( vecPush );
+			CascadePlayerPush( vecPush, pPlayer->WorldSpaceCenter() );
+		}
+	}
+}
+
+void CAI_NPC::CascadePlayerPush( const Vector &push, const Vector &pushOrigin )
+{
+	//
+	// Try to push any friends that are in the way.
+	//
+	float			hullWidth						= GetHullWidth();
+	const Vector &	origin							= GetAbsOrigin();
+	const Vector2D &origin2D						= origin.AsVector2D();
+
+	const float		MIN_Z_TO_TRANSMIT				= GetHullHeight() * 0.5 + 0.1;
+	const float		DIST_REQD_TO_TRANSMIT_PUSH_SQ	= Square( hullWidth * 5 + 0.1 );
+	const float		DIST_FROM_PUSH_VECTOR_REQD_SQ	= Square( hullWidth + 0.1 );
+
+	Vector2D		pushTestPoint = vec2_invalid;
+
+	for ( int i = 0; i < g_AI_Manager.NumAIs(); i++ )
+	{
+		CAI_NPC *pOther = g_AI_Manager.AccessAIs()[i];
+		if ( pOther != this && pOther->IRelationType(BaseEntity()) == D_LI && !pOther->HasCondition( COND_PLAYER_PUSHING ) )
+		{
+			const Vector &friendOrigin = pOther->GetAbsOrigin();
+			if ( fabsf( friendOrigin.z - origin.z ) < MIN_Z_TO_TRANSMIT &&
+				 ( friendOrigin.AsVector2D() - origin.AsVector2D() ).LengthSqr() < DIST_REQD_TO_TRANSMIT_PUSH_SQ )
+			{
+				if ( pushTestPoint == vec2_invalid )
+				{
+					pushTestPoint = origin2D - pushOrigin.AsVector2D();
+					// No normalize, since it wants to just be a big number and we can't be less that a hull away
+					pushTestPoint *= 2000;
+					pushTestPoint += origin2D;
+
+				}
+				float t;
+				float distSq = CalcDistanceSqrToLine2D(  friendOrigin.AsVector2D(), origin2D, pushTestPoint, &t );
+				if ( t > 0 && distSq < DIST_FROM_PUSH_VECTOR_REQD_SQ )
+				{
+					pOther->SetCondition( COND_PLAYER_PUSHING );
+				}
+			}
+		}
+	}
+}
+
+bool CAI_NPC::FindSpotForNPCInRadius( Vector *pResult, const Vector &vStartPos, CAI_NPC *pNPC, float radius, bool bOutOfPlayerViewcone )
+{
+	CPlayer *pPlayer = UTIL_GetNearestPlayer(pNPC->GetAbsOrigin());
+	QAngle fan;
+
+	fan.x = 0;
+	fan.z = 0;
+
+	for( fan.y = 0 ; fan.y < 360 ; fan.y += 18.0 )
+	{
+		Vector vecTest;
+		Vector vecDir;
+
+		AngleVectors( fan, &vecDir );
+
+		vecTest = vStartPos + vecDir * radius;
+
+		if ( bOutOfPlayerViewcone && pPlayer && !pPlayer->FInViewCone_Vector( vecTest ) )
+			continue;
+
+		trace_t tr;
+
+		UTIL_TraceLine( vecTest, vecTest - Vector( 0, 0, 8192 ), MASK_SHOT, pNPC->BaseEntity(), COLLISION_GROUP_NONE, &tr );
+		if( tr.fraction == 1.0 )
+		{
+			continue;
+		}
+
+		UTIL_TraceHull( tr.endpos,
+						tr.endpos + Vector( 0, 0, 10 ),
+						pNPC->GetHullMins(),
+						pNPC->GetHullMaxs(),
+						MASK_NPCSOLID,
+						pNPC->BaseEntity(),
+						COLLISION_GROUP_NONE,
+						&tr );
+
+		if( tr.fraction == 1.0 && pNPC->GetMoveProbe()->CheckStandPosition( tr.endpos, MASK_NPCSOLID ) )
+		{
+			*pResult = tr.endpos;
+			return true;
+		}
+	}
+	return false;
+}
+
+CSound *CAI_NPC::GetLoudestSoundOfType( int iType )
+{
+	return CE_CSoundEnt::GetLoudestSoundOfType( iType, EarPosition() );;
+}
+
+
+
+bool CAI_NPC::IsWeaponStateChanging( void )
+{
+	return ( m_iDesiredWeaponState == DESIREDWEAPONSTATE_CHANGING || m_iDesiredWeaponState == DESIREDWEAPONSTATE_CHANGING_DESTROY );
+}
+
+void CAI_NPC::SetIgnoreConditions( int *pConditions, int nConditions )
+{
+	for ( int i = 0; i < nConditions; ++i )
+	{
+		int iCondition = pConditions[i];
+		int interrupt = InterruptFromCondition( iCondition );
+		
+		if ( interrupt == -1 )
+		{
+			Assert(0);
+			continue;
+		}
+		
+		m_InverseIgnoreConditions->Clear( interrupt ); // clear means ignore
+	}
+}
+
+void CAI_NPC::ClearIgnoreConditions( int *pConditions, int nConditions )
+{
+	for ( int i = 0; i < nConditions; ++i )
+	{
+		int iCondition = pConditions[i];
+		int interrupt = InterruptFromCondition( iCondition );
+		
+		if ( interrupt == -1 )
+		{
+			Assert(0);
+			continue;
+		}
+		
+		m_InverseIgnoreConditions->Set( interrupt ); // set means don't ignore
+	}
+}
+
+void CAI_NPC::SetDistLook( float flDistLook )
+{
+	GetSenses()->SetDistLook( flDistLook );
+}
+
+float CAI_NPC::EnemyDistance( CEntity *pEnemy )
+{
+	Vector enemyDelta = pEnemy->WorldSpaceCenter() - WorldSpaceCenter();
+	
+	// NOTE: We ignore rotation for computing height.  Assume it isn't an effect
+	// we care about, so we simply use OBBSize().z for height.  
+	// Otherwise you'd do this:
+	// pEnemy->CollisionProp()->WorldSpaceSurroundingBounds( &enemyMins, &enemyMaxs );
+	// float enemyHeight = enemyMaxs.z - enemyMins.z;
+
+	float enemyHeight = pEnemy->CollisionProp_Actual()->OBBSize().z;
+	float myHeight = CollisionProp_Actual()->OBBSize().z;
+	
+	// max distance our centers can be apart with the boxes still overlapping
+	float flMaxZDist = ( enemyHeight + myHeight ) * 0.5f;
+
+	// see if the enemy is closer to my head, feet or in between
+	if ( enemyDelta.z > flMaxZDist )
+	{
+		// enemy feet above my head, compute distance from my head to his feet
+		enemyDelta.z -= flMaxZDist;
+	}
+	else if ( enemyDelta.z < -flMaxZDist )
+	{
+		// enemy head below my feet, return distance between my feet and his head
+		enemyDelta.z += flMaxZDist;
+	}
+	else
+	{
+		// boxes overlap in Z, no delta
+		enemyDelta.z = 0;
+	}
+
+	return enemyDelta.Length();
+}
+
+bool CAI_NPC::HasInteractionCantDie( void )
+{
+	return ( m_bCannotDieDuringInteraction && IsRunningDynamicInteraction() );
+}
+
+bool CAI_NPC::IsInPlayerSquad() const
+{ 
+	return ( GetSquad() && MAKE_STRING(GetSquad()->GetName()) == GetPlayerSquadName() && !CAI_Squad::IsSilentMember(this) ); 
+}
+
+
+bool CAI_NPC::IsSquadmateInSpread( const Vector &sourcePos, const Vector &targetPos, float flSpread, float maxDistOffCenter )
+{
+	CAI_Squad *squad = GetSquad();
+	if( !squad ) 
+		return false;
+
+	AISquadIter_t iter;
+
+	CBaseEntity *pEntity = squad->GetFirstMember( &iter );
+	CAI_NPC *pSquadmate = (CAI_NPC *)CEntity::Instance(pEntity);
+	while ( pSquadmate )
+	{
+		// Ignore squadmates that can't take damage. This is primarily to ignore npc_enemyfinders.
+		if ( pSquadmate->m_takedamage != DAMAGE_NO )
+		{
+			if ( pSquadmate != this )
+			{
+				if ( PointInSpread( pSquadmate, sourcePos, targetPos, pSquadmate->GetAbsOrigin(), flSpread, maxDistOffCenter ) )
+					return true;
+			}
+		}
+		pEntity = squad->GetNextMember( &iter );
+		pSquadmate = (CAI_NPC *)CEntity::Instance(pEntity);
+	}
+	return false;
+}
+
+bool CAI_NPC::PointInSpread( CCombatCharacter *pCheckEntity, const Vector &sourcePos, const Vector &targetPos, const Vector &testPoint, float flSpread, float maxDistOffCenter )
+{
+	float distOffLine = CalcDistanceToLine2D( testPoint.AsVector2D(), sourcePos.AsVector2D(), targetPos.AsVector2D() );
+	if ( distOffLine < maxDistOffCenter )
+	{
+		Vector toTarget		= targetPos - sourcePos;
+		float  distTarget	= VectorNormalize(toTarget);
+
+		Vector toTest   = testPoint - sourcePos;
+		float  distTest = VectorNormalize(toTest);
+		// Only reject if target is on other side 
+		if (distTarget > distTest)
+		{
+			toTarget.z = 0.0;
+			toTest.z = 0.0;
+
+			float dotProduct = DotProduct(toTarget,toTest);
+			if (dotProduct > flSpread)
+			{
+				return true;
+			}
+			else if( dotProduct > 0.0f )
+			{
+				// If this guy is in front, do the hull/line test:
+				if( pCheckEntity )
+				{
+					float flBBoxDist = NAI_Hull::Width( pCheckEntity->GetHullType() );
+					flBBoxDist *= 1.414f; // sqrt(2)
+
+					// !!!BUGBUG - this 2d check will stop a citizen shooting at a gunship or strider
+					// if another citizen is between them, even though the strider or gunship may be
+					// high up in the air (sjb)
+					distOffLine = CalcDistanceToLine( testPoint, sourcePos, targetPos );
+					if( distOffLine < flBBoxDist )
+					{
+						return true;
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
+
 
 
 
@@ -970,6 +2118,9 @@ bool NPC_CheckBrushExclude( CEntity *pEntity, CEntity *pBrush )
 	return false;
 }
 
-
+bool AIStrongOpt( void )
+{
+	return ai_strong_optimizations->GetBool();
+}
 
 

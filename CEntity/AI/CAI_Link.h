@@ -6,7 +6,6 @@
 #include "ai_hull.h"	// For num hulls
 #include "wchartypes.h"
 
-
 struct edict_t;
 
 enum Link_Info_t
@@ -20,6 +19,7 @@ enum Link_Info_t
 //=============================================================================
 
 class CAI_DynamicLink;
+class CBaseEntity;
 
 #define AI_MOVE_TYPE_BITS ( bits_CAP_MOVE_GROUND | bits_CAP_MOVE_JUMP | bits_CAP_MOVE_FLY | bits_CAP_MOVE_CLIMB | bits_CAP_MOVE_SWIM | bits_CAP_MOVE_CRAWL )
 
@@ -38,7 +38,7 @@ public:
 
 	float	m_timeStaleExpires;
 
-	CAI_DynamicLink *m_pDynamicLink;
+	CBaseEntity *m_pDynamicLink;
 	
 	//edict_t	*m_pLinkEnt;	// the entity that blocks this connection (doors, etc)
 

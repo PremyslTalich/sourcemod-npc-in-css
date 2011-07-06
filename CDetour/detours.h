@@ -56,6 +56,18 @@ ret name(void)
 ret (*name##_Actual)(p1type) = NULL; \
 ret name(p1type p1name)
 
+#define DETOUR_DECL_STATIC2(name, ret, p1type, p1name, p2type, p2name) \
+ret (*name##_Actual)(p1type, p2type) = NULL; \
+ret name(p1type p1name, p2type p2name)
+
+#define DETOUR_DECL_STATIC4(name, ret, p1type, p1name, p2type, p2name, p3type, p3name, p4type, p4name) \
+ret (*name##_Actual)(p1type, p2type, p3type, p4type) = NULL; \
+ret name(p1type p1name, p2type p2name, p3type p3name, p4type p4name)
+
+#define DETOUR_DECL_STATIC5(name, ret, p1type, p1name, p2type, p2name, p3type, p3name, p4type, p4name, p5type, p5name) \
+ret (*name##_Actual)(p1type, p2type, p3type, p4type, p5type) = NULL; \
+ret name(p1type p1name, p2type p2name, p3type p3name, p4type p4name, p5type p5name)
+
 #define DETOUR_DECL_MEMBER0(name, ret) \
 class name##Class \
 { \

@@ -5,6 +5,7 @@
 
 #include "CEntity.h"
 #include "ai_hull.h"
+#include "CAI_Hint.h"
 
 enum AI_ZoneIds_t
 {
@@ -94,8 +95,8 @@ public:
 
 	CAI_Node( int id, const Vector &origin, float yaw );
 	
-	CAI_Hint*		GetHint()					{ return m_pHint; }
-	void			SetHint( CAI_Hint *pHint )	{ m_pHint = pHint; }
+	CE_AI_Hint*		GetHint()					{ return (CE_AI_Hint *)CEntity::Instance(m_pHint); }
+	void			SetHint( CBaseEntity *pHint )	{ m_pHint = pHint; }
 
 	int				NumLinks() const		{ return m_Links.Count(); }
 	void			ClearLinks()			{ m_Links.Purge(); }
@@ -144,7 +145,7 @@ public:
 	CUtlVector<CAI_Link *> m_Links;		// growable array of links to this node
 
 	float			m_flNextUseTime;		// When can I be used again?
-	CAI_Hint*		m_pHint;				// hint attached to this node
+	CBaseEntity*	m_pHint;				// hint attached to this node
 	int				m_iFirstShuffledLink;				// first link to check
 };
 

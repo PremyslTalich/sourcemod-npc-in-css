@@ -28,6 +28,8 @@ typedef CHandle<CBaseEntity> EHANDLE;
 #include "server_class.h"
 #include "CEntity.h"
 #include "usercmd.h"
+#include "isaverestore.h"
+
 //#ifdef WIN32
 #include "rtti.h"
 //#endif
@@ -41,6 +43,25 @@ IEntityFactoryReal *IEntityFactoryReal::m_Head;
 
 EntityFactoryDictionaryCall EntityFactoryDictionary_CE = NULL;
 
+CDetour *RemoveEntity_CDetour = NULL;
+
+
+#ifdef _DEBUG
+unsigned long long CEntityManager::count = 0;
+#endif
+
+DETOUR_DECL_MEMBER1(RemoveEntity, void, CBaseHandle, handle)
+{
+	CEntity *cent = CEntity::Instance(handle);
+	if(cent)
+	{
+		if(strcmp(cent->GetClassname(),"info_target") == 0)
+			META_CONPRINTF("Destroy %s\n",cent->GetClassname());
+		cent->Destroy();
+	}
+	DETOUR_MEMBER_CALL(RemoveEntity)(handle);
+}
+
 CEntityManager *GetEntityManager()
 {
 	static CEntityManager *entityManager = new CEntityManager();
@@ -49,6 +70,7 @@ CEntityManager *GetEntityManager()
 
 CEntityManager::CEntityManager()
 {
+	memset(pEntityData, 0, sizeof(pEntityData));
 	m_bEnabled = false;
 }
 
@@ -88,6 +110,7 @@ bool CEntityManager::Init(IGameConfig *pConfig)
 
 	PhysIsInCallback = (PhysIsInCallbackFuncType)addr;
 
+
 	/* Reconfigure all the hooks */
 	IHookTracker *pTracker = IHookTracker::m_Head;
 	while (pTracker)
@@ -97,6 +120,9 @@ bool CEntityManager::Init(IGameConfig *pConfig)
 	}
 
 	CDetourManager::Init(g_pSM->GetScriptingEngine(), pConfig);
+
+	RemoveEntity_CDetour = DETOUR_CREATE_MEMBER(RemoveEntity, "CBaseEntityList::RemoveEntity");
+	RemoveEntity_CDetour->EnableDetour();
 
 	IDetourTracker *pDetourTracker = IDetourTracker::m_Head;
 	while (pDetourTracker)
@@ -133,6 +159,9 @@ void CEntityManager::Shutdown()
 		pDetourTracker->RemoveHook();
 		pDetourTracker = pDetourTracker->m_Next;
 	}
+	
+	if(RemoveEntity_CDetour)
+		RemoveEntity_CDetour->DisableDetour();
 }
 
 void CEntityManager::LinkEntityToClass(IEntityFactory_CE *pFactory, const char *className)
@@ -147,10 +176,16 @@ void CEntityManager::LinkEntityToClass(IEntityFactory_CE *pFactory, const char *
 	pSwapTrie.insert(className, replaceName);
 }
 
+static const char hhh[] = "info_player_counterterrorist";
+
 IServerNetworkable *CEntityManager::Create(const char *pClassName)
 {
+	/*if(strcmp(pClassName,"grenade") == 0)
+	{
+		//META_CONPRINTF("CEntityManager::Create %s\n",pClassName);
+	}*/
+
 	//META_CONPRINTF("CEntityManager::Create %s\n",pClassName);
-	
 
 	IServerNetworkable *pNetworkable = META_RESULT_ORIG_RET(IServerNetworkable *);
 
@@ -162,8 +197,14 @@ IServerNetworkable *CEntityManager::Create(const char *pClassName)
 	CBaseEntity *pEnt = pNetworkable->GetBaseEntity();
 	edict_t *pEdict = pNetworkable->GetEdict();
 
-	if (!pEdict || !pEnt)
+	if (/*!pEdict || */!pEnt)
 	{
+		return NULL;
+	}
+
+	if(strcmp(pClassName,"player") == 0 && engine->IndexOfEdict(pEdict) == 0)
+	{
+		//META_CONPRINTF("CEntityManager::Create Skip! \"%s\"\n",pClassName);
 		return NULL;
 	}
 
@@ -202,23 +243,26 @@ IServerNetworkable *CEntityManager::Create(const char *pClassName)
 	IEntityFactory_CE *pFactory = *value;
 	assert(pFactory);
 
+	CEntity *pEntity = pFactory->Create(pEdict, pEnt);
+
 	char vtable[20];
 	_snprintf(vtable, sizeof(vtable), "%x", (unsigned int) *(void **)pEnt);
 
-	CEntity *pEntity = pFactory->Create(pEdict, pEnt);
-
 	pEntity->ClearAllFlags();
 	pEntity->InitProps();
-
+	
 	if (!pHookedTrie.retrieve(vtable))
 	{
 		pEntity->InitHooks();
-		pEntity->InitDataMap();
 		pHookedTrie.insert(vtable, true);
 	}
+	
+	pEntity->InitDataMap();
+
 
 	pEntity->SetClassname(pClassName);
 
+	pEntity->PostInit();
 
 	return NULL;
 }
@@ -228,7 +272,84 @@ void CEntityManager::RemoveEdict(edict_t *e)
 	CEntity *pEnt = CEntity::Instance(e);
 	if (pEnt)
 	{
+		assert(0);
 		g_pSM->LogMessage(myself, "Edict Removed, removing CEntity");
 		pEnt->Destroy();
 	}
+}
+
+
+void our_trie_iterator(KTrie<IEntityFactory_CE *> *pTrie, const char *name, IEntityFactory_CE *& obj, void *data)
+{
+	SourceHook::List<CEntity *> *cent_list = (SourceHook::List<CEntity *> *)data;
+	int count = 0;
+	SourceHook::List<CEntity *>::iterator _iter;
+	CEntity *pInfo;
+	for(_iter=cent_list->begin(); _iter!=cent_list->end(); _iter++)
+	{
+		pInfo = (*_iter);
+
+		if(strcmp(name, pInfo->GetClassname()) == 0)
+		{
+			count++;
+			continue;
+		}
+		IType *pType = GetType(pInfo->BaseEntity());
+		IBaseType *pBase = pType->GetBaseType();
+
+		do 
+		{
+			const char *classname = GetTypeName(pBase->GetTypeInfo());
+			if(strcmp(classname, name) == 0)
+			{
+				count++;
+			}
+		} while (pBase->GetNumBaseClasses() && (pBase = pBase->GetBaseClass(0)));
+		pType->Destroy();
+	}
+
+	if(strlen(name) < 7)
+		META_CONPRINTF("%s:\t\t\t\t%d\n",name,count);
+	else if(strlen(name) < 15)
+		META_CONPRINTF("%s:\t\t\t%d\n",name,count);
+	else if(strlen(name) < 25)
+		META_CONPRINTF("%s:\t\t%d\n",name,count);
+	else
+		META_CONPRINTF("%s:\t%d\n",name,count);
+}
+
+void CEntityManager::PrintDump()
+{
+	META_CONPRINTF("=====================================\n");
+	
+	SourceHook::List<CEntity *> cent_list;
+
+	CEntity *cent;
+	int networked_count = 0;
+	int non_networked_count = 0;
+	for(int i=0;i<NUM_ENT_ENTRIES;i++)
+	{
+		cent = pEntityData[i];
+		if(cent != NULL)
+		{
+			cent_list.push_back(cent);
+			if(i < MAX_EDICTS)
+				networked_count++;
+			else
+				non_networked_count++;
+		}
+	}
+
+#ifdef _DEBUG
+	META_CONPRINTF("CEntity Instance:\t\t%lld\n",CEntityManager::count);
+#endif
+	META_CONPRINTF("CEntity Networked:\t\t%d\n",networked_count);
+	META_CONPRINTF("CEntity Non Networked:\t\t%d\n",non_networked_count);
+	META_CONPRINTF("CEntity Total:\t\t\t%d\n",networked_count+non_networked_count);
+
+	char buffer[128];
+	pFactoryTrie.bad_iterator(buffer,128, &cent_list,our_trie_iterator);
+
+	cent_list.clear();
+	META_CONPRINTF("=====================================\n");
 }

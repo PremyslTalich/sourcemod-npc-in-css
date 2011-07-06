@@ -21,6 +21,9 @@
 #define _INCLUDE_ENTITYOUTPUT_H_
 
 #include "CEntity.h"
+#include "variant_t.h"
+#include "datamap.h"
+
 
 #define EVENT_FIRE_ALWAYS	-1
 
@@ -70,16 +73,16 @@ public:
 	fieldtype_t ValueFieldType() { return m_Value.FieldType(); }
 
 	void FireOutput( variant_t Value, CBaseEntity *pActivator, CBaseEntity *pCaller, float fDelay = 0 );
-/*
+
 	/// Delete every single action in the action list. 
 	void DeleteAllElements( void ) ;
-*/
+
 protected:
 	variant_t m_Value;
 	CEventAction *m_ActionList;
 	DECLARE_SIMPLE_DATADESC();
 	
-	CBaseEntityOutput() {} // this class cannot be created, only it's children
+	CBaseEntityOutput() { m_ActionList = NULL; } // this class cannot be created, only it's children
 
 private:
 	CBaseEntityOutput( CBaseEntityOutput& ); // protect from accidental copying
@@ -95,5 +98,47 @@ public:
 	void FireOutput(CEntity *pActivator, CBaseEntity *pCaller, float fDelay = 0);
 };
 
+//-----------------------------------------------------------------------------
+// Purpose: wraps variant_t data handling in convenient, compiler type-checked template
+//-----------------------------------------------------------------------------
+template< class Type, fieldtype_t fieldType >
+class CEntityOutputTemplate : public CBaseEntityOutput
+{
+public:
+	//
+	// Sets an initial value without firing the output.
+	//
+	void Init( Type value ) 
+	{
+		m_Value.Set( fieldType, &value );
+	}
+
+	//
+	// Sets a value and fires the output.
+	//
+	void Set( Type value, CBaseEntity *pActivator, CBaseEntity *pCaller ) 
+	{
+		m_Value.Set( fieldType, &value );
+		FireOutput( m_Value, pActivator, pCaller );
+	}
+
+	//
+	// Returns the current value.
+	//
+	Type Get( void )
+	{
+		return *((Type*)&m_Value);
+	}
+};
+
+
+typedef CEntityOutputTemplate<variant_t,FIELD_INPUT>		COutputVariant;
+typedef CEntityOutputTemplate<int,FIELD_INTEGER>			COutputInt;
+typedef CEntityOutputTemplate<float,FIELD_FLOAT>			COutputFloat;
+typedef CEntityOutputTemplate<string_t,FIELD_STRING>		COutputString;
+typedef CEntityOutputTemplate<EHANDLE,FIELD_EHANDLE>		COutputEHANDLE;
+typedef CEntityOutputTemplate<Vector,FIELD_VECTOR>			COutputVector;
+typedef CEntityOutputTemplate<Vector,FIELD_POSITION_VECTOR>	COutputPositionVector;
+typedef CEntityOutputTemplate<color32,FIELD_COLOR32>		COutputColor32;
 
 #endif // _INCLUDE_ENTITYOUTPUT_H_

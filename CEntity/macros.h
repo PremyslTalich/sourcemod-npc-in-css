@@ -25,6 +25,9 @@
 #include "../CDetour/detours.h"
 
 
+#define CE_CUSTOM_ENTITY()\
+	bool IsCustomEntity() { return true; }
+
 #undef CE_DECLARE_CLASS
 #define CE_DECLARE_CLASS( className, baseClassName ) \
 	typedef baseClassName BaseClass; \
@@ -34,7 +37,7 @@
 	{ \
 		if (BaseClass::IsBase()) \
 		{ \
-			ThisClass::m_DataMap.baseMap = BaseClass::GetDataDescMap(); \
+			ThisClass::m_DataMap.baseMap = NULL; \
 		} \
 		datamap_t *pMap = gamehelpers->GetDataMap(BaseEntity()); \
 		if (eventFuncs == NULL) \
@@ -48,7 +51,8 @@
 		} \
 		if (eventFuncs == NULL) \
 			g_pSM->LogError(myself, "[CENTITY] Could not lookup ISaveRestoreOps for Outputs"); \
-		UTIL_PatchOutputRestoreOps(pMap); \
+		UTIL_PatchOutputRestoreOps(ThisClass::GetDataDescMap()); \
+		BaseClass::InitDataMap();\
 	}
 
 #undef CE_DECLARE_CLASS_NOBASE
@@ -201,8 +205,7 @@ name##SigOffsetTracker name##SigOffsetTrackerObj;
 #define DECLARE_SENDPROP(typeof, name) DECLARE_PROP(typeof, name, PROP_SEND)
 #define DECLARE_DATAMAP(typeof, name) DECLARE_PROP(typeof, name, PROP_DATA)
 
-#define DECLARE_SENDPROP_OFFSET(typeof, name, offset) DECLARE_PROP_OFFSET(typeof, name, PROP_SEND, offset)
-#define DECLARE_DATAMAP_OFFSET(typeof, name, offset) DECLARE_PROP_OFFSET(typeof, name, PROP_DATA, offset)
+#define DECLARE_DATAMAP_OFFSET(typeof, name) DECLARE_PROP_OFFSET(typeof, name)
 
 
 
@@ -216,6 +219,8 @@ public:
 	Redirect& operator =(const T& input)
 	{
 		*ptr = input;
+		if(pEdict)
+			pEdict->StateChanged(offset);
 		return *this;
 	}
 	operator T& () const
@@ -236,7 +241,9 @@ public:
 	}
 
 public:
+	edict_t *pEdict;
 	T* ptr;
+	unsigned int offset;
 };
 
 
@@ -261,6 +268,29 @@ public:
 	}
 };
 
+template <typename T>
+class CEFakeHandle : public CBaseHandle
+{
+public:
+	T* Get() const
+	{
+		return (T *)CEntityLookup::Instance(*this);
+	}
+	operator T*()
+	{
+		return Get();
+	}
+	operator T*() const
+	{
+		return Get();
+	}
+	T* operator->() const
+	{
+		return Get();
+	}
+};
+
+
 template<>
 class Redirect <CFakeHandle>
 {
@@ -268,6 +298,8 @@ public:
 	Redirect& operator =(const CFakeHandle& input)
 	{
 		*ptr = input;
+		if(pEdict)
+			pEdict->StateChanged(offset);
 		return *this;
 	}
 	bool operator ==(const CEntity *lhs)
@@ -300,7 +332,9 @@ public:
 	}
 
 public:
+	edict_t *pEdict;
 	CFakeHandle* ptr;
+	unsigned int offset;
 };
 
 
@@ -365,6 +399,7 @@ public: \
 		ThisClass *pThisType = dynamic_cast<ThisClass *>(pEnt); \
 		if (pThisType) \
 		{ \
+			pThisType->name.pEdict = NULL;\
 			if (!lookup) \
 			{ \
 				if (search == PROP_SEND) \
@@ -383,6 +418,9 @@ public: \
 			} \
 			if (found) \
 			{ \
+				if (search == PROP_SEND) \
+					pThisType->name.pEdict = pEnt->edict();\
+				pThisType->name.offset = offset; \
 				pThisType->name.ptr = (typeof *)(((uint8_t *)(pEnt->BaseEntity())) + offset); \
 			} \
 			else \
@@ -402,7 +440,7 @@ static name##PropTracker name##PropTrackerObj;
 
 
 
-#define DECLARE_PROP_OFFSET(typeof, name, search, _offset) \
+#define DECLARE_PROP_OFFSET(typeof, name) \
 Redirect<typeof> name; \
 friend class name##PropTracker; \
 class name##PropTracker : public IPropTracker \
@@ -410,23 +448,64 @@ class name##PropTracker : public IPropTracker \
 public: \
 	name##PropTracker() \
 	{ \
-		offset = _offset;\
+		lookup = false; \
+		found = false; \
 	} \
 	void InitProp(CEntity *pEnt) \
 	{ \
 		ThisClass *pThisType = dynamic_cast<ThisClass *>(pEnt); \
 		if (pThisType) \
 		{ \
-			pThisType->name.ptr = (typeof *)(((uint8_t *)(pEnt->BaseEntity())) + offset); \
+			pThisType->name.pEdict = NULL;\
+			if(!lookup) \
+			{ \
+				found = g_pGameConf->GetOffset(#name, &offset); \
+				if(!found) \
+				{ \
+					g_pSM->LogError(myself,"[CENTITY] Can not find offset %s", #name); \
+				} \
+				lookup = true; \
+			} \
+			if(found) \
+			{ \
+				pThisType->name.offset = offset; \
+				pThisType->name.ptr = (typeof *)(((uint8_t *)(pEnt->BaseEntity())) + offset); \
+			} \
 		} \
 	} \
 private: \
-	unsigned int offset; \
+	int offset; \
+	bool lookup; \
+	bool found; \
 }; \
 static name##PropTracker name##PropTrackerObj;
 
 
 
+#define DECLARE_DEFAULTHANDLER_SPECIAL(type, name, ret, params, paramscall, special_ret) \
+ret type::name params \
+{ \
+	if (!m_bIn##name) \
+		return SH_MCALL(BaseEntity(), name) paramscall; \
+	SET_META_RESULT(MRES_IGNORED); \
+	SH_GLOB_SHPTR->DoRecall(); \
+	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr()); \
+	RETURN_META_VALUE(MRES_SUPERCEDE, (thisptr->*(__SoureceHook_FHM_GetRecallMFP##name(thisptr))) paramscall); \
+} \
+ret type::Internal##name params \
+{ \
+	SET_META_RESULT(MRES_SUPERCEDE); \
+	type *pEnt = (type *)CEntity::Instance(META_IFACEPTR(CBaseEntity)); \
+	if (!pEnt) \
+		RETURN_META_VALUE(MRES_IGNORED, special_ret); \
+	int __index = pEnt->entindex_non_network(); \
+	pEnt->m_bIn##name = true; \
+	ret retvalue = pEnt->name paramscall; \
+	pEnt = (type *)CEntity::Instance(__index); \
+	if (pEnt) \
+		pEnt->m_bIn##name = false; \
+	return retvalue; \
+}
 
 
 #define DECLARE_DEFAULTHANDLER(type, name, ret, params, paramscall) \
@@ -445,10 +524,10 @@ ret type::Internal##name params \
 	type *pEnt = (type *)CEntity::Instance(META_IFACEPTR(CBaseEntity)); \
 	if (!pEnt) \
 		RETURN_META_VALUE(MRES_IGNORED, (ret)0); \
-	int index = pEnt->entindex(); \
+	int __index = pEnt->entindex_non_network(); \
 	pEnt->m_bIn##name = true; \
 	ret retvalue = pEnt->name paramscall; \
-	pEnt = (type *)CEntity::Instance(index); \
+	pEnt = (type *)CEntity::Instance(__index); \
 	if (pEnt) \
 		pEnt->m_bIn##name = false; \
 	return retvalue; \
@@ -474,10 +553,10 @@ void type::Internal##name params \
 	type *pEnt = (type *)CEntity::Instance(META_IFACEPTR(CBaseEntity)); \
 	if (!pEnt) \
 		RETURN_META(MRES_IGNORED); \
-	int index = pEnt->entindex(); \
+	int __index = pEnt->entindex_non_network(); \
 	pEnt->m_bIn##name = true; \
 	pEnt->name paramscall; \
-	pEnt = (type *)CEntity::Instance(index); \
+	pEnt = (type *)CEntity::Instance(__index); \
 	if (pEnt) \
 		pEnt->m_bIn##name = false; \
 }
@@ -519,5 +598,83 @@ ret (type::* type::name##_Actual) params = NULL;
 //#define DUMP_FUNCTION() META_CONPRINTF("%s\n",__FUNCTION__)
 
 #define DUMP_FUNCTION()
+
+
+
+
+
+#define RegisterHook(name, hook)\
+	if(!g_pGameConf->GetOffset(name, &offset))\
+	{\
+		return false;\
+	}\
+	SH_MANUALHOOK_RECONFIGURE(hook, offset, 0, 0);
+
+#define _GET_VARIABLE(name, type, ret)\
+	char *name##_addr = NULL;\
+	int name##_offset;\
+	META_CONPRINTF("[%s] Getting %s - ",g_Monster.GetLogTag(),#name);\
+	if(!g_pGameConf->GetMemSig(#name, (void **)&name##_addr) || name##_addr == NULL)\
+		goto name##_fail;\
+	if(!g_pGameConf->GetOffset(#name, &name##_offset))\
+		goto name##_fail;\
+	void *name##_final_addr = reinterpret_cast<char *>(name##_addr + name##_offset);\
+	char *name##_data;\
+	memcpy(&name##_data, reinterpret_cast<void*>(name##_final_addr), sizeof(char*));\
+	name = (type)name##_data;\
+		goto name##_success;\
+	name##_fail:\
+		META_CONPRINT("Fail\n");\
+		g_pSM->LogError(myself,"Unable getting %s",#name);\
+		return ret;\
+	name##_success:\
+		META_CONPRINT("Success\n");
+
+
+#define GET_VARIABLE(name, type)\
+	_GET_VARIABLE(name, type, false);
+
+#define GET_VARIABLE_NORET(name, type)\
+	_GET_VARIABLE(name, type,);
+
+
+#define _GET_VARIABLE_POINTER(name, type, ret)\
+	char *name##_addr = NULL;\
+	int name##_offset;\
+	META_CONPRINTF("[%s] Getting %s - ",g_Monster.GetLogTag(),#name);\
+	if(!g_pGameConf->GetMemSig(#name, (void **)&name##_addr) || name##_addr == NULL)\
+		goto name##_fail;\
+	if(!g_pGameConf->GetOffset(#name, &name##_offset))\
+		goto name##_fail;\
+	void **name##_final_addr = *reinterpret_cast<void ***>(name##_addr + name##_offset);\
+	char *name##_data;\
+	memcpy(&name##_data, reinterpret_cast<void*>(name##_final_addr), sizeof(char*));\
+	name = (type)name##_data;\
+		goto name##_success;\
+	name##_fail:\
+		META_CONPRINT("Fail\n");\
+		g_pSM->LogError(myself,"Unable getting %s",#name);\
+		return ret;\
+	name##_success:\
+		META_CONPRINT("Success\n");
+
+
+#define GET_VARIABLE_POINTER(name, type)\
+	_GET_VARIABLE_POINTER(name, type, false);
+
+#define GET_VARIABLE_POINTER_NORET(name, type)\
+	_GET_VARIABLE_POINTER(name, type,);
+
+
+#define GET_DETOUR(name, func)\
+	name##_CDetour = func;\
+	if(name##_CDetour == NULL)\
+	{\
+		g_pSM->LogError(myself,"Unable getting %s",#name);\
+		return false;\
+	}\
+	name##_CDetour->EnableDetour();
+
+
 
 #endif // _INCLUDE_MACROS_H_

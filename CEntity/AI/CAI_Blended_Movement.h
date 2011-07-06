@@ -9,9 +9,11 @@
 #define AI_BLENDED_MOVEMENT_H
 
 #include "CAI_NPC.h"
+#include "CCycler_Fix.h"
 #include "CAI_motor.h"
 #include "CAI_Navigator.h"
-
+#include "CAI_component.h"
+#include "ai_movetypes.h"
 
 struct AI_Waypoint_t;
 
@@ -26,7 +28,7 @@ class CAI_BlendedMotor : public CAI_Motor
 {
 	typedef CAI_Motor BaseClass;
 public:
-	CAI_BlendedMotor( CAI_BaseNPC *pOuter )
+	CAI_BlendedMotor( CBaseEntity *pOuter )
 	 :	BaseClass( pOuter )
 	{
 		m_iPrimaryLayer = -1;
@@ -101,7 +103,7 @@ private:
 	// --------------------------------
 
 	// helpers to simplify code
-/*	float	GetCycle()														{ return GetOuter()->GetCycle();								}
+	float	GetCycle()														{ return GetOuter()->GetCycle();								}
 	int		AddLayeredSequence( int sequence, int iPriority )				{ return GetOuter()->AddLayeredSequence( sequence, iPriority ); }
 	void	SetLayerWeight( int iLayer, float flWeight )					{ GetOuter()->SetLayerWeight( iLayer, flWeight );				}
 	void	SetLayerPlaybackRate( int iLayer, float flPlaybackRate )		{ GetOuter()->SetLayerPlaybackRate( iLayer, flPlaybackRate );	}
@@ -109,7 +111,7 @@ private:
 	void	SetLayerCycle( int iLayer, float flCycle )						{ GetOuter()->SetLayerCycle( iLayer, flCycle );					}
 	void	SetLayerCycle( int iLayer, float flCycle, float flPrevCycle )	{ GetOuter()->SetLayerCycle( iLayer, flCycle, flPrevCycle );	}
 	void	RemoveLayer( int iLayer, float flKillRate, float flKillDelay )	{ GetOuter()->RemoveLayer( iLayer, flKillRate, flKillDelay );	}
-*/
+
 	// --------------------------------
 
 	struct AI_Movementscript_t
@@ -210,23 +212,45 @@ private:
 //
 //-----------------------------------------------------------------------------
 
+extern CAI_Network * 		g_pBigAINet;
+
 template <class BASE_NPC>
 class CAI_BlendingHost : public BASE_NPC
 {
 	DECLARE_CLASS_NOFRIEND( CAI_BlendingHost, BASE_NPC );
+
 public:
 	const CAI_BlendedMotor *GetBlendedMotor() const { return assert_cast<const CAI_BlendedMotor *>(this->GetMotor()); }
 	CAI_BlendedMotor *		GetBlendedMotor()		{ return assert_cast<CAI_BlendedMotor *>(this->GetMotor()); }
 
+	/* Replace Original pointer */
+	virtual void PostInit()
+	{
+		BaseClass::PostInit();
+
+		CreateMotor();
+		CreateNavigator();
+	}
+
 	CAI_Motor *CreateMotor()
 	{
-		MEM_ALLOC_CREDIT();
-		return new CAI_BlendedMotor( this );
+		//remove old one
+		CAI_Motor *ptr = *(m_pMotor.ptr);
+		delete ptr;
+
+		// create & set
+		ptr = new CAI_BlendedMotor(this->BaseEntity());
+		ptr->Init( m_pLocalNavigator );		
+		*(m_pMotor.ptr) = ptr;
+		
+		// hack!!
+		(*(m_pNavigator.ptr))->Init(g_pBigAINet);		
+		return m_pMotor;
 	}
 
 	CAI_Navigator *CreateNavigator()
 	{
-		CAI_Navigator *pNavigator = BaseClass::CreateNavigator();
+		CAI_Navigator *pNavigator = m_pNavigator;
 		pNavigator->SetValidateActivitySpeed( false );
 		return pNavigator;
 	}
@@ -246,14 +270,14 @@ public:
 			return result;
 		return BaseClass::GetTimeToNavGoal();
 	}
-
 };
 
 //-------------------------------------
 // to simplify basic usage:
-class CAI_BlendedNPC : public CAI_BlendingHost<CAI_NPC>
+class CAI_BlendedNPC : public CAI_BlendingHost<CE_Cycler_Fix>
 {
-	DECLARE_CLASS( CAI_BlendedNPC, CAI_BlendingHost<CAI_NPC> );
+public:
+	DECLARE_CLASS( CAI_BlendedNPC, CAI_BlendingHost<CE_Cycler_Fix> );
 };
 
 //-----------------------------------------------------------------------------	

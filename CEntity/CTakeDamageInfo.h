@@ -29,6 +29,7 @@
 
 #define BASEDAMAGE_NOT_SPECIFIED	FLT_MAX
 
+#if 0
 class CEntityTakeDamageInfo
 {
 public:
@@ -122,6 +123,8 @@ protected:
 	int				m_iAmmoType;			// AmmoType of the weapon used to cause this damage, if any
 };
 
+#endif
+
 #if 0
 inline CBaseEntity* CEntityTakeDamageInfo::GetInflictor() const
 {
@@ -158,6 +161,8 @@ inline void CEntityTakeDamageInfo::SetWeapon(CBaseEntity *pWeapon)
 }
 
 #endif
+
+#if 0
 inline float CEntityTakeDamageInfo::GetDamage() const
 {
 	return m_flDamage;
@@ -289,6 +294,9 @@ inline void CEntityTakeDamageInfo::SetAmmoType(int iAmmoType)
 {
 	m_iAmmoType = iAmmoType;
 }
+
+#endif
+
 #if 0
 inline void CEntityTakeDamageInfo::CopyDamageToBaseDamage()
 { 

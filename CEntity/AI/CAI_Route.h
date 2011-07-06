@@ -14,7 +14,7 @@
 #include "CAI_NPC.h"
 #include "mathlib/vector.h"
 #include "CAI_Network.h"
-#include "ai_node.h"
+#include "CAI_node.h"
 #include "ai_waypoint.h"
 
 struct AI_Waypoint_t;
@@ -85,7 +85,7 @@ public:
 	void			SetArrivalSequence(int sequence);
 
 	void			SetGoalDirection( const Vector &goalDirection );
-	void			SetGoalDirection( CBaseEntity *pTarget );
+	void			SetGoalDirection( CEntity *pTarget );
 	Vector			GetGoalDirection( const Vector &startPos );
 
 	void			SetGoalSpeed( float flSpeed );
@@ -101,7 +101,7 @@ public:
 	void			SetTarget(CBaseEntity * pTarget )	{ m_target = pTarget;				}
 	void			ClearTarget()						{ m_target = NULL; m_vecTargetOffset = vec3_origin;	}
 	void			SetTargetOffset( const Vector &vecOffset)	{ m_vecTargetOffset = vecOffset;	}
-	CBaseEntity *	GetTarget()							{ return m_target;					}
+	CEntity *		GetTarget()							{ return CEntity::Instance(m_target);					}
 
 	void			SetGoalType(GoalType_t goalType);				// Set the goal type
 	void			SetGoalPosition(const Vector &goalPos);			// Set the goal position
@@ -188,3 +188,5 @@ private:
 };
 
 #endif // AI_ROUTE_H
+
+

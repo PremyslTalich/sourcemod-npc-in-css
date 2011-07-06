@@ -2,7 +2,15 @@
 #include "npc_headcrab.h"
 #include "CAI_Navigator.h"
 #include "CAI_NPC.h"
+#include "npc_bullseye.h"
+#include "CE_recipientfilter.h"
 
+
+ConVar	sk_headcrab_health( "sk_headcrab_health","0");
+ConVar	sk_headcrab_fast_health( "sk_headcrab_fast_health","0");
+ConVar	sk_headcrab_poison_health( "sk_headcrab_poison_health","0");
+ConVar	sk_headcrab_melee_dmg( "sk_headcrab_melee_dmg","0");
+ConVar	sk_headcrab_poison_npc_damage( "sk_headcrab_poison_npc_damage", "0" );
 
 
 #define CRAB_ATTN_IDLE				(float)1.5
@@ -144,14 +152,69 @@ enum
 };
 
 
+BEGIN_DATADESC( CE_BaseHeadcrab )
+
+	DEFINE_FIELD( m_bHidden, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_flTimeDrown, FIELD_TIME ),
+	DEFINE_FIELD( m_bCommittedToJump, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_vecCommittedJumpPos, FIELD_POSITION_VECTOR ),
+	DEFINE_FIELD( m_flNextNPCThink, FIELD_TIME ),
+	DEFINE_FIELD( m_flIgnoreWorldCollisionTime, FIELD_TIME ),
+
+	DEFINE_KEYFIELD( m_bStartBurrowed, FIELD_BOOLEAN, "startburrowed" ),
+	DEFINE_FIELD( m_bBurrowed, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_flBurrowTime, FIELD_TIME ),
+	DEFINE_FIELD( m_nContext, FIELD_INTEGER ),
+	DEFINE_FIELD( m_bCrawlFromCanister, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bMidJump, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_nJumpFromCanisterDir, FIELD_INTEGER ),
+
+	DEFINE_FIELD( m_bHangingFromCeiling, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_flIlluminatedTime, FIELD_TIME ),
+
+	DEFINE_INPUTFUNC( FIELD_VOID, "Burrow", InputBurrow ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "BurrowImmediate", InputBurrowImmediate ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "Unburrow", InputUnburrow ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "StartHangingFromCeiling", InputStartHangingFromCeiling ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "DropFromCeiling", InputDropFromCeiling ),
+
+	// Function Pointers
+	//DEFINE_THINKFUNC( EliminateRollAndPitch ),
+	//DEFINE_THINKFUNC( ThrowThink ),
+	//DEFINE_ENTITYFUNC( LeapTouch ),
+
+END_DATADESC()
+
+BEGIN_DATADESC( CE_NPC_FastHeadcrab )
+
+	DEFINE_FIELD( m_iRunMode,			FIELD_INTEGER ),
+	DEFINE_FIELD( m_flRealGroundSpeed,	FIELD_FLOAT ),
+	DEFINE_FIELD( m_flSlowRunTime,		FIELD_TIME ),
+	DEFINE_FIELD( m_flPauseTime,			FIELD_TIME ),
+	DEFINE_FIELD( m_vecJumpVel,			FIELD_VECTOR ),
+
+END_DATADESC()
+
+BEGIN_DATADESC( CE_NPC_BlackHeadcrab )
+
+	DEFINE_FIELD( m_bPanicState, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_flPanicStopTime, FIELD_TIME ),
+	DEFINE_FIELD( m_flNextHopTime, FIELD_TIME ),
+
+	//DEFINE_ENTITYFUNC( EjectTouch ),
+
+END_DATADESC()
+
 CE_BaseHeadcrab::CE_BaseHeadcrab()
 {
+	m_vecCommittedJumpPos.Init();
+
 	m_bStartBurrowed = false;
 
 	m_bHidden = false;
 	m_flTimeDrown = 0.0f;
 	m_bCommittedToJump = false;
-	m_vecCommittedJumpPos.Init(0,0,0);
+
 	m_flNextNPCThink = 0.0f;
 	m_flIgnoreWorldCollisionTime = 0.0f;
 	m_bBurrowed = false;
@@ -167,7 +230,7 @@ CE_BaseHeadcrab::CE_BaseHeadcrab()
 // Base Headcrab
 void CE_BaseHeadcrab::Spawn(void)
 {
-	DUMP_FUNCTION();
+	AddSpawnFlags( SF_NPC_FADE_CORPSE );
 
 	SetHullType(HULL_TINY);
 	SetHullSizeNormal();
@@ -212,8 +275,6 @@ void CE_BaseHeadcrab::Spawn(void)
 
 void CE_BaseHeadcrab::HeadcrabInit()
 {	
-	DUMP_FUNCTION();
-
 	if(m_bStartBurrowed )
 	{
 		SetBurrowed( true );
@@ -229,8 +290,6 @@ void CE_BaseHeadcrab::HeadcrabInit()
 
 void CE_BaseHeadcrab::Precache( void )
 {
-	DUMP_FUNCTION();
-
 	BaseClass::Precache();
 }
 
@@ -239,8 +298,6 @@ void CE_BaseHeadcrab::Precache( void )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::CrawlFromCanister()
 {
-	DUMP_FUNCTION();
-
 	// This is necessary to prevent ground computations, etc. from happening
 	// while the crawling animation is occuring
 	AddFlag( FL_FLY );
@@ -250,8 +307,6 @@ void CE_BaseHeadcrab::CrawlFromCanister()
 
 void CE_BaseHeadcrab::OnChangeActivity( Activity NewActivity )
 {
-	DUMP_FUNCTION();
-
 	bool fRandomize = false;
 	float flRandomRange = 0.0;
 
@@ -283,8 +338,6 @@ void CE_BaseHeadcrab::OnChangeActivity( Activity NewActivity )
 //-----------------------------------------------------------------------------
 Class_T	CE_BaseHeadcrab::Classify( void )
 {
-	DUMP_FUNCTION();
-
 	if( m_bHidden )
 	{
 		// Effectively invisible to other AI's while hidden.
@@ -301,8 +354,6 @@ Class_T	CE_BaseHeadcrab::Classify( void )
 //-----------------------------------------------------------------------------
 Vector CE_BaseHeadcrab::BodyTarget( const Vector &posSrc, bool bNoisy ) 
 { 
-	DUMP_FUNCTION();
-
 	Vector vecResult;
 	vecResult = GetAbsOrigin();
 	vecResult.z += 6;
@@ -322,8 +373,6 @@ float CE_BaseHeadcrab::GetAutoAimRadius()
 //-----------------------------------------------------------------------------
 float CE_BaseHeadcrab::MaxYawSpeed( void )
 {
-	DUMP_FUNCTION();
-
 	return BaseClass::MaxYawSpeed();
 }
 
@@ -338,8 +387,6 @@ float CE_BaseHeadcrab::MaxYawSpeed( void )
 #define HEADCRAB_MAX_LEDGE_HEIGHT	12.0f
 bool CE_BaseHeadcrab::IsFirmlyOnGround()
 {
-	DUMP_FUNCTION();
-
 	if( !(GetFlags()&FL_ONGROUND) )
 		return false;
 
@@ -350,8 +397,6 @@ bool CE_BaseHeadcrab::IsFirmlyOnGround()
 
 void CE_BaseHeadcrab::MoveOrigin( const Vector &vecDelta )
 {
-	DUMP_FUNCTION();
-
 	UTIL_SetOrigin( this, GetLocalOrigin() + vecDelta );
 }
 
@@ -361,8 +406,6 @@ void CE_BaseHeadcrab::MoveOrigin( const Vector &vecDelta )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::ThrowAt( const Vector &vecPos )
 {
-	DUMP_FUNCTION();
-
 	JumpAttack( false, vecPos, true );
 }
 
@@ -371,10 +414,8 @@ void CE_BaseHeadcrab::ThrowAt( const Vector &vecPos )
 // Purpose: 
 // Input  : vecPos - 
 //-----------------------------------------------------------------------------
-void CE_BaseHeadcrab::JumpToBurrowHint( CAI_Hint *pHint )
+void CE_BaseHeadcrab::JumpToBurrowHint( CE_AI_Hint *pHint )
 {
-	DUMP_FUNCTION();
-
 	Vector vecVel = VecCheckToss( this, GetAbsOrigin(), pHint->GetAbsOrigin(), 0.5f, 1.0f, false, NULL, NULL );
 
 	// Undershoot by a little because it looks bad if we overshoot and turn around to burrow.
@@ -391,8 +432,6 @@ void CE_BaseHeadcrab::JumpToBurrowHint( CAI_Hint *pHint )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::Leap( const Vector &vecVel )
 {
-	DUMP_FUNCTION();
-
 	SetTouch( &CE_BaseHeadcrab::LeapTouch );
 
 	SetCondition( COND_FLOATING_OFF_GROUND );
@@ -419,8 +458,6 @@ void CE_BaseHeadcrab::Leap( const Vector &vecVel )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::ThrowThink( void )
 {
-	DUMP_FUNCTION();
-
 	if (gpGlobals->curtime > m_flNextNPCThink)
 	{
 		NPCThink();
@@ -445,8 +482,6 @@ void CE_BaseHeadcrab::ThrowThink( void )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::JumpAttack( bool bRandomJump, const Vector &vecPos, bool bThrown )
 {
-	DUMP_FUNCTION();
-
 	Vector vecJumpVel;
 	if ( !bRandomJump )
 	{
@@ -530,8 +565,6 @@ void CE_BaseHeadcrab::JumpAttack( bool bRandomJump, const Vector &vecPos, bool b
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::HandleAnimEvent( animevent_t *pEvent )
 {
-	DUMP_FUNCTION();
-
 	if ( pEvent->event == AE_HEADCRAB_JUMPATTACK )
 	{
 		// Ignore if we're in mid air
@@ -652,8 +685,6 @@ void CE_BaseHeadcrab::SetBurrowed( bool bBurrowed )
 
 void CE_BaseHeadcrab::RunTask( const Task_t *pTask )
 {
-	DUMP_FUNCTION();
-
 	switch ( pTask->iTask )
 	{
 		case TASK_HEADCRAB_CLIMB_FROM_CANISTER:
@@ -696,7 +727,7 @@ void CE_BaseHeadcrab::RunTask( const Task_t *pTask )
 		case TASK_HEADCRAB_DROWN:
 			if( gpGlobals->curtime > m_flTimeDrown )
 			{
-				OnTakeDamage( CEntityTakeDamageInfo( BaseEntity(), BaseEntity(), (float)((*m_iHealth) * 2), DMG_DROWN ) );
+				OnTakeDamage( CTakeDamageInfo( BaseEntity(), BaseEntity(), (float)((*m_iHealth) * 2), DMG_DROWN ) );
 			}
 			break;
 
@@ -819,8 +850,6 @@ void CE_BaseHeadcrab::RunTask( const Task_t *pTask )
 //-----------------------------------------------------------------------------
 bool CE_BaseHeadcrab::HasHeadroom()
 {
-	DUMP_FUNCTION();
-
 	trace_t tr;
 	UTIL_TraceEntity( this, GetAbsOrigin(), GetAbsOrigin() + Vector( 0, 0, 1 ), MASK_NPCSOLID, BaseEntity(), GetCollisionGroup(), &tr );
 
@@ -834,10 +863,6 @@ bool CE_BaseHeadcrab::HasHeadroom()
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::LeapTouch( CEntity *pOther )
 {
-	DUMP_FUNCTION();
-
-	//CEntity *pOther = CEntity::Instance(_pOther);
-
 	m_bMidJump = false;
 
 	if ( IRelationType( pOther->BaseEntity() ) == D_HT )
@@ -900,9 +925,7 @@ void CE_BaseHeadcrab::LeapTouch( CEntity *pOther )
 //-----------------------------------------------------------------------------
 int CE_BaseHeadcrab::CalcDamageInfo( CTakeDamageInfo *pInfo )
 {
-	DUMP_FUNCTION();
-
-	pInfo->Set( BaseEntity(), BaseEntity(),/* sk_headcrab_melee_dmg.GetFloat()*/ 10000, DMG_SLASH );
+	pInfo->Set( BaseEntity(), BaseEntity(), sk_headcrab_melee_dmg.GetFloat(), DMG_SLASH );
 	CalculateMeleeDamageForce( pInfo, GetAbsVelocity(), GetAbsOrigin() );
 	return (int)pInfo->GetDamage();
 }
@@ -913,8 +936,6 @@ int CE_BaseHeadcrab::CalcDamageInfo( CTakeDamageInfo *pInfo )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::TouchDamage( CEntity *pOther )
 {
-	DUMP_FUNCTION();
-
 	CTakeDamageInfo info;
 	CalcDamageInfo( &info );
 	pOther->TakeDamage( info  );
@@ -925,8 +946,6 @@ void CE_BaseHeadcrab::TouchDamage( CEntity *pOther )
 //---------------------------------------------------------
 void CE_BaseHeadcrab::GatherConditions( void )
 {
-	DUMP_FUNCTION();
-
 	// If we're hidden, just check to see if we should unhide
 	if ( m_bHidden )
 	{
@@ -976,8 +995,6 @@ void CE_BaseHeadcrab::GatherConditions( void )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::PrescheduleThink( void )
 {
-	DUMP_FUNCTION();
-
 	BaseClass::PrescheduleThink();
 	
 	// Are we fading in after being hidden?
@@ -1026,8 +1043,6 @@ void CE_BaseHeadcrab::PrescheduleThink( void )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::EliminateRollAndPitch()
 {
-	DUMP_FUNCTION();
-
 	QAngle angles = GetAbsAngles();
 	angles.x = AngleNormalize( angles.x );
 	angles.z = AngleNormalize( angles.z );
@@ -1060,7 +1075,7 @@ void CE_BaseHeadcrab::EliminateRollAndPitch()
 
 	SetAbsAngles( angles );
 
-	SetContextThink( &CE_BaseHeadcrab::EliminateRollAndPitch, gpGlobals->curtime + TICK_INTERVAL, NULL );
+	//SetContextThink( &CE_BaseHeadcrab::EliminateRollAndPitch, gpGlobals->curtime + TICK_INTERVAL, "PitchContext" );
 }
 
 
@@ -1069,8 +1084,6 @@ void CE_BaseHeadcrab::EliminateRollAndPitch()
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::BeginClimbFromCanister()
 {
-	DUMP_FUNCTION();
-
 	Assert( GetMoveParent() );
 	// Compute a desired position or hint
 	Vector vecForward, vecActualForward;
@@ -1080,7 +1093,7 @@ void CE_BaseHeadcrab::BeginClimbFromCanister()
 	VectorNormalize( vecForward );
 
 	Vector vecSearchCenter = GetAbsOrigin();
-	CAI_Hint *pHint = CAI_HintManager::FindHint( this, HINT_HEADCRAB_BURROW_POINT, 0, HEADCRAB_BURROW_POINT_SEARCH_RADIUS, &vecSearchCenter );
+	CE_AI_Hint *pHint = CAI_HintManager::FindHint( this, HINT_HEADCRAB_BURROW_POINT, 0, HEADCRAB_BURROW_POINT_SEARCH_RADIUS, &vecSearchCenter );
 
 	if ( pHint && ( !pHint->IsLocked() ) )
 	{
@@ -1143,8 +1156,6 @@ void CE_BaseHeadcrab::BeginClimbFromCanister()
 
 void CE_BaseHeadcrab::JumpFromCanister()
 {
-	DUMP_FUNCTION();
-
 	Assert( GetMoveParent() );
 
 	Vector vecForward, vecActualForward, vecActualRight;
@@ -1220,7 +1231,7 @@ void CE_BaseHeadcrab::JumpFromCanister()
 
 void CE_BaseHeadcrab::DropFromCeiling( void )
 {
-	DUMP_FUNCTION();
+
 }
 
 
@@ -1230,18 +1241,14 @@ void CE_BaseHeadcrab::DropFromCeiling( void )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::PlayerHasIlluminatedNPC( CBaseEntity *pPlayer, float flDot )
 {
-	DUMP_FUNCTION();
-
 	if ( flDot < 0.97387f )
 		return;
 
 	DropFromCeiling();
 }
 
-bool CE_BaseHeadcrab::CanBeAnEnemyOf( CEntity *pEnemy )
+bool CE_BaseHeadcrab::CanBeAnEnemyOf( CBaseEntity *pEnemy )
 {
-	DUMP_FUNCTION();
-
 	return BaseClass::CanBeAnEnemyOf( pEnemy );
 }
 
@@ -1254,8 +1261,6 @@ bool CE_BaseHeadcrab::CanBeAnEnemyOf( CEntity *pEnemy )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::StartTask( const Task_t *pTask )
 {
-	DUMP_FUNCTION();
-
 	switch ( pTask->iTask )
 	{
 	case TASK_HEADCRAB_WAIT_FOR_BARNACLE_KILL:
@@ -1482,8 +1487,6 @@ float CE_BaseHeadcrab::InnateRange1MaxRange( void )
 
 int CE_BaseHeadcrab::RangeAttack1Conditions( float flDot, float flDist )
 {
-	DUMP_FUNCTION();
-
 	if ( gpGlobals->curtime < m_flNextAttack )
 		return 0;
 
@@ -1508,8 +1511,7 @@ int CE_BaseHeadcrab::RangeAttack1Conditions( float flDot, float flDist )
 	CEntity *pEnemy = GetEnemy();
 	if( pEnemy )
 	{
-		//CE_TODO
-		bool bEnemyIsBullseye = false;//( dynamic_cast<CNPC_Bullseye *>(pEnemy) != NULL );
+		bool bEnemyIsBullseye = ( dynamic_cast<CE_NPC_Bullseye *>(pEnemy) != NULL );
 
 		trace_t tr;
 		UTIL_TraceLine( EyePosition(), pEnemy->EyePosition(), MASK_SOLID, BaseEntity(), COLLISION_GROUP_NONE, &tr );
@@ -1554,8 +1556,6 @@ int CE_BaseHeadcrab::RangeAttack1Conditions( float flDot, float flDist )
 //------------------------------------------------------------------------------
 bool CE_BaseHeadcrab::CorpseGib( const CTakeDamageInfo &info )
 {
-	DUMP_FUNCTION();
-
 	EmitSound( "NPC_HeadCrab.Gib" );	
 
 	return BaseClass::CorpseGib( info );
@@ -1568,8 +1568,6 @@ bool CE_BaseHeadcrab::CorpseGib( const CTakeDamageInfo &info )
 //------------------------------------------------------------------------------
 void CE_BaseHeadcrab::Touch( CEntity *pOther )
 { 
-	DUMP_FUNCTION();
-
 	// If someone has smacked me into a wall then gib!
 	if (m_NPCState == NPC_STATE_DEAD) 
 	{
@@ -1607,8 +1605,6 @@ void CE_BaseHeadcrab::Touch( CEntity *pOther )
 //-----------------------------------------------------------------------------
 int CE_BaseHeadcrab::OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo )
 {
-	DUMP_FUNCTION();
-
 	CTakeDamageInfo info = inputInfo;
 
 	//
@@ -1670,8 +1666,6 @@ int CE_BaseHeadcrab::OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::ClampRagdollForce( const Vector &vecForceIn, Vector *vecForceOut )
 {
-	DUMP_FUNCTION();
-
 	// Assumes the headcrab mass is 5kg (100 feet per second)
 	float MAX_HEADCRAB_RAGDOLL_SPEED = 100.0f * 12.0f * 5.0f;
 
@@ -1696,8 +1690,6 @@ void CE_BaseHeadcrab::ClampRagdollForce( const Vector &vecForceIn, Vector *vecFo
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::Event_Killed( const CTakeDamageInfo &info )
 {
-	DUMP_FUNCTION();
-
 	// Create a little decal underneath the headcrab
 	// This type of damage combination happens from dynamic scripted sequences
 	if ( info.GetDamageType() & (DMG_GENERIC | DMG_PREVENT_PHYSICS_FORCE) )
@@ -1718,8 +1710,6 @@ void CE_BaseHeadcrab::Event_Killed( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 int CE_BaseHeadcrab::TranslateSchedule( int scheduleType )
 {
-	DUMP_FUNCTION();
-
 	switch( scheduleType )
 	{
 		case SCHED_FALL_TO_GROUND:
@@ -1778,8 +1768,6 @@ int CE_BaseHeadcrab::TranslateSchedule( int scheduleType )
 //-----------------------------------------------------------------------------
 int CE_BaseHeadcrab::SelectSchedule( void )
 {
-	DUMP_FUNCTION();
-
 	if ( m_bCrawlFromCanister )
 	{
 		m_bCrawlFromCanister = false;
@@ -1878,7 +1866,8 @@ int CE_BaseHeadcrab::SelectSchedule( void )
 		return SCHED_FALL_TO_GROUND;
 	}
 
-	if ( GetHintNode() && GetHintNode()->HintType() == HINT_HEADCRAB_BURROW_POINT )
+	CE_AI_Hint *phint = (CE_AI_Hint *)GetHintNode();
+	if ( phint && phint->HintType() == HINT_HEADCRAB_BURROW_POINT )
 	{
 		// Only burrow if we're not within leap attack distance of our enemy.
 		if ( ( GetEnemy() == NULL ) || ( ( GetEnemy()->GetAbsOrigin() - GetAbsOrigin() ).Length() > HEADCRAB_MAX_JUMP_DIST ) )
@@ -1909,8 +1898,6 @@ int CE_BaseHeadcrab::SelectSchedule( void )
 //-----------------------------------------------------------------------------
 int CE_BaseHeadcrab::SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFailureCode_t taskFailCode )
 {
-	DUMP_FUNCTION();
-
 	if ( failedSchedule == SCHED_BACK_AWAY_FROM_ENEMY && failedTask == TASK_FIND_BACKAWAY_FROM_SAVEPOSITION )
 	{
 		if ( HasCondition( COND_SEE_ENEMY ) )
@@ -1942,8 +1929,6 @@ int CE_BaseHeadcrab::SelectFailSchedule( int failedSchedule, int failedTask, AI_
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
-	DUMP_FUNCTION();
-
 	CTakeDamageInfo	newInfo = info;
 
 	// Ignore if we're in a dynamic scripted sequence
@@ -1975,8 +1960,6 @@ void CE_BaseHeadcrab::TraceAttack( const CTakeDamageInfo &info, const Vector &ve
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize, bool bCalledByLevelDesigner )
 {
-	DUMP_FUNCTION();
-
 	// Can't start on fire if we're burrowed
 	if ( m_bBurrowed )
 		return;
@@ -2011,10 +1994,8 @@ void CE_BaseHeadcrab::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize
 // Output :	 true  - if sub-class has a response for the interaction
 //			 false - if sub-class has no response
 //-----------------------------------------------------------------------------
-bool CE_BaseHeadcrab::HandleInteraction(int interactionType, void *data, CCombatCharacter* sourceEnt)
+bool CE_BaseHeadcrab::HandleInteraction(int interactionType, void *data, CBaseEntity* sourceEnt)
 {
-	DUMP_FUNCTION();
-
 	//CE_WTF
 	/*if (interactionType == g_interactionBarnacleVictimDangle)
 	{
@@ -2074,7 +2055,7 @@ bool CE_BaseHeadcrab::HandleInteraction(int interactionType, void *data, CCombat
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CE_BaseHeadcrab::FValidateHintType( CAI_Hint *pHint )
+bool CE_BaseHeadcrab::FValidateHintType( CBaseEntity *pHint )
 {
 	return true;
 }
@@ -2086,8 +2067,6 @@ bool CE_BaseHeadcrab::FValidateHintType( CAI_Hint *pHint )
 //-----------------------------------------------------------------------------
 void CE_BaseHeadcrab::ClearBurrowPoint( const Vector &origin )
 {
-	DUMP_FUNCTION();
-
 	CEntity *pEntity = NULL;
 	//CBaseEntity *pEntity_base = NULL;
 
@@ -2129,8 +2108,6 @@ void CE_BaseHeadcrab::ClearBurrowPoint( const Vector &origin )
 //-----------------------------------------------------------------------------
 bool CE_BaseHeadcrab::ValidBurrowPoint( const Vector &point )
 {
-	DUMP_FUNCTION();
-
 	trace_t	tr;
 
 	UTIL_TraceHull( point, point+Vector(0,0,1), GetHullMins(), GetHullMaxs(), 
@@ -2157,16 +2134,14 @@ bool CE_BaseHeadcrab::ValidBurrowPoint( const Vector &point )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_BaseHeadcrab::GrabHintNode( CAI_Hint *pHint )
+void CE_BaseHeadcrab::GrabHintNode( CE_AI_Hint *pHint )
 {
-	DUMP_FUNCTION();
-
 	// Free up the node for use
 	ClearHintNode();
 
 	if ( pHint )
 	{
-		SetHintNode( pHint );
+		SetHintNode( pHint->BaseEntity() );
 		pHint->Lock( BaseEntity() );
 	}
 }
@@ -2179,8 +2154,6 @@ void CE_BaseHeadcrab::GrabHintNode( CAI_Hint *pHint )
 //-----------------------------------------------------------------------------
 bool CE_BaseHeadcrab::FindBurrow( const Vector &origin, float distance, bool excludeNear )
 {
-	DUMP_FUNCTION();
-
 	// Attempt to find a burrowing point
 	CHintCriteria	hintCriteria;
 
@@ -2194,7 +2167,7 @@ bool CE_BaseHeadcrab::FindBurrow( const Vector &origin, float distance, bool exc
 		hintCriteria.AddExcludePosition( origin, 128 );
 	}
 
-	CAI_Hint *pHint = CAI_HintManager::FindHint( this, hintCriteria );
+	CE_AI_Hint *pHint = CAI_HintManager::FindHint( this, hintCriteria );
 
 	if ( pHint == NULL )
 		return false;
@@ -2203,6 +2176,7 @@ bool CE_BaseHeadcrab::FindBurrow( const Vector &origin, float distance, bool exc
 
 	// Setup our path and attempt to run there
 	Vector vHintPos;
+
 	pHint->GetPosition( this, &vHintPos );
 
 	AI_NavGoal_t goal( vHintPos, ACT_RUN );
@@ -2247,11 +2221,11 @@ void CE_BaseHeadcrab::Unburrow( void )
 	}
 }
 
-/*
+
 //-----------------------------------------------------------------------------
 // Purpose: Tells the headcrab to unburrow as soon the space is clear.
 //-----------------------------------------------------------------------------
-void CBaseHeadcrab::InputUnburrow( inputdata_t &inputdata )
+void CE_BaseHeadcrab::InputUnburrow( inputdata_t &inputdata )
 {
 	if ( IsAlive() == false )
 		return;
@@ -2263,7 +2237,7 @@ void CBaseHeadcrab::InputUnburrow( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Purpose: Tells the headcrab to run to a nearby burrow point and burrow.
 //-----------------------------------------------------------------------------
-void CBaseHeadcrab::InputBurrow( inputdata_t &inputdata )
+void CE_BaseHeadcrab::InputBurrow( inputdata_t &inputdata )
 {
 	if ( IsAlive() == false )
 		return;
@@ -2275,7 +2249,7 @@ void CBaseHeadcrab::InputBurrow( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Purpose: Tells the headcrab to burrow right where he is.
 //-----------------------------------------------------------------------------
-void CBaseHeadcrab::InputBurrowImmediate( inputdata_t &inputdata )
+void CE_BaseHeadcrab::InputBurrowImmediate( inputdata_t &inputdata )
 {
 	if ( IsAlive() == false )
 		return;
@@ -2286,7 +2260,7 @@ void CBaseHeadcrab::InputBurrowImmediate( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseHeadcrab::InputStartHangingFromCeiling( inputdata_t &inputdata )
+void CE_BaseHeadcrab::InputStartHangingFromCeiling( inputdata_t &inputdata )
 {
 	if ( IsAlive() == false )
 		return;
@@ -2298,7 +2272,7 @@ void CBaseHeadcrab::InputStartHangingFromCeiling( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseHeadcrab::InputDropFromCeiling( inputdata_t &inputdata )
+void CE_BaseHeadcrab::InputDropFromCeiling( inputdata_t &inputdata )
 {
 	if ( IsAlive() == false )
 		return;
@@ -2307,7 +2281,7 @@ void CBaseHeadcrab::InputDropFromCeiling( inputdata_t &inputdata )
 		return;
 
 	SetSchedule( SCHED_HEADCRAB_CEILING_DROP );
-}*/
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -2323,14 +2297,8 @@ void CE_BaseHeadcrab::CreateDust( bool placeDecal )
 
 		if ( ( (char) pdata->game.material == CHAR_TEX_CONCRETE ) || ( (char) pdata->game.material == CHAR_TEX_DIRT ) )
 		{
-			//CE_TODO
-			//UTIL_CreateAntlionDust( tr.endpos + Vector(0, 0, 24), GetLocalAngles() );
+			UTIL_CreateDust(tr.endpos + Vector(0, 0, 24), GetLocalAngles(), 1.0f, 10.0f);
 
-			//CEffectData data;
-			//data.m_vOrigin = GetAbsOrigin();
-			//data.m_vNormal = tr.plane.normal;
-			//DispatchEffect( "headcrabdust", data );
-			
 			if ( placeDecal )
 			{
 				UTIL_DecalTrace( &tr, "Headcrab.Unburrow" );
@@ -2378,7 +2346,7 @@ LINK_ENTITY_TO_CUSTOM_CLASS(npc_headcrab, cycler, CE_NPC_Headcrab);
 
 void CE_NPC_Headcrab::Precache(void)
 {
-	DUMP_FUNCTION();
+	PrecacheModel( "models/headcrabclassic.mdl" );
 
 	PrecacheScriptSound( "NPC_HeadCrab.Gib" );
 	PrecacheScriptSound( "NPC_HeadCrab.Idle" );
@@ -2397,23 +2365,17 @@ void CE_NPC_Headcrab::Spawn(void)
 {
 	Precache();
 
-	DUMP_FUNCTION();
-
 	SetModel("models/headcrabclassic.mdl");
 
 	BaseClass::Spawn();
 
-	m_iHealth = 100;
+	m_iHealth = sk_headcrab_health.GetInt();
 	m_flBurrowTime = 0.0f;
 	m_bCrawlFromCanister = false;
 	m_bMidJump = false;
 
 	NPCInit();
 	HeadcrabInit();
-
-
-	//SetThink(&CDBNPC_Headcrab::MyThink);
-	//SetNextThink(gpGlobals->curtime);	
 }
 
 //-----------------------------------------------------------------------------
@@ -2421,7 +2383,6 @@ void CE_NPC_Headcrab::Spawn(void)
 //-----------------------------------------------------------------------------
 Activity CE_NPC_Headcrab::NPC_TranslateActivity( Activity eNewActivity )
 {
-	DUMP_FUNCTION();
 	if ( eNewActivity == ACT_WALK )
 		return ACT_RUN;
 
@@ -2434,7 +2395,6 @@ Activity CE_NPC_Headcrab::NPC_TranslateActivity( Activity eNewActivity )
 //-----------------------------------------------------------------------------
 void CE_NPC_Headcrab::IdleSound( void )
 {
-	DUMP_FUNCTION();
 	EmitSound( "NPC_HeadCrab.Idle" );
 }
 
@@ -2444,8 +2404,6 @@ void CE_NPC_Headcrab::IdleSound( void )
 //-----------------------------------------------------------------------------
 void CE_NPC_Headcrab::AlertSound( void )
 {
-	DUMP_FUNCTION();
-
 	EmitSound( "NPC_HeadCrab.Alert" );
 }
 
@@ -2454,7 +2412,6 @@ void CE_NPC_Headcrab::AlertSound( void )
 //-----------------------------------------------------------------------------
 void CE_NPC_Headcrab::PainSound( const CTakeDamageInfo &info )
 {
-	DUMP_FUNCTION();
 	if( IsOnFire() && random->RandomInt( 0, HEADCRAB_BURN_SOUND_FREQUENCY ) > 0 )
 	{
 		// Don't squeak every think when burning.
@@ -2470,7 +2427,6 @@ void CE_NPC_Headcrab::PainSound( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 void CE_NPC_Headcrab::DeathSound( const CTakeDamageInfo &info )
 {
-	DUMP_FUNCTION();
 	EmitSound( "NPC_HeadCrab.Die" );
 }
 
@@ -2480,7 +2436,6 @@ void CE_NPC_Headcrab::DeathSound( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 void CE_NPC_Headcrab::TelegraphSound( void )
 {
-	DUMP_FUNCTION();
 	//FIXME: Need a real one
 	EmitSound( "NPC_HeadCrab.Alert" );
 }
@@ -2491,7 +2446,6 @@ void CE_NPC_Headcrab::TelegraphSound( void )
 //-----------------------------------------------------------------------------
 void CE_NPC_Headcrab::AttackSound( void )
 {
-	DUMP_FUNCTION();
 	EmitSound( "NPC_Headcrab.Attack" );
 }
 
@@ -2501,7 +2455,6 @@ void CE_NPC_Headcrab::AttackSound( void )
 //-----------------------------------------------------------------------------
 void CE_NPC_Headcrab::BiteSound( void )
 {
-	DUMP_FUNCTION();
 	EmitSound( "NPC_HeadCrab.Bite" );
 }
 
@@ -2513,8 +2466,6 @@ void CE_NPC_Headcrab::BiteSound( void )
 //-----------------------------------------------------------------------------
 float CE_NPC_Headcrab::MaxYawSpeed ( void )
 {
-	DUMP_FUNCTION();
-
 	switch ( GetActivity() )
 	{
 	case ACT_IDLE:			
@@ -2563,6 +2514,8 @@ CE_NPC_FastHeadcrab::CE_NPC_FastHeadcrab()
 //-----------------------------------------------------------------------------
 void CE_NPC_FastHeadcrab::Precache( void )
 {
+	PrecacheModel( "models/headcrab.mdl" );
+
 	PrecacheScriptSound( "NPC_FastHeadcrab.Idle" );
 	PrecacheScriptSound( "NPC_FastHeadcrab.Alert" );
 	PrecacheScriptSound( "NPC_FastHeadcrab.Pain" );
@@ -2584,7 +2537,7 @@ void CE_NPC_FastHeadcrab::Spawn( void )
 
 	BaseClass::Spawn();
 
-	m_iHealth = /*sk_headcrab_health.GetFloat()*/100;
+	m_iHealth = sk_headcrab_fast_health.GetInt();
 
 	m_iRunMode = HEADCRAB_RUNMODE_IDLE;
 	m_flPauseTime = 999999;
@@ -2863,7 +2816,7 @@ void CE_NPC_FastHeadcrab::StartTask( const Task_t *pTask )
 			{
 				AIMoveTrace_t moveTrace;
 				CEntity *enemy = GetEnemy();
-				GetMoveProbe()->MoveLimit( NAV_JUMP, GetAbsOrigin(), tr.endpos, MASK_NPCSOLID, ((enemy) ? enemy->BaseEntity() : NULL), &moveTrace );
+				GetMoveProbe()->MoveLimit( NAV_JUMP, GetAbsOrigin(), tr.endpos, MASK_NPCSOLID, enemy, &moveTrace );
 
 				// FIXME: Where should this happen?
 				m_vecJumpVel = moveTrace.vJumpVelocity;
@@ -3016,7 +2969,7 @@ void CE_NPC_BlackHeadcrab::Spawn( void )
 	BaseClass::Spawn();
 
 	m_bPanicState = false;
-	m_iHealth = /*sk_headcrab_poison_health.GetFloat()*/100;
+	m_iHealth = sk_headcrab_poison_health.GetInt();
 
 	NPCInit();
 	HeadcrabInit();
@@ -3028,6 +2981,8 @@ void CE_NPC_BlackHeadcrab::Spawn( void )
 //-----------------------------------------------------------------------------
 void CE_NPC_BlackHeadcrab::Precache( void )
 {
+	PrecacheModel( "models/headcrabblack.mdl" );
+
 	PrecacheScriptSound( "NPC_BlackHeadcrab.Telegraph" );
 	PrecacheScriptSound( "NPC_BlackHeadcrab.Attack" );
 	PrecacheScriptSound( "NPC_BlackHeadcrab.Bite" );
@@ -3143,8 +3098,6 @@ int CE_NPC_BlackHeadcrab::TranslateSchedule( int scheduleType )
 //-----------------------------------------------------------------------------
 void CE_NPC_BlackHeadcrab::BuildScheduleTestBits( void )
 {
-	DUMP_FUNCTION();
-
 	// Ignore damage if we're attacking or are fleeing and recently flinched.
 	if ( IsCurSchedule( SCHED_HEADCRAB_CRAWL_FROM_CANISTER ) || IsCurSchedule( SCHED_RANGE_ATTACK1 ) || ( IsCurSchedule( SCHED_TAKE_COVER_FROM_ENEMY ) && HasMemory( bits_MEMORY_FLINCHED ) ) )
 	{
@@ -3222,8 +3175,24 @@ void CE_NPC_BlackHeadcrab::TouchDamage( CEntity *pOther )
 
 		if ( pOther->IsAlive() && pOther->GetHealth() > 1)
 		{
-			// That didn't finish them. Take them down to one point with poison damage. It'll heal.
-			pOther->TakeDamage( CTakeDamageInfo( BaseEntity(), BaseEntity(), pOther->GetHealth() - 1, DMG_POISON ) );		
+			if ( hl2_episodic->GetBool() )
+			{
+				if ( pOther->IsPlayer() )
+				{
+					// That didn't finish them. Take them down to one point with poison damage. It'll heal.
+					pOther->TakeDamage( CTakeDamageInfo( BaseEntity(), BaseEntity(), pOther->GetHealth() - 1, DMG_POISON ) );
+				}
+				else
+				{
+					// Just take some amount of slash damage instead
+					pOther->TakeDamage( CTakeDamageInfo( BaseEntity(), BaseEntity(), sk_headcrab_poison_npc_damage.GetFloat(), DMG_SLASH ) );
+				}
+			}
+			else
+			{
+				// That didn't finish them. Take them down to one point with poison damage. It'll heal.
+				pOther->TakeDamage( CTakeDamageInfo( BaseEntity(), BaseEntity(), pOther->GetHealth() - 1, DMG_POISON ) );
+			}
 		}
 	}
 }

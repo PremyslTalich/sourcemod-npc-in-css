@@ -3,7 +3,6 @@
 
 #include "extension.h"
 
-void CommandInitialize();
 
 
 #endif

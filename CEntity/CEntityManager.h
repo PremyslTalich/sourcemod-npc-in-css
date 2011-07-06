@@ -53,12 +53,19 @@ public:
 	void RemoveEdict(edict_t *e);
 	//virtual IEntityFactory *FindFactory(const char *pClassName);
 
+	void PrintDump();
+
+#ifdef _DEBUG
+	static unsigned long long count;
+#endif;
+
 private:
 	KTrie<IEntityFactory_CE *> pFactoryTrie;
 	KTrie<const char *> pSwapTrie;
 	KTrie<bool> pHookedTrie;
 	IEntityFactoryDictionary_CE *pDict;
 	bool m_bEnabled;
+
 	
 };
 

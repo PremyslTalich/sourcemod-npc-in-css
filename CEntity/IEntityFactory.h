@@ -60,7 +60,7 @@ public:
 
 	CEntity *Create(edict_t *pEdict, CBaseEntity *pEnt)
 	{
-		if (!pEdict || !pEnt)
+		if (/*!pEdict || */!pEnt)
 		{
 			return NULL;
 		}
@@ -130,5 +130,16 @@ public:
 	const char *pReplaceName;
 	const char *pClassName;
 };
+
+
+class IEntityListener
+{
+public:
+	virtual void OnEntityCreated( CBaseEntity *pEntity ) {};
+	virtual void OnEntitySpawned( CBaseEntity *pEntity ) {};
+	virtual void OnEntityDeleted( CBaseEntity *pEntity ) {};
+};
+
+
 
 #endif // _INCLUDE_IENTITYFACTORY_H_

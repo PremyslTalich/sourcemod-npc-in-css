@@ -135,3 +135,222 @@ AISquadEnemyInfo_t *CAI_Squad::FindEnemyInfo( CEntity *pEnemy )
 	m_pLastFoundEnemyInfo = &m_EnemyInfos[i];
 	return &m_EnemyInfos[i];
 }
+
+CBaseEntity *CAI_Squad::GetFirstMember( AISquadIter_t *pIter, bool bIgnoreSilentMembers )
+{
+	int i = 0;
+	if ( bIgnoreSilentMembers )
+	{
+		for ( ; i < m_SquadMembers.Count(); i++ )
+		{
+			if ( !IsSilentMember( m_SquadMembers[i] ) )
+				break;
+		}
+	}
+
+	if ( pIter )
+		*pIter = (AISquadIter_t)i;
+	if ( i >= m_SquadMembers.Count() )
+		return NULL;
+
+	return m_SquadMembers[i];
+}
+
+bool CAI_Squad::IsSilentMember( const CBaseEntity *pNPC )
+{
+	CAI_NPC *npc = (CAI_NPC *)CEntity::Instance(pNPC);
+	if ( !npc || ( npc->GetMoveType() == MOVETYPE_NONE && npc->GetSolid() == SOLID_NONE ) ) // a.k.a., enemy finder
+		return true;
+	return npc->IsSilentSquadMember();
+}
+
+bool CAI_Squad::IsSilentMember( const CAI_NPC *pNPC )
+{
+	if ( !pNPC || ( pNPC->GetMoveType() == MOVETYPE_NONE && pNPC->GetSolid() == SOLID_NONE ) ) // a.k.a., enemy finder
+		return true;
+	return pNPC->IsSilentSquadMember();
+}
+
+
+CBaseEntity *CAI_Squad::GetNextMember( AISquadIter_t *pIter, bool bIgnoreSilentMembers )
+{
+	int &i = (int &)*pIter;
+	i++;
+	if ( bIgnoreSilentMembers )
+	{
+		for ( ; i < m_SquadMembers.Count(); i++ )
+		{
+			if ( !IsSilentMember( m_SquadMembers[i] ) )
+				break;
+		}
+	}
+
+	if ( i >= m_SquadMembers.Count() )
+		return NULL;
+
+	return m_SquadMembers[i];
+}
+
+bool CAI_Squad::IsStrategySlotRangeOccupied( CEntity *pEnemy, int slotIDStart, int slotIDEnd )
+{
+	for ( int i = slotIDStart; i <= slotIDEnd; i++ )
+	{
+		if (!IsSlotOccupied(pEnemy, i))
+			return false;
+	}
+	return true;
+}
+
+//-------------------------------------
+// Purpose: Broadcast a message to all squad members
+// Input:	messageID - generic message handle
+//			data - generic data handle
+//			sender - who sent the message (NULL by default, if not, will not resend to the sender)
+//-------------------------------------
+
+int	CAI_Squad::BroadcastInteraction( int interactionType, void *data, CCombatCharacter *sender )
+{
+	//Must have a squad
+	if ( m_SquadMembers.Count() == 0 )
+		return false;
+
+	//Broadcast to all members of the squad
+	for ( int i = 0; i < m_SquadMembers.Count(); i++ )
+	{
+		CAI_NPC *pMember = CEntity::Instance(m_SquadMembers[i])->MyNPCPointer();		
+		//Validate and don't send again to the sender
+		if ( ( pMember != NULL) && ( pMember != sender ) )
+		{
+			//Send it
+			pMember->DispatchInteraction( interactionType, data, sender->BaseEntity() );
+		}
+	}
+
+	return true;
+}
+
+void CAI_Squad::VacateStrategySlot( CEntity *pEnemy, int slot)
+{
+	// If I wasn't taking up a squad slot I'm done
+	if (slot == SQUAD_SLOT_NONE)
+		return;
+
+	// As a debug measure check to see if slot was filled
+	if (!IsSlotOccupied(pEnemy, slot))
+	{
+		DevMsg( "ERROR! Vacating an empty slot!\n");
+	}
+
+	// Free the slot
+	VacateSlot(pEnemy, slot);
+}
+
+//-------------------------------------
+// Purpose: Alert everyone in the squad to the presence of a new enmey
+//-------------------------------------
+
+int	CAI_Squad::NumMembers( bool bIgnoreSilentMembers )
+{
+	int nSilentMembers = 0;
+	if ( bIgnoreSilentMembers )
+	{
+		for ( int i = 0; i < m_SquadMembers.Count(); i++ )
+		{
+			if ( IsSilentMember( m_SquadMembers[i] ) )
+				nSilentMembers++;
+		}
+	}
+	return ( m_SquadMembers.Count() - nSilentMembers );
+}
+
+
+//-------------------------------------
+// Purpose: Addes the given NPC to the squad
+//-------------------------------------
+void CAI_Squad::AddToSquad(CAI_NPC *pNPC)
+{
+	if ( !pNPC || !pNPC->IsAlive() )
+	{
+		Assert(0);
+		return;
+	}
+
+	if ( pNPC->GetSquad() == this )
+		return;
+
+	if ( pNPC->GetSquad() )
+	{
+		pNPC->GetSquad()->RemoveFromSquad(pNPC);
+	}
+
+	if (m_SquadMembers.Count() == MAX_SQUAD_MEMBERS)
+	{
+		DevMsg("Error!! Squad %s is too big!!! Replacing last member\n", STRING(this->m_Name));
+		m_SquadMembers.Remove(m_SquadMembers.Count()-1);
+	}
+	m_SquadMembers.AddToTail(pNPC->BaseEntity());
+
+	pNPC->SetSquad( this );
+	pNPC->SetSquadName( m_Name );
+
+	if ( m_SquadMembers.Count() > 1 )
+	{
+		CAI_NPC *pCopyFrom = (CAI_NPC *)CEntity::Instance(m_SquadMembers[0]);
+		CEAI_Enemies *pEnemies = pCopyFrom->GetEnemies();
+		AIEnemiesIter_t iter;
+		AI_EnemyInfo_t *pInfo = pEnemies->GetFirst( &iter );
+		while ( pInfo )
+		{
+			pNPC->UpdateEnemyMemory( pInfo->hEnemy, pInfo->vLastKnownLocation, pCopyFrom->BaseEntity() );
+			pInfo = pEnemies->GetNext( &iter );
+		}
+	}
+}
+
+//-------------------------------------
+// Purpose: Removes an NPC from a squad
+//-------------------------------------
+
+void CAI_Squad::RemoveFromSquad( CAI_NPC *pNPC, bool bDeath )
+{
+	if ( !pNPC )
+		return;
+
+	// Find the index of this squad member
+	int member;
+	int myIndex = m_SquadMembers.Find(pNPC->BaseEntity());
+	if (myIndex == -1)
+	{
+		DevMsg("ERROR: Attempting to remove non-existing squad membmer!\n");
+		return;
+	}
+	m_SquadMembers.Remove(myIndex);
+
+	// Notify squad members of death 
+	if ( bDeath )
+	{
+		for (member = 0; member < m_SquadMembers.Count(); member++)
+		{
+			CAI_NPC* pSquadMem = (CAI_NPC *)CEntity::Instance(m_SquadMembers[member]);
+			if (pSquadMem)
+			{
+				pSquadMem->NotifyDeadFriend(pNPC->BaseEntity());
+			}
+		}
+	}
+
+	pNPC->SetSquad(NULL);
+	pNPC->SetSquadName( NULL_STRING );
+}
+
+bool CAI_Squad::SquadIsMember( CEntity *pMember )
+{
+	if(!pMember)
+		return false;
+
+	CAI_NPC *pNPC = pMember->MyNPCPointer();
+	if ( pNPC && pNPC->GetSquad() == this )
+		return true;
+
+	return false;
+}

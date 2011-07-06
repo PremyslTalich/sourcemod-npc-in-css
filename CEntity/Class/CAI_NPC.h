@@ -8,6 +8,8 @@
 #include "CAI_Hint.h"
 #include "CEAI_ScriptedSequence.h"
 #include "CAI_Navigator.h"
+#include "CAI_senses.h"
+
 
 #include "ai_npcstate.h"
 #include "ai_activity.h"
@@ -15,21 +17,31 @@
 #include "ai_task.h"
 #include "ai_condition.h"
 #include "ai_namespaces.h"
-#include "ai_schedule.h"
+#include "CAI_schedule.h"
 #include "npcevent.h"
 #include "ai_movetypes.h"
-#include "ai_moveshoot.h"
+#include "CAI_Moveshoot.h"
 #include "CAI_motor.h"
 #include "ai_activity.h"
 #include "CAI_moveprobe.h"
 #include "CAI_Squad.h"
+#include "CAI_Hint.h"
 #include "ai_squadslot.h"
 #include "activitylist.h"
 #include "eventlist.h"
+#include "CAI_speech.h"
+#include "CAI_Interactions.h"
 
+
+#define PLAYER_SQUADNAME "player_squad"
 
 class CAI_BehaviorBase;
-class CAI_Hint;
+class CEAI_ScriptedSequence;
+class CAI_TacticalServices;
+class CPropDoor;
+class CE_AI_Hint;
+class CE_AI_GoalEntity;
+class CAI_ShotRegulator;
 
 //=============================================================================
 //
@@ -370,11 +382,12 @@ struct ScriptedNPCInteraction_t
 	DECLARE_SIMPLE_DATADESC();
 };
 
-
+float DeltaV( float v0, float v1, float d );
 Vector VecCheckToss ( CEntity *pEdict, Vector vecSpot1, Vector vecSpot2, float flHeightMaxRatio, float flGravityAdj, bool bRandomize, Vector *vecMins = NULL, Vector *vecMaxs = NULL );
 Vector VecCheckToss ( CEntity *pEntity, ITraceFilter *pFilter, Vector vecSpot1, Vector vecSpot2, float flHeightMaxRatio, float flGravityAdj, bool bRandomize, Vector *vecMins = NULL, Vector *vecMaxs = NULL );
 Vector VecCheckThrow( CEntity *pEdict, const Vector &vecSpot1, Vector vecSpot2, float flSpeed, float flGravityAdj = 1.0f, Vector *vecMins = NULL, Vector *vecMaxs = NULL );
 
+extern bool AIStrongOpt( void );
 
 
 
@@ -385,6 +398,7 @@ extern CAI_ClassScheduleIdSpace *my_gm_ClassScheduleIdSpace;
 extern CAI_LocalIdSpace    *my_gm_SquadSlotIdSpace;
 extern CAI_GlobalNamespace *my_gm_SquadSlotNamespace;*/
 
+class CBaseCombatCharacter;
 
 
 class CAI_NPC : public CCombatCharacter
@@ -393,6 +407,7 @@ public:
 	CE_DECLARE_CLASS(CAI_NPC, CCombatCharacter);
 	
 	CAI_NPC();
+	virtual ~CAI_NPC();
 
 	void		SetHullSizeNormal(bool force=false);
 
@@ -403,8 +418,22 @@ public:
 	void		SetCondition(int iCondition);
 	bool		HasCondition( int iCondition );
 	void		ClearCondition( int iCondition );
+	void		ClearConditions( int *pConditions, int nConditions );
+
+	const Vector &		GetEnemyLKP() const;
+	float				GetEnemyLastTimeSeen() const;
 
 	CEntity		*GetEnemy()									{ return m_hEnemy; }
+	CEntity		*GetEnemy()	const							{ return m_hEnemy; }
+	CBaseEntity	*GetEnemy_CBase()							{ return (m_hEnemy != NULL) ? m_hEnemy->BaseEntity() : NULL; }
+
+
+	void		SetEnemyOccluder(CEntity *pBlocker);
+	CEntity		*GetEnemyOccluder()							{ return m_hEnemyOccluder; }
+	CEntity		*GetEnemyOccluder() const					{ return m_hEnemyOccluder; }
+	CBaseEntity	*GetEnemyOccluder_CBase()					{ return (m_hEnemyOccluder != NULL) ? m_hEnemyOccluder->BaseEntity() : NULL; }
+
+
 	bool		AutoMovement(CEntity *pTarget = NULL, AIMoveTrace_t *pTraceResult = NULL);
 	bool		AutoMovement( float flInterval, CEntity *pTarget = NULL, AIMoveTrace_t *pTraceResult = NULL );
 	
@@ -417,8 +446,11 @@ public:
 	CAI_Motor *			GetMotor() 					{ return m_pMotor; }
 	const CAI_Motor *	GetMotor() const			{ return m_pMotor; }
 
-	CAI_Hint			*GetHintNode()				{ return m_pHintNode; }
-	const CAI_Hint		*GetHintNode() const		{ return m_pHintNode; }
+	CAI_Pathfinder *	GetPathfinder() 			{ return m_pPathfinder; }
+	const CAI_Pathfinder *GetPathfinder() const 	{ return m_pPathfinder; }
+
+	CE_AI_Hint				*GetHintNode()				{ return (CE_AI_Hint *)(m_pHintNode.ptr->Get()); }
+	const CE_AI_Hint		*GetHintNode() const		{ return (CE_AI_Hint *)(m_pHintNode.ptr->Get()); }
 
 	const Vector &		GetHullMins() const		{ return NAI_Hull::Mins(GetHullType()); }
 	const Vector &		GetHullMaxs() const		{ return NAI_Hull::Maxs(GetHullType()); }
@@ -428,6 +460,8 @@ public:
 	Activity			GetActivity( void ) { return m_Activity; }
 
 	string_t			GetHintGroup( void )			{ return m_strHintGroup; }
+	void				ClearHintGroup( void )			{ SetHintGroup( NULL_STRING );	}
+	void				SetHintGroup( string_t name, bool bHintGroupNavLimiting = false );
 
 	NPC_STATE			GetState( void )				{ return m_NPCState; }
 
@@ -442,21 +476,30 @@ public:
 
 	Activity TranslateActivity( Activity idealActivity, Activity *pIdealWeaponActivity = NULL );
 	Activity GetIdealActivity() { return m_IdealActivity; }
+	
+	void ResetActivity(void) { m_Activity = ACT_RESET; }
 
-	void SetHintNode( CAI_Hint *pHintNode );
+	void SetHintNode( CBaseEntity *pHintNode );
 	void ClearHintNode( float reuseDelay = 0.0 );
 
 	CAI_Navigator *		GetNavigator() 				{ return m_pNavigator; }
 	const CAI_Navigator *GetNavigator() const 		{ return m_pNavigator; }
+	
+	CAI_LocalNavigator *GetLocalNavigator()			{ return m_pLocalNavigator; }
+	const CAI_LocalNavigator *GetLocalNavigator() const { return m_pLocalNavigator; }
 
 	CAI_Squad *			GetSquad() 				{ return m_pSquad; }
 	const CAI_Squad		*GetSquad() const 		{ return m_pSquad; }
 
-	
+	bool				IsInSquad() const				{ return GetSquad() != NULL; }
+
+	CAI_Senses *		GetSenses()				{ return m_pSenses; }
+	const CAI_Senses *	GetSenses() const		{ return m_pSenses; }
+
 	bool	FacingIdeal();
 
 	int 				GetScheduleCurTaskIndex() const			{ return m_ScheduleState.ptr->iCurTask;	}
-	CAI_Schedule *		GetCurSchedule()						{ return m_pSchedule; }
+	CAI_Schedule *		GetCurSchedule()						{ return *(m_pSchedule.ptr); }
 
 	const Task_t*		GetTask( void );
 
@@ -476,6 +519,12 @@ public:
 	inline bool			HasMemory( int iMemory ) 		{ if ( m_afMemory & iMemory ) return TRUE; return FALSE; }
 	inline bool			HasAllMemories( int iMemory ) 	{ if ( (m_afMemory & iMemory) == iMemory ) return TRUE; return FALSE; }
 
+	inline CEAI_ScriptedSequence *Get_m_hCine()			{ return (CEAI_ScriptedSequence *)(m_hCine.ptr->Get()); }
+
+	CEntity*		GetGoalEnt()							{ return m_hGoalEnt.ptr->Get();	}
+	void			SetGoalEnt( CBaseEntity *pGoalEnt )		{ m_hGoalEnt.ptr->Set( pGoalEnt ); }
+
+
 	void				SetCustomInterruptCondition( int nCondition );
 	bool				IsCustomInterruptConditionSet( int nCondition );
 	void				ClearCustomInterruptCondition( int nCondition );
@@ -493,6 +542,144 @@ public:
 	bool				IsWaitFinished();
 	float				SetWait( float minWait, float maxWait = 0.0 );
 
+	bool				DispatchInteraction( int interactionType, void *data, CBaseEntity* sourceEnt )	{ return ( interactionType > 0 ) ? HandleInteraction( interactionType, data, sourceEnt ) : false; }
+	
+	CAI_NPC *			GetInteractionPartner( void );
+
+	string_t			GetSquadName()	{ return m_SquadName; }
+	void				SetSquadName( string_t name )	{ m_SquadName = name; 	}
+
+	void				SetDefaultEyeOffset ( void );
+
+	bool				ConditionInterruptsCurSchedule( int iCondition );
+
+	void				ResetIdealActivity( Activity newIdealActivity );
+
+	inline int			LookupPoseMoveYaw()		{ return m_poseMove_Yaw; }
+
+	void				SetUpdatedYaw()	{ m_ScheduleState->bTaskUpdatedYaw = true; }
+
+	bool				IsFlaggedEfficient() const					{ return HasSpawnFlags( SF_NPC_START_EFFICIENT ); }
+
+	float				GetStepDownMultiplier() const;
+
+	bool				UpdateTurnGesture( void );
+
+	Activity			GetStoppedActivity( void );
+	int					GetScriptCustomMoveSequence( void );
+
+	CEntity *			GetNavTargetEntity(void);
+
+	void				SetTarget( CBaseEntity *pTarget );
+	CEntity*			GetTarget()								{ return m_hTargetEnt; }
+
+	CAI_TacticalServices *GetTacticalServices()			{ return m_pTacticalServices; }
+	const CAI_TacticalServices *GetTacticalServices() const { return m_pTacticalServices; }
+
+	bool				IsJumpLegal( const Vector &startPos, const Vector &apex, const Vector &endPos, float maxUp, float maxDown, float maxDist ) const;
+
+	void	OpenPropDoorBegin( CPropDoor *pDoor );
+	void	OpenPropDoorNow( CPropDoor *pDoor );
+
+	float	VecToYaw( const Vector &vecDir );
+
+	int		WalkMove( const Vector& vecPosition, unsigned int mask );
+	int		FlyMove( const Vector& pfPosition, unsigned int mask );
+
+	void	RememberUnreachable( CEntity* pEntity, float duration = -1 );
+
+	void	ForceChooseNewEnemy()	{ m_EnemiesSerialNumber = -1; }
+	bool	HasStrategySlotRange( int slotIDStart, int slotIDEnd );
+
+	void	TaskMovementComplete( void );
+	TaskStatus_e 		GetTaskStatus() const					{ return m_ScheduleState.ptr->fTaskStatus; 	}
+
+	bool				OccupyStrategySlot( int squadSlotID );
+	bool				IsStrategySlotRangeOccupied( int slotIDStart, int slotIDEnd );	// Returns true if all in the range are occupied
+
+	inline bool			IsInAScript( void ) { return m_bInAScript; }
+	inline void			SetInAScript( bool bScript ) { m_bInAScript = bScript; }
+
+	void				VacateStrategySlot( void );
+
+	CCombatCharacter	*GetEnemyCombatCharacterPointer();
+	int					TaskIsRunning( void );
+
+	void				ClearEnemyMemory();
+
+	void				TestPlayerPushing( CEntity *pPlayer );
+	void				CascadePlayerPush( const Vector &push, const Vector &pushOrigin );
+
+	CSound *			GetLoudestSoundOfType( int iType );
+	
+	inline CAI_ShotRegulator* GetShotRegulator()		{ return m_ShotRegulator; }
+
+	void				TaskInterrupt()					{ m_ScheduleState.ptr->iTaskInterrupt++; }
+	int					GetTaskInterrupt() const		{ return m_ScheduleState.ptr->iTaskInterrupt; }
+
+	bool IsActiveDynamicInteraction( void ) { return (m_iInteractionState == NPCINT_RUNNING_ACTIVE && (m_hCine != NULL)); }
+
+	AI_Efficiency_t		GetEfficiency() const						{ return m_Efficiency; }
+	void				SetEfficiency( AI_Efficiency_t efficiency )	{ m_Efficiency = efficiency; }
+
+	AI_MoveEfficiency_t GetMoveEfficiency() const					{ return m_MoveEfficiency; }
+	void				SetMoveEfficiency( AI_MoveEfficiency_t efficiency )	{ m_MoveEfficiency = efficiency; }
+
+	bool				IsWeaponStateChanging( void );
+
+	void				SetIgnoreConditions( int *pConditions, int nConditions );
+	void				ClearIgnoreConditions( int *pConditions, int nConditions );
+
+	void				SetDistLook( float flDistLook );
+
+	bool				ConditionsGathered() const		{ return m_bConditionsGathered; }
+
+	float				EnemyDistance( CEntity *pEnemy );
+
+	ScriptedNPCInteraction_t *GetRunningDynamicInteraction( void ) { return &(m_ScriptedInteractions->Element(m_iInteractionPlaying)); }
+	
+	bool				HasInteractionCantDie( void );
+	
+	bool				IsInPlayerSquad() const;
+
+	string_t			GetPlayerSquadName() const	{ Assert( gm_iszPlayerSquad != NULL_STRING ); return gm_iszPlayerSquad; }
+
+	void				ForceGatherConditions()	{ m_bForceConditionsGather = true; SetEfficiency( AIE_NORMAL ); }	// Force an NPC out of PVS to call GatherConditions on next think
+
+	bool				IsSquadmateInSpread( const Vector &sourcePos, const Vector &targetPos, float flSpread, float maxDistOffCenter );
+	bool				PointInSpread( CCombatCharacter *pCheckEntity, const Vector &sourcePos, const Vector &targetPos, const Vector &testPoint, float flSpread, float maxDistOffCenter );
+
+protected:
+	void				ChainStartTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; StartTask( (const Task_t *)&tempTask ); }
+	void				ChainRunTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; RunTask( (const Task_t *)	&tempTask );	}
+
+public:
+	template <class BEHAVIOR_TYPE>
+	bool GetBehavior( BEHAVIOR_TYPE **ppBehavior )
+	{
+		CAI_BehaviorBase **ppBehaviors = AccessBehaviors();
+		
+		*ppBehavior = NULL;
+		for ( int i = 0; i < NumBehaviors(); i++ )
+		{
+			*ppBehavior = dynamic_cast<BEHAVIOR_TYPE *>(ppBehaviors[i]);
+			if ( *ppBehavior )
+				return true;
+		}
+		return false;
+	}
+
+	enum
+	{
+		NEXT_SCHEDULE 	= LAST_SHARED_SCHEDULE,
+		NEXT_TASK		= LAST_SHARED_TASK,
+		NEXT_CONDITION 	= LAST_SHARED_CONDITION,
+	};
+
+public:
+	//is virtual, but not hooked, for npc only?
+	virtual bool OnMoveBlocked( AIMoveResult_t *pResult ) { return false;	}
+
 public:
 	virtual CEAI_Enemies *GetEnemies();
 	virtual void NPCInit();
@@ -504,7 +691,6 @@ public:
 	virtual float MaxYawSpeed();
 	virtual CAI_ClassScheduleIdSpace *GetClassScheduleIdSpace();
 	virtual void NPCThink();
-	virtual void HandleAnimEvent(animevent_t *pEvent);
 	virtual bool IsActivityFinished();
 	virtual float CalcIdealYaw( const Vector &vecTarget );
 	virtual void GatherConditions();
@@ -513,7 +699,6 @@ public:
 	virtual void AlertSound();
 	virtual void PainSound(const CTakeDamageInfo &info);
 	virtual void DeathSound(const CTakeDamageInfo &info);
-	virtual bool FValidateHintType(CAI_Hint *pHint);
 	virtual bool FInAimCone_Vector(const Vector &vecSpot);
 	virtual CBaseEntity *BestEnemy();
 	void TaskFail(AI_TaskFailureCode_t code);
@@ -525,29 +710,143 @@ public:
 	virtual int	SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFailureCode_t taskFailCode );
 	virtual Activity Weapon_TranslateActivity( Activity baseAct, bool *pRequired = NULL );
 	virtual Activity NPC_TranslateActivity( Activity eNewActivity );
-	virtual bool HandleInteraction(int interactionType, void *data, CCombatCharacter* sourceEnt);
+	virtual bool HandleInteraction(int interactionType, void *data, CBaseEntity* sourceEnt);
 	virtual CAI_Schedule *GetSchedule(int schedule);
 	virtual void PlayerHasIlluminatedNPC(CBaseEntity *pPlayer, float flDot );
 	virtual bool QuerySeeEntity( CBaseEntity *pEntity, bool bOnlyHateOrFearIfNPC = false );
 	virtual int	GetSoundInterests();
 	virtual void BuildScheduleTestBits( void );
 	virtual bool UpdateEnemyMemory( CBaseEntity *pEnemy, const Vector &position, CBaseEntity *pInformer = NULL);
+	virtual bool OverrideMove( float flInterval );
 	virtual	bool OverrideMoveFacing( const AILocalMoveGoal_t &move, float flInterval );
 	virtual float GetHitgroupDamageMultiplier( int iHitGroup, const CTakeDamageInfo &info );
 	virtual bool OnBehaviorChangeStatus(  CAI_BehaviorBase *pBehavior, bool fCanFinishSchedule );
 	virtual bool IsInterruptable();
-
+	virtual void MakeAIFootstepSound( float volume, float duration = 0.5f );
+	virtual void OnScheduleChange( void );
+	virtual void TranslateNavGoal( CBaseEntity *pEnemy, Vector &chasePosition);
+	virtual int	MeleeAttack1Conditions( float flDot, float flDist );
+	virtual bool IsUnreachable( CBaseEntity* pEntity );	
+	virtual bool OnObstructingDoor(AILocalMoveGoal_t *pMoveGoal, CBaseEntity *pDoor, float distClear, AIMoveResult_t *pResult);
+	virtual bool IsHeavyDamage( const CTakeDamageInfo &info );
+	virtual float GetTimeToNavGoal();
+	virtual float StepHeight() const;
+	virtual float GetJumpGravity() const;
+	virtual bool ShouldPlayerAvoid( void );
+	virtual bool ShouldProbeCollideAgainstEntity( CBaseEntity *pEntity );
+	virtual int	CapabilitiesGet( void ) const;
+	virtual bool IsCrouching( void );
+	virtual void OnChangeHintGroup( string_t oldGroup, string_t newGroup );
+	virtual bool IsJumpLegal( const Vector &startPos, const Vector &apex, const Vector &endPos ) const;
+	virtual bool ShouldFailNav( bool bMovementFailed );
+	virtual bool IsNavigationUrgent();
+	virtual float GetDefaultNavGoalTolerance();
+	virtual void OnMovementFailed();
+	virtual bool ShouldBruteForceFailedNav();
+	virtual bool IsUnusableNode(int iNodeID, CBaseEntity *pHint);
+	virtual	bool MovementCost( int moveType, const Vector &vecStart, const Vector &vecEnd, float *pCost );
+	virtual Vector GetNodeViewOffset();
+	virtual void PostNPCInit();
+	virtual float InnateRange1MaxRange( void );
+	virtual float InnateRange1MinRange (void );
+	virtual int	RangeAttack1Conditions( float flDot, float flDist );
+	virtual int	RangeAttack2Conditions( float flDot, float flDist );
+	virtual	void OnStateChange( NPC_STATE OldState, NPC_STATE NewState );
+	virtual bool ShouldPlayIdleSound( void );
+	virtual bool IsLightDamage( const CTakeDamageInfo &info );
+	virtual	bool CanBeAnEnemyOf( CBaseEntity *pEnemy );
+	virtual	bool AllowedToIgnite( void );
+	virtual void GatherEnemyConditions( CBaseEntity *pEnemy );
+	virtual bool IsSilentSquadMember() const;
+	virtual void OnMovementComplete();
+	virtual void AddFacingTarget_E_V_F_F_F( CBaseEntity *pTarget, const Vector &vecPosition, float flImportance, float flDuration, float flRamp = 0.0 );
+	virtual bool QueryHearSound( CSound *pSound );
+	virtual bool IsPlayerAlly( CBaseEntity *pPlayer = NULL );
+	virtual CAI_BehaviorBase *GetRunningBehavior();
+	virtual void OnUpdateShotRegulator();
+	virtual void CleanupOnDeath( CBaseEntity *pCulprit, bool bFireDeathOutput );
+	virtual void OnStartSchedule( int scheduleType );
+	virtual void AimGun();
+	virtual const char *GetSchedulingErrorName();
+	virtual bool IsCurTaskContinuousMove();
+	virtual	bool IsValidEnemy( CBaseEntity *pEnemy );
+	virtual	bool IsValidCover( const Vector &vLocation, CAI_Hint const *pHint );
+	virtual	bool IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint );
+	virtual float GetMaxTacticalLateralMovement();
+	virtual bool ShouldIgnoreSound( CSound *pSound );
+	virtual void OnSeeEntity( CBaseEntity *pEntity );
+	virtual float GetReasonableFacingDist( void );
+	virtual bool CanFlinch();
+	virtual bool IsCrouchedActivity( Activity activity );
+	virtual bool CanRunAScriptedNPCInteraction( bool bForced = false );
+	virtual Activity GetFlinchActivity( bool bHeavyDamage, bool bGesture );
+	virtual bool OnCalcBaseMove( AILocalMoveGoal_t *pMoveGoal, float distClear, AIMoveResult_t *pResult );
+	virtual bool ShouldAlwaysThink();
+	virtual bool ScheduledMoveToGoalEntity( int scheduleType, CBaseEntity *pGoalEntity, Activity movementActivity );
+	virtual bool ScheduledFollowPath( int scheduleType, CBaseEntity *pPathStart, Activity movementActivity );
+	virtual const char *TaskName(int taskID);
+	virtual CAI_Schedule *GetNewSchedule();
+	virtual CAI_Schedule *GetFailSchedule();
+	virtual CAI_BehaviorBase **AccessBehaviors();
+	virtual int	NumBehaviors();
+	virtual CAI_Expresser *GetExpresser();
+	virtual bool ValidateNavGoal();
+	virtual void NotifyDeadFriend(CBaseEntity *pFriend);
+	virtual void SetAim(const Vector &aimDir);
+	virtual	void RelaxAim( void );
+	virtual Activity GetHintActivity( short sHintType, Activity HintsActivity );
+	virtual bool FValidateHintType( CBaseEntity *pHint );
+	virtual float GetHintDelay( short sHintType );
+	virtual bool InnateWeaponLOSCondition( const Vector &ownerPos, const Vector &targetPos, bool bSetConditions );	
+	virtual bool OnObstructionPreSteer( AILocalMoveGoal_t *pMoveGoal, float distClear, AIMoveResult_t *pResult );
+	virtual float CoverRadius() ;
+	virtual void SetTurnActivity();
+	virtual bool FCanCheckAttacks();
+	virtual int	GetGlobalScheduleId( int localScheduleID );
+	virtual void AddFacingTarget_V_F_F_F( const Vector &vecPosition, float flImportance, float flDuration, float flRamp = 0.0 );
+	virtual void SetSquad( CAI_Squad *pSquad );
+	virtual void ClearCommandGoal();
+	virtual bool FindCoverPosInRadius( CBaseEntity *pEntity, const Vector &goalPos, float coverRadius, Vector *pResult );
+	virtual void CheckAmmo( void );
+	virtual void OnRangeAttack1();
+	virtual Vector GetShootEnemyDir( const Vector &shootOrigin, bool bNoisy = true );
+	virtual	void SetScriptedScheduleIgnoreConditions( Interruptability_t interrupt );
+	virtual void OnStartScene( void );
+	virtual NPC_STATE SelectIdealState( void );
+	virtual void RunAI( void );
+	virtual	bool ShouldMoveAndShoot( void );
+	virtual bool CanBeUsedAsAFriend( void );
+	virtual void OnClearGoal( CAI_BehaviorBase *pBehavior, CE_AI_GoalEntity *pGoal );
+	virtual bool ShouldAcceptGoal( CAI_BehaviorBase *pBehavior, CE_AI_GoalEntity *pGoal );
+	virtual	void Wake( bool bFireOutput = true );
+	virtual float GetReactionDelay( CBaseEntity *pEnemy );
+	virtual const char*	SquadSlotName(int slotID);
+	virtual	bool PlayerInSpread( const Vector &sourcePos, const Vector &targetPos, float flSpread, float maxDistOffCenter, bool ignoreHatedPlayers = true );
 
 public: // sign
 	void CallNPCThink();
 	void SetEnemy(CBaseEntity *pEnemy, bool bSetCondNewEnemy = true);
-
-public:
-	virtual bool CanBeAnEnemyOf( CEntity *pEnemy );
+	void SetupVPhysicsHull();
+	bool CineCleanup();
+	void TestPlayerPushing( CBaseEntity *pPlayer );
 
 protected:
 	static bool			LoadSchedules(void);
 	virtual bool		LoadedSchedules(void);
+
+public:
+	// Scripted sequence Info
+	enum SCRIPTSTATE
+	{
+		SCRIPT_PLAYING = 0,				// Playing the action animation.
+		SCRIPT_WAIT,						// Waiting on everyone in the script to be ready. Plays the pre idle animation if there is one.
+		SCRIPT_POST_IDLE,					// Playing the post idle animation after playing the action animation.
+		SCRIPT_CLEANUP,					// Cancelling the script / cleaning up.
+		SCRIPT_WALK_TO_MARK,				// Walking to the scripted sequence position.
+		SCRIPT_RUN_TO_MARK,				// Running to the scripted sequence position.
+		SCRIPT_CUSTOM_MOVE_TO_MARK,	// Moving to the scripted sequence position while playing a custom movement animation.
+	};
+
 
 public:
 	static void			AddActivityToSR(const char *actName, int conID);
@@ -561,6 +860,10 @@ public:
 	static int			GetConditionID	(const char* condName);
 	static int			GetTaskID		(const char* taskName);
 	static int			GetSquadSlotID	(const char* slotName);
+
+	static bool			FindSpotForNPCInRadius( Vector *pResult, const Vector &vStartPos, CAI_NPC *pNPC, float radius, bool bOutOfPlayerViewcone = false );
+
+	static string_t gm_iszPlayerSquad;
 
 public:
 	static void InitSchedulingTables();
@@ -585,11 +888,12 @@ private:
 	static void			InitDefaultActivitySR(void);
 	static void			InitDefaultSquadSlotSR(void);
 
-	static CStringRegistry*	m_pActivitySR;
-	static int			m_iNumActivities;
+	friend HelperFunction;
+	static CStringRegistry*		m_pActivitySR;
+	static int					*m_iNumActivities;
 
-	static CStringRegistry*	m_pEventSR;
-	static int			m_iNumEvents;
+	static CStringRegistry*		m_pEventSR;
+	static int					*m_iNumEvents;
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetHullSizeNormal, void, (bool force));
@@ -602,7 +906,6 @@ public:
 	DECLARE_DEFAULTHEADER(MaxYawSpeed, float, ());
 	DECLARE_DEFAULTHEADER(GetClassScheduleIdSpace, CAI_ClassScheduleIdSpace *, ());
 	DECLARE_DEFAULTHEADER(NPCThink, void, ());
-	DECLARE_DEFAULTHEADER(HandleAnimEvent, void, (animevent_t *pEvent));
 	DECLARE_DEFAULTHEADER(IsActivityFinished, bool, ());
 	DECLARE_DEFAULTHEADER(CalcIdealYaw, float, (const Vector &vecTarget));
 	DECLARE_DEFAULTHEADER(GatherConditions, void, ());
@@ -611,7 +914,6 @@ public:
 	DECLARE_DEFAULTHEADER(AlertSound, void, ());
 	DECLARE_DEFAULTHEADER(PainSound, void, (const CTakeDamageInfo &info));
 	DECLARE_DEFAULTHEADER(DeathSound, void, (const CTakeDamageInfo &info));
-	DECLARE_DEFAULTHEADER(FValidateHintType, bool, (CAI_Hint *pHint));
 	DECLARE_DEFAULTHEADER(FInAimCone_Vector, bool, (const Vector &vecSpot));
 	DECLARE_DEFAULTHEADER(BestEnemy, CBaseEntity *, ());
 	DECLARE_DEFAULTHEADER(TaskFail, void, (AI_TaskFailureCode_t code));
@@ -623,38 +925,145 @@ public:
 	DECLARE_DEFAULTHEADER(Weapon_TranslateActivity, Activity, (Activity baseAct, bool *pRequired));
 	DECLARE_DEFAULTHEADER(NPC_TranslateActivity, Activity, (Activity eNewActivity));
 	DECLARE_DEFAULTHEADER(GetSchedule, CAI_Schedule *, (int schedule));
-	DECLARE_DEFAULTHEADER(TaskName, const char *, (int taskID));
 	DECLARE_DEFAULTHEADER(PlayerHasIlluminatedNPC, void, (CBaseEntity *pPlayer, float flDot));
 	DECLARE_DEFAULTHEADER(QuerySeeEntity, bool, (CBaseEntity *pEntity, bool bOnlyHateOrFearIfNPC));
 	DECLARE_DEFAULTHEADER(GetSoundInterests, int, ());
 	DECLARE_DEFAULTHEADER(BuildScheduleTestBits, void, ());
 	DECLARE_DEFAULTHEADER(UpdateEnemyMemory, bool, (CBaseEntity *pEnemy, const Vector &position, CBaseEntity *pInformer));
+	DECLARE_DEFAULTHEADER(OverrideMove, bool, ( float flInterval ));
 	DECLARE_DEFAULTHEADER(OverrideMoveFacing, bool, (const AILocalMoveGoal_t &move, float flInterval));
 	DECLARE_DEFAULTHEADER(GetHitgroupDamageMultiplier , float, (int iHitGroup, const CTakeDamageInfo &info));
 	DECLARE_DEFAULTHEADER(OnBehaviorChangeStatus, bool, (CAI_BehaviorBase *pBehavior, bool fCanFinishSchedule));
 	DECLARE_DEFAULTHEADER(IsInterruptable, bool, ());
-
+	DECLARE_DEFAULTHEADER(MakeAIFootstepSound, void, (float volume, float duration));
+	DECLARE_DEFAULTHEADER(OnScheduleChange, void, ());
+	DECLARE_DEFAULTHEADER(TranslateNavGoal, void, (CBaseEntity *pEnemy, Vector &chasePosition));
+	DECLARE_DEFAULTHEADER(MeleeAttack1Conditions, int, (float flDot, float flDist ));
+	DECLARE_DEFAULTHEADER(IsUnreachable, bool, (CBaseEntity* pEntity));
+	DECLARE_DEFAULTHEADER(OnObstructingDoor, bool, (AILocalMoveGoal_t *pMoveGoal, CBaseEntity *pDoor, float distClear, AIMoveResult_t *pResult));
+	DECLARE_DEFAULTHEADER(IsHeavyDamage, bool, (const CTakeDamageInfo &info));
+	DECLARE_DEFAULTHEADER(GetTimeToNavGoal, float, ());
+	DECLARE_DEFAULTHEADER(StepHeight, float, () const);
+	DECLARE_DEFAULTHEADER(GetJumpGravity, float, () const);
+	DECLARE_DEFAULTHEADER(ShouldPlayerAvoid, bool, ());
+	DECLARE_DEFAULTHEADER(ShouldProbeCollideAgainstEntity, bool, (CBaseEntity *pEntity));
+	DECLARE_DEFAULTHEADER(CapabilitiesGet,int, () const);
+	DECLARE_DEFAULTHEADER(IsCrouching, bool,  ());
+	DECLARE_DEFAULTHEADER(OnChangeHintGroup, void,  (string_t oldGroup, string_t newGroup));
+	DECLARE_DEFAULTHEADER(IsJumpLegal, bool, (const Vector &startPos, const Vector &apex, const Vector &endPos ) const);
+	DECLARE_DEFAULTHEADER(ShouldFailNav, bool, (bool bMovementFailed));
+	DECLARE_DEFAULTHEADER(IsNavigationUrgent, bool, ());
+	DECLARE_DEFAULTHEADER(GetDefaultNavGoalTolerance, float, ());
+	DECLARE_DEFAULTHEADER(OnMovementFailed, void, ());
+	DECLARE_DEFAULTHEADER(ShouldBruteForceFailedNav, bool, ());
+	DECLARE_DEFAULTHEADER(IsUnusableNode, bool, (int iNodeID, CBaseEntity *pHint));
+	DECLARE_DEFAULTHEADER(MovementCost, bool, (int moveType, const Vector &vecStart, const Vector &vecEnd, float *pCost));
+	DECLARE_DEFAULTHEADER(GetNodeViewOffset, Vector, ());
+	DECLARE_DEFAULTHEADER(PostNPCInit, void, ());
+	DECLARE_DEFAULTHEADER(InnateRange1MaxRange, float, ());
+	DECLARE_DEFAULTHEADER(InnateRange1MinRange, float, ());
+	DECLARE_DEFAULTHEADER(RangeAttack1Conditions, int, ( float flDot, float flDist));
+	DECLARE_DEFAULTHEADER(RangeAttack2Conditions, int, ( float flDot, float flDist));
+	DECLARE_DEFAULTHEADER(OnStateChange, void, (NPC_STATE OldState, NPC_STATE NewState));
+	DECLARE_DEFAULTHEADER(ShouldPlayIdleSound, bool, ());
+	DECLARE_DEFAULTHEADER(IsLightDamage, bool, (const CTakeDamageInfo &info));
+	DECLARE_DEFAULTHEADER(CanBeAnEnemyOf, bool, ( CBaseEntity *pEnemy ));
+	DECLARE_DEFAULTHEADER(AllowedToIgnite, bool, ());
+	DECLARE_DEFAULTHEADER(GatherEnemyConditions, void, ( CBaseEntity *pEnemy ));
+	DECLARE_DEFAULTHEADER(IsSilentSquadMember, bool, () const);
+	DECLARE_DEFAULTHEADER(OnMovementComplete, void, ());
+	DECLARE_DEFAULTHEADER(AddFacingTarget_E_V_F_F_F, void, ( CBaseEntity *pTarget, const Vector &vecPosition, float flImportance, float flDuration, float flRamp));
+	DECLARE_DEFAULTHEADER(QueryHearSound, bool, (CSound *pSound));
+	DECLARE_DEFAULTHEADER(IsPlayerAlly, bool, (CBaseEntity *IsPlayerAlly));
+	DECLARE_DEFAULTHEADER(GetRunningBehavior, CAI_BehaviorBase *, ());
+	DECLARE_DEFAULTHEADER(OnUpdateShotRegulator, void, ());
+	DECLARE_DEFAULTHEADER(CleanupOnDeath, void,( CBaseEntity *pCulprit, bool bFireDeathOutput ));
+	DECLARE_DEFAULTHEADER(OnStartSchedule, void,( int scheduleType ));
+	DECLARE_DEFAULTHEADER(AimGun, void,());
+	DECLARE_DEFAULTHEADER(GetSchedulingErrorName, const char *,());
+	DECLARE_DEFAULTHEADER(IsCurTaskContinuousMove, bool,());
+	DECLARE_DEFAULTHEADER(IsValidEnemy, bool,( CBaseEntity *pEnemy ));
+	DECLARE_DEFAULTHEADER(IsValidCover, bool,( const Vector &vLocation, CAI_Hint const *pHint ));
+	DECLARE_DEFAULTHEADER(IsValidShootPosition, bool,( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint ));
+	DECLARE_DEFAULTHEADER(GetMaxTacticalLateralMovement, float,());
+	DECLARE_DEFAULTHEADER(ShouldIgnoreSound, bool,( CSound *pSound ));
+	DECLARE_DEFAULTHEADER(OnSeeEntity, void,( CBaseEntity *pEntity ));
+	DECLARE_DEFAULTHEADER(GetReasonableFacingDist, float,());
+	DECLARE_DEFAULTHEADER(CanFlinch, bool,());
+	DECLARE_DEFAULTHEADER(IsCrouchedActivity, bool,( Activity activity ));
+	DECLARE_DEFAULTHEADER(CanRunAScriptedNPCInteraction, bool,( bool bForced ));
+	DECLARE_DEFAULTHEADER(GetFlinchActivity, Activity, ( bool bHeavyDamage, bool bGesture ));
+	DECLARE_DEFAULTHEADER(OnCalcBaseMove, bool,( AILocalMoveGoal_t *pMoveGoal, float distClear, AIMoveResult_t *pResult ));
+	DECLARE_DEFAULTHEADER(ShouldAlwaysThink, bool,());
+	DECLARE_DEFAULTHEADER(ScheduledMoveToGoalEntity, bool,( int scheduleType, CBaseEntity *pGoalEntity, Activity movementActivity ));
+	DECLARE_DEFAULTHEADER(ScheduledFollowPath, bool,( int scheduleType, CBaseEntity *pPathStart, Activity movementActivity ));
+	DECLARE_DEFAULTHEADER(TaskName, const char *,(int taskID));
+	DECLARE_DEFAULTHEADER(GetNewSchedule, CAI_Schedule *,());
+	DECLARE_DEFAULTHEADER(GetFailSchedule, CAI_Schedule *,());
+	DECLARE_DEFAULTHEADER(AccessBehaviors,CAI_BehaviorBase **,());
+	DECLARE_DEFAULTHEADER(NumBehaviors, int, ());
+	DECLARE_DEFAULTHEADER(GetExpresser, CAI_Expresser *, ());
+	DECLARE_DEFAULTHEADER(ValidateNavGoal, bool, ());
+	DECLARE_DEFAULTHEADER(NotifyDeadFriend, void, (CBaseEntity *pFriend));
+	DECLARE_DEFAULTHEADER(SetAim, void, (const Vector &aimDir));
+	DECLARE_DEFAULTHEADER(RelaxAim, void, ());
+	DECLARE_DEFAULTHEADER(GetHintActivity, Activity, ( short sHintType, Activity HintsActivity ));
+	DECLARE_DEFAULTHEADER(FValidateHintType, bool, ( CBaseEntity *pHint ));
+	DECLARE_DEFAULTHEADER(GetHintDelay, float,( short sHintType ));
+	DECLARE_DEFAULTHEADER(InnateWeaponLOSCondition, bool, ( const Vector &ownerPos, const Vector &targetPos, bool bSetConditions ));	
+	DECLARE_DEFAULTHEADER(OnObstructionPreSteer, bool, ( AILocalMoveGoal_t *pMoveGoal, float distClear, AIMoveResult_t *pResult ));
+	DECLARE_DEFAULTHEADER(CoverRadius, float, ());
+	DECLARE_DEFAULTHEADER(SetTurnActivity, void, ());
+	DECLARE_DEFAULTHEADER(FCanCheckAttacks, bool, ());
+	DECLARE_DEFAULTHEADER(GetGlobalScheduleId, int, ( int localScheduleID ));
+	DECLARE_DEFAULTHEADER(AddFacingTarget_V_F_F_F, void, ( const Vector &vecPosition, float flImportance, float flDuration, float flRamp ));
+	DECLARE_DEFAULTHEADER(SetSquad, void, ( CAI_Squad *pSquad ));
+	DECLARE_DEFAULTHEADER(ClearCommandGoal, void, ());
+	DECLARE_DEFAULTHEADER(FindCoverPosInRadius, bool, ( CBaseEntity *pEntity, const Vector &goalPos, float coverRadius, Vector *pResult ));
+	DECLARE_DEFAULTHEADER(CheckAmmo, void, ());
+	DECLARE_DEFAULTHEADER(OnRangeAttack1, void, ());
+	DECLARE_DEFAULTHEADER(GetShootEnemyDir, Vector,( const Vector &shootOrigin, bool bNoisy));
+	DECLARE_DEFAULTHEADER(SetScriptedScheduleIgnoreConditions, void, ( Interruptability_t interrupt ));
+	DECLARE_DEFAULTHEADER(OnStartScene, void, ());
+	DECLARE_DEFAULTHEADER(SelectIdealState, NPC_STATE, ());
+	DECLARE_DEFAULTHEADER(RunAI, void, ());
+	DECLARE_DEFAULTHEADER(ShouldMoveAndShoot, bool, ());
+	DECLARE_DEFAULTHEADER(CanBeUsedAsAFriend, bool, ());
+	DECLARE_DEFAULTHEADER(OnClearGoal, void, ( CAI_BehaviorBase *pBehavior, CE_AI_GoalEntity *pGoal ));
+	DECLARE_DEFAULTHEADER(ShouldAcceptGoal, bool, ( CAI_BehaviorBase *pBehavior, CE_AI_GoalEntity *pGoal ));
+	DECLARE_DEFAULTHEADER(Wake, void, ( bool bFireOutput ));
+	DECLARE_DEFAULTHEADER(GetReactionDelay, float, ( CBaseEntity *pEnemy ));
+	DECLARE_DEFAULTHEADER(SquadSlotName, const char*, (int slotID));
+	DECLARE_DEFAULTHEADER(PlayerInSpread, bool, ( const Vector &sourcePos, const Vector &targetPos, float flSpread, float maxDistOffCenter, bool ignoreHatedPlayers));
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetSchedule_Int, bool, (int localScheduleID));
 	DECLARE_DEFAULTHEADER_DETOUR(SetEnemy, void, (CBaseEntity *pEnemy, bool bSetCondNewEnemy));
-
+	DECLARE_DEFAULTHEADER_DETOUR(SetupVPhysicsHull, void, ());
+	DECLARE_DEFAULTHEADER_DETOUR(CineCleanup, bool, ());
 
 protected: // sign
 	void EndTaskOverlay();
 
 
 protected:
-	bool IsRunningDynamicInteraction( void ) { return (m_iInteractionState != NPCINT_NOT_RUNNING && (m_hCine != NULL)); }
-
+	bool IsRunningDynamicInteraction( void ) { return (m_iInteractionState != NPCINT_NOT_RUNNING && (m_hCine.ptr != NULL)); }
 
 protected: //Sendprops
 
 
-protected: //Datamaps
+public: //Datamaps
 	DECLARE_DATAMAP(NPC_STATE, m_NPCState);
+	DECLARE_DATAMAP(string_t, m_spawnEquipment);
+	DECLARE_DATAMAP(CFakeHandle, m_hCine);
+	DECLARE_DATAMAP(float, m_flDistTooFar);
+	DECLARE_DATAMAP(float, m_flMoveWaitFinished);
+	DECLARE_DATAMAP(Vector, m_vInterruptSavePosition);
+
+	
+protected:
 	DECLARE_DATAMAP(int, m_afCapability);
-	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_Conditions,0x834);
+	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_Conditions);
 	DECLARE_DATAMAP(CFakeHandle, m_hEnemy);
 	DECLARE_DATAMAP(AIScheduleState_t, m_ScheduleState);
 	DECLARE_DATAMAP(CAI_MoveAndShootOverlay, m_MoveAndShootOverlay);
@@ -663,26 +1072,63 @@ protected: //Datamaps
 	DECLARE_DATAMAP(CAI_MoveProbe *, m_pMoveProbe);
 	DECLARE_DATAMAP(Activity, m_Activity);
 	DECLARE_DATAMAP(string_t, m_strHintGroup);
-	DECLARE_DATAMAP(CAI_Hint, m_pHintNode);
+	DECLARE_DATAMAP(CFakeHandle, m_pHintNode);
 	DECLARE_DATAMAP(AI_SleepState_t, m_SleepState);
-	DECLARE_DATAMAP_OFFSET(CAI_Schedule, m_pSchedule, 0x7F0); // "Schedule cleared: %s\"
+	DECLARE_DATAMAP_OFFSET(CAI_Schedule *, m_pSchedule); // "Schedule cleared: %s\"
 	DECLARE_DATAMAP(int, m_IdealSchedule);
 	DECLARE_DATAMAP(int, m_iInteractionState);
 	DECLARE_DATAMAP(Activity, m_IdealActivity);
 	DECLARE_DATAMAP(CAI_Navigator *, m_pNavigator);
-	DECLARE_DATAMAP_OFFSET(CAI_Squad *, m_pSquad,0xA80); // "Found %s that isn't in a squad\n"
+	DECLARE_DATAMAP_OFFSET(CAI_Squad *, m_pSquad); // "Found %s that isn't in a squad\n"
 	DECLARE_DATAMAP(int, m_iMySquadSlot);
 	DECLARE_DATAMAP(int, m_afMemory);
-	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_CustomInterruptConditions,0x854);
+	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_CustomInterruptConditions);
 	DECLARE_DATAMAP(NPC_STATE, m_IdealNPCState);
-	DECLARE_DATAMAP_OFFSET(int, m_poseMove_Yaw,0x830); // move_yaw
-	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_InverseIgnoreConditions,0x894);
+	DECLARE_DATAMAP_OFFSET(int, m_poseMove_Yaw); // move_yaw
+	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_InverseIgnoreConditions);
 	DECLARE_DATAMAP(float, m_flWaitFinished);
+	DECLARE_DATAMAP(CFakeHandle, m_hInteractionPartner);
+	DECLARE_DATAMAP(string_t, m_SquadName);
+	DECLARE_DATAMAP(Vector, m_vDefaultEyeOffset);
+	DECLARE_DATAMAP(CAI_LocalNavigator *, m_pLocalNavigator);
+	DECLARE_DATAMAP(string_t, m_iszSceneCustomMoveSeq);
+	DECLARE_DATAMAP(CFakeHandle, m_hTargetEnt);
+	DECLARE_DATAMAP(SCRIPTSTATE, m_scriptState);
+	DECLARE_DATAMAP(CFakeHandle, m_hGoalEnt);
+	DECLARE_DATAMAP(CAI_TacticalServices *, m_pTacticalServices);
+	DECLARE_DATAMAP(bool, m_bHintGroupNavLimiting);
+	DECLARE_DATAMAP(CAI_Pathfinder *, m_pPathfinder);
+	DECLARE_DATAMAP(float, m_flLastDamageTime);
+	DECLARE_DATAMAP(Vector, m_vSavePosition);
+	DECLARE_DATAMAP(CUtlVector<UnreachableEnt_t> , m_UnreachableEnts);
+	DECLARE_DATAMAP(int, m_EnemiesSerialNumber);
+	DECLARE_DATAMAP(CFakeHandle, m_hEnemyOccluder);
+	DECLARE_DATAMAP(CAI_Senses *, m_pSenses);
+	DECLARE_DATAMAP(COutputEvent, m_OnLostPlayer);
+	DECLARE_DATAMAP(COutputEvent, m_OnLostEnemy);
+	DECLARE_DATAMAP(bool, m_bInAScript);
+	DECLARE_DATAMAP(float, m_flLastAttackTime);
+	DECLARE_DATAMAP(CAI_ShotRegulator, m_ShotRegulator);
+	DECLARE_DATAMAP(AI_Efficiency_t, m_Efficiency);
+	DECLARE_DATAMAP(AI_MoveEfficiency_t, m_MoveEfficiency);
+	DECLARE_DATAMAP(DesiredWeaponState_t, m_iDesiredWeaponState);
+	DECLARE_DATAMAP(float, m_flEyeIntegRate);
+	DECLARE_DATAMAP(bool, m_bConditionsGathered);
+	DECLARE_DATAMAP(int, m_iInteractionPlaying);
+	DECLARE_DATAMAP(CUtlVector<ScriptedNPCInteraction_t>, m_ScriptedInteractions);
+	DECLARE_DATAMAP(bool, m_bCannotDieDuringInteraction);
+	DECLARE_DATAMAP(COutputEvent, m_OnDamaged);
+	DECLARE_DATAMAP(COutputEvent, m_OnDamagedByPlayer);
+	DECLARE_DATAMAP(COutputEvent, m_OnDamagedByPlayerSquad);
+	DECLARE_DATAMAP(COutputEvent, m_OnHalfHealth);
+	DECLARE_DATAMAP(bool, m_bForceConditionsGather);
+	DECLARE_DATAMAP(float, m_flSumDamage);
+	DECLARE_DATAMAP(float, m_flLastPlayerDamageTime);
 
-public:
-	DECLARE_DATAMAP(CEAI_ScriptedSequence, m_hCine);
+
 
 	friend class CAI_SchedulesManager;
+	friend class CEAI_ScriptedSequence;
 };
 
 
@@ -724,27 +1170,234 @@ inline void CAI_NPC::ResetScheduleCurTaskIndex()
 
 inline const QAngle &CAI_Component::GetLocalAngles( void ) const
 {
-	return CEntity::Instance((CBaseEntity *)GetOuter())->GetLocalAngles();
+	return GetOuter()->GetLocalAngles();
 }
 
 inline const Vector &CAI_Component::GetLocalOrigin() const
 {
-	return CEntity::Instance((CBaseEntity *)GetOuter())->GetLocalOrigin();
+	return GetOuter()->GetLocalOrigin();
 }
 
-//-----------------------------------------------------------------------------
+inline void CAI_Component::Forget( int iMemory )
+{
+	GetOuter()->Forget( iMemory );
+}
+
+inline int CAI_Component::GetSequence()
+{
+	return GetOuter()->GetSequence();
+}
 
 inline void CAI_Component::TaskComplete( bool fIgnoreSetFailedCondition )
 {
-	//CAI_NPC *npc = (CAI_NPC *)CEntity::Instance((CBaseEntity *)GetOuter());	
-	//GetOuter()->TaskComplete( fIgnoreSetFailedCondition );
+	GetOuter()->TaskComplete( fIgnoreSetFailedCondition );
 }
 
 inline void CAI_Component::TaskFail( AI_TaskFailureCode_t code )
 {
-	//CAI_NPC *npc = (CAI_NPC *)CEntity::Instance((CBaseEntity *)GetOuter());	
-	//GetOuter()->TaskFail( code );
+	GetOuter()->TaskFail( code );
 }
+
+inline const Task_t *CAI_Component::GetCurTask()
+{
+	return GetOuter()->GetTask();
+}
+
+inline void CAI_Component::TaskFail( const char *pszGeneralFailText )
+{
+	GetOuter()->TaskFail( pszGeneralFailText );
+}
+
+inline void CAI_Component::SetActivity( Activity NewActivity )
+{
+	GetOuter()->SetActivity( NewActivity );
+}
+
+inline const Vector &CAI_Component::GetAbsOrigin() const
+{
+	return GetOuter()->GetAbsOrigin();
+}
+
+inline float CAI_Component::GetHullWidth() const
+{
+	return NAI_Hull::Width(GetOuter()->GetHullType());
+}
+
+inline float CAI_Component::GetLastThink( const char *szContext )
+{
+	return GetOuter()->GetLastThink( szContext );
+}
+
+inline Activity CAI_Component::GetActivity()
+{
+	return GetOuter()->GetActivity();
+}
+
+inline void	 CAI_Component::SetGroundEntity( CBaseEntity *ground )
+{
+	GetOuter()->SetGroundEntity( ground );
+}
+
+inline Vector CAI_Component::WorldSpaceCenter() const
+{
+	return GetOuter()->WorldSpaceCenter();
+}
+
+inline void CAI_Component::SetGravity( float flGravity )
+{
+	GetOuter()->SetGravity( flGravity );
+}
+
+inline void CAI_Component::SetSolid( SolidType_t val )
+{
+	GetOuter()->SetSolid(val);
+}
+
+inline void CAI_Component::SetLocalAngles( const QAngle& angles )
+{
+	GetOuter()->SetLocalAngles( angles );
+}
+
+inline void CAI_Component::SetLocalOrigin(const Vector &origin)
+{
+	GetOuter()->SetLocalOrigin(origin);
+}
+
+inline float CAI_Component::GetHullHeight() const
+{
+	return NAI_Hull::Height(GetOuter()->GetHullType());
+}
+
+inline int CAI_Component::GetCollisionGroup() const
+{
+	return GetOuter()->GetCollisionGroup();
+}
+
+inline const Vector &CAI_Component::WorldAlignMaxs() const
+{
+	return GetOuter()->WorldAlignMaxs();
+}
+
+inline const Vector &CAI_Component::WorldAlignMins() const
+{
+	return GetOuter()->WorldAlignMins();
+}
+
+inline const Vector &CAI_Component::GetHullMins() const
+{
+	return NAI_Hull::Mins(GetOuter()->GetHullType());
+}
+
+inline const Vector &CAI_Component::GetHullMaxs() const
+{
+	return NAI_Hull::Maxs(GetOuter()->GetHullType());
+}
+
+inline void CAI_Component::Remember( int iMemory )
+{
+	GetOuter()->Remember( iMemory );
+}
+
+inline const QAngle &CAI_Component::GetAbsAngles() const
+{
+	return GetOuter()->GetAbsAngles();
+}
+
+inline bool CAI_Component::HasMemory( int iMemory )
+{
+	return GetOuter()->HasMemory( iMemory );
+}
+
+inline const Vector &CAI_Component::GetEnemyLKP() const
+{
+	return GetOuter()->GetEnemyLKP();
+}
+
+inline void CAI_Component::TranslateNavGoal( CEntity *pEnemy, Vector &chasePosition )
+{
+	GetOuter()->TranslateNavGoal( (pEnemy) ? pEnemy->BaseEntity() : NULL, chasePosition );
+}
+
+
+inline void CAI_Component::SetTarget( CBaseEntity *pTarget )
+{
+	GetOuter()->SetTarget( pTarget );
+}
+
+inline CEntity* CAI_Component::GetGoalEnt()
+{
+	return GetOuter()->GetGoalEnt();
+}
+
+inline void CAI_Component::SetGoalEnt( CBaseEntity *pGoalEnt )
+{
+	GetOuter()->SetGoalEnt( pGoalEnt );
+}
+
+inline int CAI_Component::CapabilitiesGet()
+{
+	return GetOuter()->CapabilitiesGet();
+}
+
+inline Hull_t CAI_Component::GetHullType() const
+{
+	return GetOuter()->GetHullType();
+}
+
+inline CEntity *CAI_Component::GetTarget()
+{
+	return GetOuter()->GetTarget();
+}
+
+inline CEntity *CAI_Component::GetEnemy()
+{
+	return GetOuter()->GetEnemy();
+}
+
+
+
+
+
+
+
+//=============================================================================
+//
+// class CAI_Manager
+//
+// Central location for components of the AI to operate across all AIs without
+// iterating over the global list of entities.
+//
+//=============================================================================
+
+class CAI_Manager
+{
+public:
+	CAI_Manager();
+	
+	CAI_NPC **		AccessAIs();
+	int				NumAIs();
+	
+	void AddAI( CAI_NPC *pAI );
+	void RemoveAI( CAI_NPC *pAI );
+
+	bool FindAI( CAI_NPC *pAI )	{ return ( m_AIs.Find( pAI ) != m_AIs.InvalidIndex() ); }
+	
+private:
+	enum
+	{
+		MAX_AIS = 256
+	};
+	
+	typedef CUtlVector<CAI_NPC *> CAIArray;
+	
+	CAIArray m_AIs;
+
+};
+
+//-------------------------------------
+
+extern CAI_Manager g_AI_Manager;
+
 
 //-------------------------------------
 
@@ -844,7 +1497,7 @@ typedef bool (*AIScheduleLoadFunc_t)();
 	derivedClass::AccessClassScheduleIdSpaceDirect().Init( #derivedClass, BaseClass::GetSchedulingSymbols(), &BaseClass::AccessClassScheduleIdSpaceDirect() ); \
 	derivedClass::gm_SquadSlotIdSpace.Init( &CAI_BaseNPC::gm_SquadSlotNamespace, &BaseClass::gm_SquadSlotIdSpace);
 
-#define	ADD_CUSTOM_INTERACTION( interaction )	{ interaction = CBaseCombatCharacter::GetInteractionID(); }
+#define	ADD_CUSTOM_INTERACTION( interaction )	{ interaction = CCombatCharacter::GetInteractionID(); }
 
 #define ADD_CUSTOM_SQUADSLOT_NAMED(derivedClass,squadSlotName,squadSlotEN)\
 	if ( !derivedClass::gm_SquadSlotIdSpace.AddSymbol( squadSlotName, squadSlotEN, "squadslot", derivedClass::gm_pszErrorClassName ) ) return;
@@ -1154,6 +1807,56 @@ inline bool ValidateConditionLimits( const char *pszNewCondition )
 //-----------------
 
 
+// ============================================================================
+abstract_class INPCInteractive
+{
+public:
+	virtual bool	CanInteractWith( CAI_NPC *pUser ) = 0;
+	virtual	bool	HasBeenInteractedWith()	= 0;
+	virtual void	NotifyInteraction( CAI_NPC *pUser ) = 0;
+
+	// Alyx specific interactions
+	virtual void	AlyxStartedInteraction( void ) = 0;
+	virtual void	AlyxFinishedInteraction( void ) = 0;
+};
+
+#define	DEFINE_BASENPCINTERACTABLE_DATADESC() \
+	DEFINE_OUTPUT( m_OnAlyxStartedInteraction,				"OnAlyxStartedInteraction" ),	\
+	DEFINE_OUTPUT( m_OnAlyxFinishedInteraction,				"OnAlyxFinishedInteraction" ),  \
+	DEFINE_INPUTFUNC( FIELD_VOID, "InteractivePowerDown", InputPowerdown )
+
+
+template <class NPC_CLASS>
+class CNPCBaseInteractive : public NPC_CLASS, public INPCInteractive
+{
+public:
+	CE_DECLARE_CLASS( CNPCBaseInteractive, NPC_CLASS );
+public:
+	virtual bool	CanInteractWith( CAI_NPC *pUser ) { return false; };
+	virtual	bool	HasBeenInteractedWith()	{ return false; };
+	virtual void	NotifyInteraction( CAI_NPC *pUser ) { return; };
+
+	virtual void	InputPowerdown( inputdata_t &inputdata )
+	{
+
+	}
+
+	// Alyx specific interactions
+	virtual void	AlyxStartedInteraction( void )
+	{
+		m_OnAlyxStartedInteraction.FireOutput( this, this );
+	}
+	virtual void	AlyxFinishedInteraction( void )
+	{
+		m_OnAlyxFinishedInteraction.FireOutput( this, this );
+	}
+
+public:
+	// Outputs
+	// Alyx specific interactions
+	COutputEvent	m_OnAlyxStartedInteraction;
+	COutputEvent	m_OnAlyxFinishedInteraction;
+};
 
 
 #endif

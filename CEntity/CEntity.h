@@ -76,17 +76,23 @@
 #ifndef _INCLUDE_CENTITY_H_
 #define _INCLUDE_CENTITY_H_
 
-#define NO_STRING_T
-
 //#define GAME_DLL
 
 
 #include "extension.h"
+
 #include "CE_Define.h"
 #include "CEntityBase.h"
 #include "CECollisionProperty.h"
 #include "CTakeDamageInfo.h"
 #include "IEntityFactory.h"
+#include "string_t.h"
+#include "gamestringpool.h"
+
+inline int ENTINDEX( edict_t *pEdict)			
+{ 
+	return engine->IndexOfEdict(pEdict); 
+}
 
 #include "vector.h"
 #include "server_class.h"
@@ -106,7 +112,8 @@
 #include "ServerNetworkProperty.h"
 #include "decals.h"
 #include "vehicles.h"
-
+#include "vcollide_parse.h"
+#include "physics.h"
 
 extern variant_t g_Variant;
 
@@ -142,31 +149,66 @@ enum Class_T
 	CLASS_EARTH_FAUNA,
 	CLASS_HACKED_ROLLERMINE,
 	CLASS_COMBINE_HUNTER,
+	
+	CLASS_DRAGON,
 
 	NUM_AI_CLASSES
 };
 
+// Things that toggle (buttons/triggers/doors) need this
+enum TOGGLE_STATE
+{
+	TS_AT_TOP,
+	TS_AT_BOTTOM,
+	TS_GOING_UP,
+	TS_GOING_DOWN
+};
 
+//
+// Structure passed to input handlers.
+//
+struct inputdata_t
+{
+	CBaseEntity *pActivator;		// The entity that initially caused this chain of output events.
+	CBaseEntity *pCaller;			// The entity that fired this particular output.
+	variant_t value;				// The data parameter for this output.
+	int nOutputID;					// The unique ID of the output that was fired.
+};
 
 class CEntity;
-class CEntityTakeDamageInfo;
 class CECollisionProperty;
 class CAI_NPC;
 
 
-#undef DEFINE_INPUTFUNC
-#define DEFINE_INPUTFUNC( fieldtype, inputname, inputfunc ) { fieldtype, #inputfunc, { 0, 0 }, 1, FTYPEDESC_INPUT, inputname, NULL, (inputfunc_t)(&classNameTypedef::inputfunc) }
+#define VPHYSICS_MAX_OBJECT_LIST_COUNT	1024
 
 
-extern CEntity *pEntityData[MAX_EDICTS+1];
+extern CEntity *pEntityData[ENTITY_ARRAY_SIZE];
 
 extern ConVar *sv_gravity;
 extern ConVar *phys_pushscale;
+extern ConVar *hl2_episodic;
+
+
+//-----------------------------------------------------------------------------
+// Entity events... targetted to a particular entity
+// Each event has a well defined structure to use for parameters
+//-----------------------------------------------------------------------------
+enum EntityEvent_t
+{
+	ENTITY_EVENT_WATER_TOUCH = 0,		// No data needed
+	ENTITY_EVENT_WATER_UNTOUCH,			// No data needed
+	ENTITY_EVENT_PARENT_CHANGED,		// No data needed
+};
 
 
 typedef void (CEntity::*BASEPTR)(void);
 typedef void (CEntity::*ENTITYFUNCPTR)(CEntity *pOther);
-typedef void (CEntity::*USEPTR)(CEntity *pActivator, CEntity *pCaller, USE_TYPE useType, float value);
+typedef void (CEntity::*USEPTR)(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value);
+
+typedef void (CBaseEntity::*VALVE_BASEPTR)(void);
+typedef void (CBaseEntity::*VALVE_ENTITYFUNCPTR)(CBaseEntity *pOther);
+
 
 #define DEFINE_THINKFUNC( function ) DEFINE_FUNCTION_RAW( function, BASEPTR )
 #define DEFINE_ENTITYFUNC( function ) DEFINE_FUNCTION_RAW( function, ENTITYFUNCPTR )
@@ -175,6 +217,8 @@ typedef void (CEntity::*USEPTR)(CEntity *pActivator, CEntity *pCaller, USE_TYPE 
 
 //template< class T >
 class CFakeHandle;
+class AI_CriteriaSet;
+
 
 #define DECLARE_DEFAULTHEADER(name, ret, params) \
 	ret Internal##name params; \
@@ -187,18 +231,38 @@ class CFakeHandle;
 #define SetThink(a) ThinkSet(static_cast <void (CEntity::*)(void)> (a), 0, NULL)
 #define SetContextThink( a, b, context ) ThinkSet( static_cast <void (CEntity::*)(void)> (a), (b), context )
 
-#define SetTouch( a ) m_pfnTouch = static_cast <void (CEntity::*)(CEntity *)> (a)
+#define SetTouch( a ) ce_m_pfnTouch = static_cast <void (CEntity::*)(CEntity *)> (a)
+#define SetUse( a ) ce_m_pfnUse = static_cast <void (CEntity::*)(CBaseEntity *, CBaseEntity *, USE_TYPE , float)> (a)
+
+
+// handling entity/edict transforms
+inline CBaseEntity *GetContainingEntity( edict_t *pent )
+{
+	if ( pent && pent->GetUnknown() )
+	{
+		return pent->GetUnknown()->GetBaseEntity();
+	}
+
+	return NULL;
+}
 
 class CCombatCharacter;
+class CAnimating;
+
 
 class CEntity // : public CBaseEntity  - almost.
 {
 public: // CEntity
 	CE_DECLARE_CLASS_NOBASE(CEntity);
 	DECLARE_DATADESC();
-	DECLARE_DEFAULTHEADER(GetDataDescMap, datamap_t *, ());
+	DECLARE_DEFAULTHEADER(GetDataDescMap_Real, datamap_t *, ());
+	datamap_t *GetDataDescMap_Real();
+
+	virtual ~CEntity();
 
 	virtual void Init(edict_t *pEdict, CBaseEntity *pBaseEntity);
+	virtual void PostInit() {}
+
 	void InitHooks();
 	void InitProps();
 	void ClearAllFlags();
@@ -242,24 +306,47 @@ public: // CEntity
 	static CEntity *Instance(edict_t *pEnt)  { return CEntityLookup::Instance(pEnt); }
 	static CEntity* Instance(int iEnt)  { return CEntityLookup::Instance(iEnt); }
 	static CEntity* Instance(CBaseEntity *pEnt)  { return CEntityLookup::Instance(pEnt); }
+	static CEntity* Instance(const CBaseEntity *pEnt)  { return CEntityLookup::Instance((CBaseEntity *)pEnt); }
+
+	static CEntity *Create( const char *szName, const Vector &vecOrigin, const QAngle &vecAngles, CBaseEntity *pOwner = NULL );
+	static CEntity *CreateNoSpawn( const char *szName, const Vector &vecOrigin, const QAngle &vecAngles, CBaseEntity *pOwner = NULL );
 
 	static HSOUNDSCRIPTHANDLE PrecacheScriptSound( const char *soundname );
+	
+	static soundlevel_t LookupSoundLevel( const char *soundname );
+	static soundlevel_t LookupSoundLevel( const char *soundname, HSOUNDSCRIPTHANDLE& handle );
+
+	static void EmitSound( IRecipientFilter& filter, int iEntIndex, const EmitSound_t & params );
+	static void EmitSound( IRecipientFilter& filter, int iEntIndex, const char *soundname, const Vector *pOrigin = NULL, float soundtime = 0.0f, float *duration = NULL );
+
+	static void StopSound( int iEntIndex, const char *soundname );
+	static void StopSound( int iEntIndex, int iChannel, const char *pSample );
+
+	static bool	GetParametersForSound( const char *soundname, CSoundParameters &params, const char *actormodel );
+	static bool	GetParametersForSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle, CSoundParameters &params, const char *actormodel );
+
+	static int	PrecacheModel( const char *name ); 
+
+	const trace_t *GetTouchTrace( void );
+
 
 public: // CBaseEntity virtuals
+	virtual bool IsCustomEntity() { return false; }
+
+	virtual void SetModel(const char *model);
 	virtual void Teleport(const Vector *origin, const QAngle* angles, const Vector *velocity);
 	virtual void UpdateOnRemove();
 	virtual void Spawn();
-	virtual int OnTakeDamage(CEntityTakeDamageInfo &info);
+	virtual int OnTakeDamage(const CTakeDamageInfo &info);
 	virtual void Think();
 	virtual bool AcceptInput(const char *szInputName, CEntity *pActivator, CEntity *pCaller, variant_t Value, int outputID);
 	virtual void StartTouch(CEntity *pOther);
 	virtual void Touch(CEntity *pOther); 
 	virtual void EndTouch(CEntity *pOther);
 	virtual Vector GetSoundEmissionOrigin();
-	virtual int VPhysicsTakeDamage(const CEntityTakeDamageInfo &inputInfo);
+	virtual int VPhysicsTakeDamage(const CTakeDamageInfo &inputInfo);
 	virtual int	VPhysicsGetObjectList(IPhysicsObject **pList, int listMax);
 	virtual ServerClass *GetServerClass();
-	virtual void SetModel(char *model);
 	virtual Class_T Classify();
 	virtual bool ShouldCollide(int collisionGroup, int contentsMask);
 	virtual int ObjectCaps();
@@ -272,20 +359,72 @@ public: // CBaseEntity virtuals
 	virtual Vector BodyTarget( const Vector &posSrc, bool bNoisy = true);
 	virtual IServerVehicle *GetServerVehicle();
 	virtual bool IsAlive();
-	virtual const Vector &WorldSpaceCenter();
+	virtual const Vector &WorldSpaceCenter() const;
 	virtual void PhysicsSimulate();
-
+	virtual int	BloodColor();
+	virtual void StopLoopingSounds();
+	virtual void SetOwnerEntity( CBaseEntity* pOwner );
+	virtual void Activate();
+	virtual Vector HeadTarget( const Vector &posSrc );
+	virtual float GetAutoAimRadius();
+	virtual unsigned int PhysicsSolidMaskForEntity( void ) const;
+	virtual bool CanStandOn(CBaseEntity *pSurface) const;
+	virtual Vector GetSmoothedVelocity( void );
+	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	virtual bool FVisible_Entity(CBaseEntity *pEntity, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL );
+	virtual bool FVisible_Vector(const Vector &vecTarget, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL );
+	virtual Vector EarPosition( void ) const;
+	virtual Vector GetAutoAimCenter();
+	virtual Vector EyePosition();
+	virtual void OnRestore( void );
+	virtual void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName = NULL );
+	virtual	bool TestHitboxes(const Ray_t &ray, unsigned int fContentsMask, trace_t& tr);
+	virtual void VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
+	virtual void VPhysicsShadowCollision( int index, gamevcollisionevent_t *pEvent );
+	virtual void Splash();
+	virtual bool ShouldSavePhysics();
+	virtual bool CreateVPhysics( void );
+	virtual bool IsNetClient( void ) const;
+	virtual CBaseEntity *HasPhysicsAttacker( float dt );
+	virtual const QAngle &EyeAngles( void );
+	virtual int	Save( ISave &save );
+	virtual int	Restore( IRestore &restore );
+	virtual void ModifyOrAppendCriteria( AI_CriteriaSet& set );
+	virtual void DeathNotice ( CBaseEntity *pVictim );
+	virtual bool PassesDamageFilter( const CTakeDamageInfo &info );
+	virtual void Precache();
+	virtual bool DispatchKeyValue( const char *szKeyName, const char *szValue );
+	virtual void OnEntityEvent( EntityEvent_t event, void *pEventData );
+	virtual void VPhysicsDestroyObject();
+	virtual int	TakeHealth( float flHealth, int bitsDamageType );
+	virtual float GetAttackDamageScale( CBaseEntity *pVictim );
+	virtual bool OnControls( CBaseEntity *pControls );
+	virtual void VPhysicsUpdate( IPhysicsObject *pPhysics );
+	virtual void VPhysicsShadowUpdate( IPhysicsObject *pPhysics );
+	virtual bool IsTriggered( CBaseEntity *pActivator );
+	virtual void FireBullets( const FireBulletsInfo_t &info );
+	virtual const char *GetTracerType( void );
 
 public:
 	void SetLocalOrigin(const Vector& origin);
 	void PhysicsTouchTriggers(const Vector *pPrevAbsOrigin = NULL);
 	void SetAbsOrigin(const Vector& absOrigin);
 	void SetLocalAngles( const QAngle& angles );
+	virtual bool IsMoving( void );
+	bool AddStepDiscontinuity( float flTime, const Vector &vecOrigin, const QAngle &vecAngles );
+	IPhysicsObject *VPhysicsInitShadow( bool allowPhysicsMovement, bool allowPhysicsRotation, solid_t *pSolid = NULL );
+	void PhysicsMarkEntitiesAsTouching( CBaseEntity *other, trace_t &trace );
+	IPhysicsObject *VPhysicsInitNormal( SolidType_t solidType, int nSolidFlags, bool createAsleep, solid_t *pSolid = NULL);
+	IPhysicsObject *VPhysicsInitStatic( void );
 
 public:
 	virtual CCombatCharacter *MyCombatCharacterPointer( void ) { return NULL; }
+	virtual CAnimating	*GetBaseAnimating() { return NULL; }
 
 public: // CBaseEntity non virtual helpers
+	void CBaseEntityThink();
+	void CEntityThink();
+	VALVE_BASEPTR GetCurrentThinkPointer();
 	BASEPTR	ThinkSet(BASEPTR func, float thinkTime, const char *szContext);
 	void SetNextThink(float thinkTime, const char *szContext = NULL);
 	void CheckHasThinkFunction(bool isThinking);
@@ -295,10 +434,11 @@ public: // CBaseEntity non virtual helpers
 	void RemoveEFlags(int nEFlagMask);
 	bool IsEFlagSet(int nEFlagMask) const;
 
+	const char *GetDebugName(void);
 	const char* GetClassname();
 	void SetClassname(const char *pClassName);
-	const char* GetTargetName();
-	void SetTargetName(const char *pTargetName);
+	const char* GetEntityName();
+	void SetName(const char *pTargetName);
 	CEntity *GetOwnerEntity();
 	void SetOwner(CEntity *pOwnerEntity);
 
@@ -306,10 +446,10 @@ public: // CBaseEntity non virtual helpers
 	virtual void ChangeTeam(int iTeamNum);
 	bool InSameTeam(CEntity *pEntity) const;
 
-	int GetMoveType() const;
-	void SetMoveType(int MoveType);
-	int GetMoveCollide() const;
-	void SetMoveCollide(int MoveCollide);
+	MoveType_t GetMoveType() const;
+	void SetMoveType( MoveType_t val, MoveCollide_t moveCollide = MOVECOLLIDE_DEFAULT );
+	MoveCollide_t GetMoveCollide() const;
+	void SetMoveCollide(MoveCollide_t MoveCollide);
 
 	const Vector &GetAbsOrigin() const;
 	const Vector &GetLocalOrigin() const;
@@ -321,6 +461,7 @@ public: // CBaseEntity non virtual helpers
 
 	edict_t *edict();
 	int entindex();
+	int entindex_non_network();
 
 	inline IPhysicsObject *VPhysicsGetObject(void) const { return m_pPhysicsObject; }
 	inline CECollisionProperty *CollisionProp(void) const { return col_ptr; }
@@ -331,6 +472,11 @@ public: // CBaseEntity non virtual helpers
 	void CollisionRulesChanged();
 
 	inline int GetWaterLevel() const { return m_nWaterLevel; }
+	inline void SetWaterLevel( int nLevel ) { m_nWaterLevel = nLevel; }
+	
+	bool IsPointSized() const;
+
+	void SetWaterType( int nType );
 
 	inline bool	IsWorld() { return entindex() == 0; }
 	
@@ -339,6 +485,7 @@ public: // CBaseEntity non virtual helpers
 	const Vector&			WorldAlignSize( ) const;
 
 	float BoundingRadius() const;
+	bool  IsSolidFlagSet( int flagMask ) const;
 
 	virtual	bool IsPlayer();
 
@@ -375,6 +522,28 @@ public: // CBaseEntity non virtual helpers
 	void ApplyAbsVelocityImpulse( const Vector &vecImpulse );
 
 	void EmitSound( const char *soundname, float soundtime = 0.0f, float *duration = NULL );
+	void EmitSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle, float soundtime = 0.0f, float *duration = NULL );  // Override for doing the general case of CPASAttenuationFilter filter( this ), and EmitSound( filter, entindex(), etc. );
+
+	void RemoveDeferred( void );
+
+	void PhysicsStepRecheckGround();
+
+	void SetNavIgnore( float duration = FLT_MAX );
+	void ClearNavIgnore();
+	bool IsNavIgnored() const;
+
+	void StopSound( const char *soundname );
+
+	void PhysicsCheckWaterTransition( void );
+	void UpdateWaterState();
+
+	void FollowEntity( CBaseEntity *pBaseEntity, bool bBoneMerge = true );
+	void StopFollowingEntity();
+	bool IsFollowingEntity();
+	
+	void RemoveAllDecals();
+
+	void ComputeAbsPosition( const Vector &vecLocalPosition, Vector *pAbsPosition );
 
 public: //custom
 	CECollisionProperty *col_ptr;
@@ -390,7 +559,10 @@ public: // custom
 	void SetViewOffset(const Vector& v);
 	
 	void AddEffects(int nEffects);
+	void SetEffects( int nEffects );
 	void RemoveEffects(int nEffects);
+	void ClearEffects();
+	bool IsEffectActive( int nEffects ) const;
 
 	void AddFlag(int flags);
 	void RemoveFlag(int flagsToRemove);
@@ -399,8 +571,10 @@ public: // custom
 	void ClearFlags();
 	
 	int GetModelIndex( void ) const;
+	void SetModelIndex( int index );
 
 	bool IsTransparent() const;
+	void SetRenderMode( RenderMode_t nRenderMode );
 
 	int GetCollisionGroup() const;
 
@@ -420,31 +594,104 @@ public: // custom
 
 	void SetAbsAngles(const QAngle& absAngles);
 
-	Vector EyePosition();
-
 	CAI_NPC	*MyNPCPointer();
 
 	CServerNetworkProperty *NetworkProp() const;
 	
 	CEntity *GetGroundEntity();
+	CEntity *GetGroundEntity() const;
+
+	string_t GetModelName( void ) const;
+	void SetModelName( string_t name );
 
 	bool IsBSPModel() const;
 
+	float GetGroundChangeTime( void );
+
+	float GetLastThink( const char *szContext = NULL );
+
+	void NetworkStateChanged();
+
+	void VelocityPunch( const Vector &vecForce );
+
+	CEntity *GetNextTarget( void );
+
+	bool		NameMatches( const char *pszNameOrWildcard );
+	bool		ClassMatches( const char *pszClassOrWildcard );
+
+	bool		NameMatches( string_t nameStr );
+	bool		ClassMatches( string_t nameStr );
+
+	void CalcAbsolutePosition();
+	void CalcAbsoluteVelocity();
+
+	bool PhysicsCheckWater( void );
+	int GetWaterType() const;
+
+	const Vector&	GetBaseVelocity() const;
+	void			SetBaseVelocity( const Vector& v );
+
+	void		TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr, int bitsDamageType );
+
+	void		SUB_Remove();
+	void		SUB_DoNothing();
+	void		SUB_TouchNothing(CEntity *pOther);
+
+	void		Remove();
+	void		ViewPunch( const QAngle &angleOffset );
+
+	bool		IsMarkedForDeletion( void ); 
+
+	CEntity		*GetParent();
+
+	void		SetCollisionBounds( const Vector& mins, const Vector &maxs );
+	
+	float		GetNextThink( const char *szContext = NULL );
+	void		DispatchTraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
+
+	inline int	GetSolidFlags( void ) const { return m_usSolidFlags; }
+
+	bool		BlocksLOS( void );
+	void		SetBlocksLOS( bool bBlocksLOS );
+	
+	bool		HasNPCsOnIt();
+	void		*GetDataObject( int type );
+	
+	float		GetFriction( void ) const;
+	void		SetFriction( float flFriction );
+
+	void		SetLocalAngularVelocity( const QAngle &vecAngVelocity );
+	const QAngle &GetLocalAngularVelocity() const;
+
+	unsigned char GetParentAttachment() const;
+
+	void		SetMoveDoneTime( float flTime );
+	void		CheckHasGamePhysicsSimulation();
+
+	float		GetLocalTime( void ) const;
+
+	int			CBaseEntity_ObjectCaps( void );
+
+private:
+	bool		NameMatchesComplex( const char *pszNameOrWildcard );
+	bool		ClassMatchesComplex( const char *pszClassOrWildcard );
+
+
 public: // All the internal hook implementations for the above virtuals
+	DECLARE_DEFAULTHEADER(SetModel, void, (const char *model));
 	DECLARE_DEFAULTHEADER(Teleport, void, (const Vector *origin, const QAngle* angles, const Vector *velocity));
 	DECLARE_DEFAULTHEADER(UpdateOnRemove, void, ());
 	DECLARE_DEFAULTHEADER(Spawn, void, ());
-	DECLARE_DEFAULTHEADER(OnTakeDamage, int, (CEntityTakeDamageInfo &info));
+	DECLARE_DEFAULTHEADER(OnTakeDamage, int, (const CTakeDamageInfo &info));
 	DECLARE_DEFAULTHEADER(Think, void, ());
 	DECLARE_DEFAULTHEADER(AcceptInput, bool, (const char *szInputName, CBaseEntity *pActivator, CBaseEntity *pCaller,variant_t Value, int outputID));
 	DECLARE_DEFAULTHEADER(StartTouch, void, (CBaseEntity *pOther));
 	DECLARE_DEFAULTHEADER(Touch, void, (CBaseEntity *pOther));
 	DECLARE_DEFAULTHEADER(EndTouch, void, (CBaseEntity *pOther));
 	DECLARE_DEFAULTHEADER(GetSoundEmissionOrigin, Vector, ());
-	DECLARE_DEFAULTHEADER(VPhysicsTakeDamage, int, (const CEntityTakeDamageInfo &inputInfo));
+	DECLARE_DEFAULTHEADER(VPhysicsTakeDamage, int, (const CTakeDamageInfo &inputInfo));
 	DECLARE_DEFAULTHEADER(VPhysicsGetObjectList, int, (IPhysicsObject **pList, int listMax));
 	DECLARE_DEFAULTHEADER(GetServerClass, ServerClass *, ());
-	DECLARE_DEFAULTHEADER(SetModel, void, (char *model));
 	DECLARE_DEFAULTHEADER(Classify, Class_T, ());
 	DECLARE_DEFAULTHEADER(ShouldCollide, bool, (int collisionGroup, int contentsMask));
 	DECLARE_DEFAULTHEADER(ObjectCaps, int, ());
@@ -454,18 +701,64 @@ public: // All the internal hook implementations for the above virtuals
 	DECLARE_DEFAULTHEADER(Event_Killed, void, (const CTakeDamageInfo &info));
 	DECLARE_DEFAULTHEADER(TraceAttack, void, (const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr));
 	DECLARE_DEFAULTHEADER(BodyTarget, Vector, (const Vector &posSrc, bool bNoisy));
-	DECLARE_DEFAULTHEADER(GetServerVehicle, IServerVehicle *, ());
 	DECLARE_DEFAULTHEADER(IsAlive, bool, ());
-	DECLARE_DEFAULTHEADER(WorldSpaceCenter, const Vector &, ());
+	DECLARE_DEFAULTHEADER(WorldSpaceCenter, const Vector &, () const);
 	DECLARE_DEFAULTHEADER(PhysicsSimulate, void, ());
+	DECLARE_DEFAULTHEADER(BloodColor, int, ());
+	DECLARE_DEFAULTHEADER(StopLoopingSounds, void, ());
+	DECLARE_DEFAULTHEADER(SetOwnerEntity, void, (CBaseEntity* pOwner));
+	DECLARE_DEFAULTHEADER(Activate, void, ());
+	DECLARE_DEFAULTHEADER(HeadTarget, Vector, (const Vector &posSrc));
+	DECLARE_DEFAULTHEADER(GetAutoAimRadius, float, ());
+	DECLARE_DEFAULTHEADER(PhysicsSolidMaskForEntity, unsigned int, () const);
+	DECLARE_DEFAULTHEADER(CanStandOn, bool, (CBaseEntity *pSurface) const);
+	DECLARE_DEFAULTHEADER(IsMoving, bool, ());
+	DECLARE_DEFAULTHEADER(GetSmoothedVelocity, Vector, ());
+	DECLARE_DEFAULTHEADER(Use, void, (CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value));
+	DECLARE_DEFAULTHEADER(FVisible_Entity, bool, (CBaseEntity *pEntity, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL));
+	DECLARE_DEFAULTHEADER(FVisible_Vector, bool, (const Vector &vecTarget, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL));
+	DECLARE_DEFAULTHEADER(EarPosition, Vector, () const);
+	DECLARE_DEFAULTHEADER(GetAutoAimCenter, Vector, ());
+	DECLARE_DEFAULTHEADER(EyePosition, Vector, ());
+	DECLARE_DEFAULTHEADER(OnRestore, void, ());
+	DECLARE_DEFAULTHEADER(ImpactTrace, void, ( trace_t *pTrace, int iDamageType, const char *pCustomImpactName));
+	DECLARE_DEFAULTHEADER(TestHitboxes, bool, (const Ray_t &ray, unsigned int fContentsMask, trace_t& tr));
+	DECLARE_DEFAULTHEADER(VPhysicsCollision, void, (int index, gamevcollisionevent_t *pEvent ));
+	DECLARE_DEFAULTHEADER(VPhysicsShadowCollision, void, (int index, gamevcollisionevent_t *pEvent ));
+	DECLARE_DEFAULTHEADER(Splash, void, ());
+	DECLARE_DEFAULTHEADER(ShouldSavePhysics, bool, ());
+	DECLARE_DEFAULTHEADER(CreateVPhysics, bool, ());
+	DECLARE_DEFAULTHEADER(IsNetClient, bool, () const);
+	DECLARE_DEFAULTHEADER(HasPhysicsAttacker, CBaseEntity *, (float dt));
+	DECLARE_DEFAULTHEADER(EyeAngles, const QAngle &, ());
+	DECLARE_DEFAULTHEADER(Save, int, (ISave &save));
+	DECLARE_DEFAULTHEADER(Restore, int, (IRestore &restore));
+	DECLARE_DEFAULTHEADER(ModifyOrAppendCriteria, void, (AI_CriteriaSet& set));
+	DECLARE_DEFAULTHEADER(DeathNotice, void, ( CBaseEntity *pVictim ));
+	DECLARE_DEFAULTHEADER(PassesDamageFilter, bool, ( const CTakeDamageInfo &info ));
+	DECLARE_DEFAULTHEADER(Precache, void, ());
+	DECLARE_DEFAULTHEADER(DispatchKeyValue, bool, ( const char *szKeyName, const char *szValue ));
+	DECLARE_DEFAULTHEADER(OnEntityEvent, void, ( EntityEvent_t event, void *pEventData ));
+	DECLARE_DEFAULTHEADER(VPhysicsDestroyObject, void, ());
+	DECLARE_DEFAULTHEADER(TakeHealth, int, ( float flHealth, int bitsDamageType ));
+	DECLARE_DEFAULTHEADER(GetAttackDamageScale, float,( CBaseEntity *pVictim ));
+	DECLARE_DEFAULTHEADER(OnControls, bool, ( CBaseEntity *pControls ));
+	DECLARE_DEFAULTHEADER(VPhysicsUpdate, void, ( IPhysicsObject *pPhysics ));
+	DECLARE_DEFAULTHEADER(VPhysicsShadowUpdate, void, ( IPhysicsObject *pPhysics ));
+	DECLARE_DEFAULTHEADER(IsTriggered, bool, ( CBaseEntity *pActivator ));
+	DECLARE_DEFAULTHEADER(FireBullets, void, ( const FireBulletsInfo_t &info ));
+	DECLARE_DEFAULTHEADER(GetTracerType, const char	*,());
 
-	
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetLocalOrigin, void, (const Vector& origin));
 	DECLARE_DEFAULTHEADER_DETOUR(PhysicsTouchTriggers, void, (const Vector *pPrevAbsOrigin));
 	DECLARE_DEFAULTHEADER_DETOUR(TakeDamage, void, (const CTakeDamageInfo &inputInfo));
 	DECLARE_DEFAULTHEADER_DETOUR(SetAbsOrigin, void, (const Vector& absOrigin));
 	DECLARE_DEFAULTHEADER_DETOUR(SetLocalAngles, void, (const QAngle& angles));
+	DECLARE_DEFAULTHEADER_DETOUR(AddStepDiscontinuity, bool, (float flTime, const Vector &vecOrigin, const QAngle &vecAngles));
+	DECLARE_DEFAULTHEADER_DETOUR(VPhysicsInitShadow, IPhysicsObject *, ( bool allowPhysicsMovement, bool allowPhysicsRotation, solid_t *pSolid));
+	DECLARE_DEFAULTHEADER_DETOUR(VPhysicsInitNormal, IPhysicsObject *, ( SolidType_t solidType, int nSolidFlags, bool createAsleep, solid_t *pSolid ));
+	DECLARE_DEFAULTHEADER_DETOUR(VPhysicsInitStatic, IPhysicsObject *, ());
 
 protected: // CEntity	
 	CBaseEntity *m_pEntity;
@@ -478,35 +771,41 @@ protected: //Sendprops
 	DECLARE_SENDPROP(CFakeHandle, m_hOwnerEntity);
 	DECLARE_SENDPROP(unsigned short, m_usSolidFlags);
 	DECLARE_SENDPROP(color32, m_clrRender);
-	DECLARE_SENDPROP(unsigned char, m_nRenderMode);
 	DECLARE_SENDPROP(unsigned char, m_nSolidType);
 	DECLARE_SENDPROP(Vector, m_vecMins);
 	DECLARE_SENDPROP(Vector, m_vecMaxs);	
 	DECLARE_SENDPROP(short, m_nModelIndex);
 	DECLARE_SENDPROP(QAngle, m_angRotation);
+	DECLARE_SENDPROP(unsigned char, m_iParentAttachment);
 
-	
+public:
+	DECLARE_SENDPROP(unsigned char, m_nRenderMode);
+	DECLARE_SENDPROP(unsigned char, m_nRenderFX);
+	DECLARE_SENDPROP(unsigned char, m_nSurroundType);
+	DECLARE_SENDPROP(Vector, m_vecSpecifiedSurroundingMins);
+	DECLARE_SENDPROP(Vector, m_vecSpecifiedSurroundingMaxs);
+
+
+
 protected: //Datamaps
 	DECLARE_DATAMAP(Vector, m_vecAbsOrigin);
 	DECLARE_DATAMAP(Vector, m_vecAbsVelocity);
-	DECLARE_DATAMAP(string_t, m_iClassname);
 	DECLARE_DATAMAP(matrix3x4_t, m_rgflCoordinateFrame);
 	DECLARE_DATAMAP(Vector, m_vecVelocity);
-	DECLARE_DATAMAP(Vector, m_vecAngVelocity);
+	DECLARE_DATAMAP(QAngle, m_vecAngVelocity);
 	DECLARE_DATAMAP(Vector, m_vecBaseVelocity);
 	DECLARE_DATAMAP(CFakeHandle, m_hMoveParent);
 	DECLARE_DATAMAP(int, m_iEFlags);
 	DECLARE_DATAMAP(IPhysicsObject *, m_pPhysicsObject);
 	DECLARE_DATAMAP(int, m_nNextThinkTick);
 	DECLARE_DATAMAP(CFakeHandle, m_pParent);
-	DECLARE_DATAMAP(int, m_MoveType);
-	DECLARE_DATAMAP(int, m_MoveCollide);
+	DECLARE_DATAMAP(unsigned char, m_MoveType);
+	DECLARE_DATAMAP(unsigned char, m_MoveCollide);
 	DECLARE_DATAMAP(string_t, m_iName);
 	
 	DECLARE_DATAMAP(CCollisionProperty, m_Collision);
 	DECLARE_DATAMAP(Vector, m_vecViewOffset);
 	DECLARE_DATAMAP(int, m_spawnflags);
-	DECLARE_DATAMAP(int, m_iHealth);
 	DECLARE_DATAMAP(int, m_fFlags);
 	DECLARE_DATAMAP(CServerNetworkProperty , m_Network);
 	DECLARE_DATAMAP(char, m_lifeState);
@@ -516,17 +815,36 @@ protected: //Datamaps
 	DECLARE_DATAMAP(float, m_flGravity);
 	DECLARE_DATAMAP(int, m_iMaxHealth);
 	DECLARE_DATAMAP(int, m_fEffects);
+	DECLARE_DATAMAP(string_t, m_ModelName);
+	DECLARE_DATAMAP(float, m_flGroundChangeTime);
+	DECLARE_DATAMAP(int, m_nLastThinkTick);
+	DECLARE_DATAMAP(float, m_flNavIgnoreUntilTime);
+	DECLARE_DATAMAP(unsigned char, m_nWaterType);
+	DECLARE_DATAMAP(float, m_flFriction);
+	DECLARE_DATAMAP(float, m_flMoveDoneTime);
+	DECLARE_DATAMAP(float, m_flLocalTime);
+
 
 public:
+	DECLARE_DATAMAP(int, m_iHealth);
+	DECLARE_DATAMAP(string_t, m_iClassname);
 	DECLARE_DATAMAP(char, m_takedamage);
 	DECLARE_DATAMAP(float , m_flAnimTime);
 	DECLARE_DATAMAP(float , m_flPrevAnimTime);
+	DECLARE_DATAMAP(float , m_flSpeed);
+	DECLARE_DATAMAP(string_t , m_target);
+	DECLARE_DATAMAP(Vector, m_vecSurroundingMins);
+	DECLARE_DATAMAP(Vector, m_vecSurroundingMaxs);
+	DECLARE_DATAMAP_OFFSET(float, m_flRadius);
+	DECLARE_DATAMAP(VALVE_BASEPTR, m_pfnThink);
+	DECLARE_DATAMAP(unsigned char, m_triggerBloat);
 
 
 	/* Thinking Stuff */
-	void (CEntity::*m_pfnThink)(void);
-	void (CEntity::*m_pfnTouch)(CEntity *pOther);
-
+	void (CEntity::*ce_m_pfnThink)(void);
+	void (CEntity::*ce_m_pfnTouch)(CEntity *pOther);
+	void (CEntity::*ce_m_pfnUse)(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value);
+	
 	friend class CECollisionProperty;
 };
 
@@ -624,9 +942,20 @@ inline int CEntity::GetModelIndex( void ) const
 	return m_nModelIndex;
 }
 
+inline void CEntity::SetModelIndex( int index )
+{
+	m_nModelIndex = index;
+	DispatchUpdateTransmitState();
+}
+
 inline bool CEntity::IsTransparent() const
 {
 	return m_nRenderMode != kRenderNormal;
+}
+
+inline void CEntity::SetRenderMode( RenderMode_t nRenderMode )
+{
+	m_nRenderMode = nRenderMode;
 }
 
 inline const QAngle& CEntity::GetLocalAngles() const
@@ -671,8 +1000,121 @@ inline float CEntity::GetGravity() const
 
 inline CEntity *GetWorldEntity()
 {
-	return g_WorldEntity;
+	return my_g_WorldEntity;
 }
+
+inline void CEntity::SetModelName( string_t name )
+{
+	m_ModelName = name;
+	DispatchUpdateTransmitState();
+}
+
+inline string_t CEntity::GetModelName( void ) const
+{
+	return m_ModelName;
+}
+
+inline void	CEntity::SetNavIgnore( float duration )
+{
+	float flNavIgnoreUntilTime = ( duration == FLT_MAX ) ? FLT_MAX : gpGlobals->curtime + duration;
+	if ( flNavIgnoreUntilTime > m_flNavIgnoreUntilTime )
+		m_flNavIgnoreUntilTime = flNavIgnoreUntilTime;
+}
+
+inline void	CEntity::ClearNavIgnore()
+{
+	m_flNavIgnoreUntilTime = 0;
+}
+
+inline bool	CEntity::IsNavIgnored() const
+{
+	return ( gpGlobals->curtime <= m_flNavIgnoreUntilTime );
+}
+
+inline void	CEntity::NetworkStateChanged()
+{
+	NetworkProp()->NetworkStateChanged();
+}
+
+inline bool CEntity::NameMatches( const char *pszNameOrWildcard )
+{
+	if ( IDENT_STRINGS(m_iName, pszNameOrWildcard) )
+		return true;
+	return NameMatchesComplex( pszNameOrWildcard );
+}
+
+inline bool CEntity::NameMatches( string_t nameStr )
+{
+	if ( IDENT_STRINGS(m_iName, nameStr) )
+		return true;
+	return NameMatchesComplex( STRING(nameStr) );
+}
+
+inline bool CEntity::ClassMatches( const char *pszClassOrWildcard )
+{
+	if ( IDENT_STRINGS(m_iClassname, pszClassOrWildcard ) )
+		return true;
+	return ClassMatchesComplex( pszClassOrWildcard );
+}
+
+inline bool CEntity::ClassMatches( string_t nameStr )
+{
+	if ( IDENT_STRINGS(m_iClassname, nameStr ) )
+		return true;
+	return ClassMatchesComplex( STRING(nameStr) );
+}
+
+
+inline const Vector& CEntity::GetBaseVelocity() const 
+{ 
+	return m_vecBaseVelocity; 
+}
+
+inline void CEntity::SetBaseVelocity( const Vector& v ) 
+{ 
+	m_vecBaseVelocity = v; 
+}
+
+inline bool CEntity::IsPointSized() const
+{
+	return CollisionProp_Actual()->BoundingRadius() == 0.0f;
+}
+
+inline bool CEntity::IsEffectActive( int nEffects ) const
+{ 
+	return (*(m_fEffects.ptr) & nEffects) != 0; 
+}
+
+inline bool CEntity::IsMarkedForDeletion( void ) 
+{ 
+	return (m_iEFlags & EFL_KILLME); 
+}
+
+inline CEntity* CEntity::GetParent()
+{
+	return m_pParent;
+}
+
+inline float CEntity::GetFriction( void ) const
+{ 
+	return m_flFriction; 
+}
+
+inline void CEntity::SetFriction( float flFriction )
+{ 
+	m_flFriction = flFriction; 
+}
+
+inline unsigned char CEntity::GetParentAttachment() const
+{
+	return m_iParentAttachment;
+}
+
+inline float CEntity::GetLocalTime( void ) const
+{ 
+	return m_flLocalTime; 
+}
+
 
 
 
@@ -688,6 +1130,14 @@ inline bool FClassnameIs( CEntity *pEntity, const char *szClassname )
 }
 
 
+inline CCombatCharacter *ToBaseCombatCharacter( CEntity *pEntity )
+{
+	if ( !pEntity )
+		return NULL;
+
+	return pEntity->MyCombatCharacterPointer();
+}
+
 
 
 class CPointEntity : public CEntity
@@ -696,30 +1146,10 @@ public:
 	CE_DECLARE_CLASS( CPointEntity, CEntity );
 
 	//void	Spawn( void );
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	//virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 private:
+
 };
-
-
-// Has a position + size
-class CServerOnlyEntity : public CEntity
-{
-public:
-	CE_DECLARE_CLASS(CServerOnlyEntity, CEntity);
-
-public:
-	virtual int ObjectCaps( void ) { return (BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
-};
-
-/*
-// Has only a position, no size
-class CServerOnlyPointEntity : public CServerOnlyEntity
-{
-	CE_DECLARE_CLASS( CServerOnlyPointEntity, CServerOnlyEntity );
-
-public:
-	virtual bool KeyValue( const char *szKeyName, const char *szValue );
-};*/
 
 
 #endif // _INCLUDE_CENTITY_H_

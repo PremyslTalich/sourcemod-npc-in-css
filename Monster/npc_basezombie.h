@@ -7,12 +7,12 @@
 #include "CAI_NPC.h"
 #include "CAI_Behavior.h"
 #include "CAI_Blended_Movement.h"
-#include "CE_soundenvelope.h"
-#include "CAI_behavior_actbusy.h"
+class CBasePlayer;
+#include "soundenvelope.h"
+
+
 
 #define ZOM_ATTN_FOOTSTEP ATTN_IDLE
-
-#define	ENVELOPE_CONTROLLER		(CSoundEnvelopeController::GetController())
 
 #define ZOMBIE_MELEE_REACH	55
 
@@ -99,37 +99,34 @@ enum Zombie_Conds
 };
 
 
-class CBaseDoor;
-
-
 
 typedef CAI_BlendingHost< CAI_BehaviorHost<CE_Cycler_Fix> > CAI_BaseZombieBase;
 
 
-abstract_class CE_BaseZombie : public CE_Cycler_Fix
+abstract_class CE_BaseZombie : public CAI_BaseZombieBase
 {
 public:
-	CE_DECLARE_CLASS(CE_BaseZombie, CE_Cycler_Fix);
-	
-	CE_BaseZombie( void );
-	~CE_BaseZombie( void );
+	CE_DECLARE_CLASS(CE_BaseZombie, CAI_BaseZombieBase);
 
-	//void Spawn( void );
-	//void Precache( void );
-	void StartTouch( CBaseEntity *pOther );
-	bool CreateBehaviors();
+	CE_BaseZombie( void );
+	virtual ~CE_BaseZombie( void );
+
+	void Spawn( void );
+	void Precache( void );
+	void StartTouch( CEntity *pOther );
+	//bool CreateBehaviors();
 	float MaxYawSpeed( void );
 	bool OverrideMoveFacing( const AILocalMoveGoal_t &move, float flInterval );
 	Class_T Classify( void );
 	Disposition_t IRelationType( CBaseEntity *pTarget );
-	//void HandleAnimEvent( animevent_t *pEvent );
+	void HandleAnimEvent( animevent_t *pEvent );
 
 	void OnStateChange( NPC_STATE OldState, NPC_STATE NewState );
 
 	void KillMe( void )
 	{
 		m_iHealth = 5;
-		OnTakeDamage( CEntityTakeDamageInfo( BaseEntity(), BaseEntity(), m_iHealth * 2, DMG_GENERIC ) );
+		OnTakeDamage( CTakeDamageInfo( BaseEntity(), BaseEntity(), m_iHealth * 2, DMG_GENERIC ) );
 	}
 
 	int MeleeAttack1Conditions ( float flDot, float flDist );
@@ -143,34 +140,34 @@ public:
 	int OnTakeDamage_Alive( const CTakeDamageInfo &info );
 	virtual float	GetReactionDelay( CBaseEntity *pEnemy ) { return 0.0; }
 
-	//virtual int SelectSchedule ( void );
-	//virtual int	SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFailureCode_t taskFailCode );
-	//virtual void BuildScheduleTestBits( void );
+	virtual int SelectSchedule ( void );
+	virtual int	SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFailureCode_t taskFailCode );
+	virtual void BuildScheduleTestBits( void );
 
-	//virtual int TranslateSchedule( int scheduleType );
-	//virtual Activity NPC_TranslateActivity( Activity baseAct );
+	virtual int TranslateSchedule( int scheduleType );
+	virtual Activity NPC_TranslateActivity( Activity baseAct );
 
-	//void StartTask( const Task_t *pTask );
-	//void RunTask( const Task_t *pTask );
+	void StartTask( const Task_t *pTask );
+	void RunTask( const Task_t *pTask );
 
-	//void GatherConditions( void );
-	//void PrescheduleThink( void );
+	void GatherConditions( void );
+	void PrescheduleThink( void );
 
-	//virtual void Event_Killed( const CTakeDamageInfo &info );
-	//virtual bool BecomeRagdoll( const CTakeDamageInfo &info, const Vector &forceVector );
+	virtual void Event_Killed( const CTakeDamageInfo &info );
+	virtual bool BecomeRagdoll( const CTakeDamageInfo &info, const Vector &forceVector );
 	void StopLoopingSounds();
-	//virtual void OnScheduleChange( void );
+	virtual void OnScheduleChange( void );
 
-	//virtual void PoundSound();
+	virtual void PoundSound();
 
 	// Custom damage/death 
 	bool ShouldIgnite( const CTakeDamageInfo &info );
 	bool ShouldIgniteZombieGib( void );
-	virtual bool IsChopped( const CTakeDamageInfo &info ) { return false; }
+	virtual bool IsChopped( const CTakeDamageInfo &info );
 	virtual bool IsSquashed( const CTakeDamageInfo &info ) { return false; }
-	virtual void DieChopped( const CTakeDamageInfo &info ) { }
-	//virtual void Ignite( float flFlameLifetime, bool bNPCOnly = true, float flSize = 0.0f, bool bCalledByLevelDesigner = false );
-	void CopyRenderColorTo( CBaseEntity *pOther );
+	virtual void DieChopped( const CTakeDamageInfo &info );
+	virtual void Ignite( float flFlameLifetime, bool bNPCOnly = true, float flSize = 0.0f, bool bCalledByLevelDesigner = false );
+	void CopyRenderColorTo( CEntity *pOther );
 
 	virtual bool ShouldBecomeTorso( const CTakeDamageInfo &info, float flDamageThreshold );
 	virtual HeadcrabRelease_t ShouldReleaseHeadcrab( const CTakeDamageInfo &info, float flDamageThreshold );
@@ -178,14 +175,14 @@ public:
 	// Headcrab releasing/breaking apart
 	void RemoveHead( void );
 	virtual void SetZombieModel( void ) { };
-	//virtual void BecomeTorso( const Vector &vecTorsoForce, const Vector &vecLegsForce );
-	//virtual bool CanBecomeLiveTorso() { return false; }
-	//virtual bool HeadcrabFits( CBaseAnimating *pCrab );
+	virtual void BecomeTorso( const Vector &vecTorsoForce, const Vector &vecLegsForce );
+	virtual bool CanBecomeLiveTorso() { return false; }
+	virtual bool HeadcrabFits( CAnimating *pCrab );
 	void ReleaseHeadcrab( const Vector &vecOrigin, const Vector &vecVelocity, bool fRemoveHead, bool fRagdollBody, bool fRagdollCrab = false );
-	void SetHeadcrabSpawnLocation( int iCrabAttachment, CBaseAnimating *pCrab );
+	void SetHeadcrabSpawnLocation( int iCrabAttachment, CAnimating *pCrab );
 
 	// Slumping/sleeping
-	bool IsSlumped( void ) { return false; }
+	bool IsSlumped( void );
 	bool IsGettingUp( void );
 
 	// Swatting physics objects
@@ -197,10 +194,10 @@ public:
 	// Returns whether we must be very near our enemy to attack them.
 	virtual bool MustCloseToAttack(void) { return true; }
 
-	//virtual CBaseEntity *ClawAttack( float flDist, int iDamage, QAngle &qaViewPunch, Vector &vecVelocityPunch, int BloodOrigin );
+	virtual CEntity *ClawAttack( float flDist, int iDamage, QAngle &qaViewPunch, Vector &vecVelocityPunch, int BloodOrigin );
 
 	// Sounds & sound envelope
-	/*virtual bool ShouldPlayFootstepMoan( void );
+	virtual bool ShouldPlayFootstepMoan( void );
 	virtual void PainSound( const CTakeDamageInfo &info ) = 0;
 	virtual void AlertSound( void ) = 0;
 	virtual void IdleSound( void ) = 0;
@@ -208,16 +205,16 @@ public:
 	virtual void AttackHitSound( void ) = 0;
 	virtual void AttackMissSound( void ) = 0;
 	virtual void FootstepSound( bool fRightFoot ) = 0;
-	virtual void FootscuffSound( bool fRightFoot ) = 0;*/
+	virtual void FootscuffSound( bool fRightFoot ) = 0;
 
 	// make a sound Alyx can hear when in darkness mode
-	void		 MakeAISpookySound( float volume, float duration = 0.5 );
+	//void		 MakeAISpookySound( float volume, float duration = 0.5 );
 
-	//virtual bool CanPlayMoanSound();
-	//virtual void MoanSound( envelopePoint_t *pEnvelope, int iEnvelopeSize );
+	virtual bool CanPlayMoanSound();
+	virtual void MoanSound( envelopePoint_t *pEnvelope, int iEnvelopeSize );
 	bool ShouldPlayIdleSound( void ) { return false; }
 
-	/*virtual const char *GetMoanSound( int nSound ) = 0;
+	virtual const char *GetMoanSound( int nSound ) = 0;
 	virtual const char *GetHeadcrabClassname( void ) = 0;
 	virtual const char *GetLegsModel( void ) = 0;
 	virtual const char *GetTorsoModel( void ) = 0;
@@ -226,15 +223,11 @@ public:
 	virtual Vector BodyTarget( const Vector &posSrc, bool bNoisy );
 	virtual Vector HeadTarget( const Vector &posSrc );
 	virtual float  GetAutoAimRadius();
-	virtual void TranslateNavGoal( CBaseEntity *pEnemy, Vector &chasePosition );*/
+	virtual void TranslateNavGoal( CBaseEntity *pEnemy, Vector &chasePosition );
 
 	bool OnInsufficientStopDist( AILocalMoveGoal_t *pMoveGoal, float distClear, AIMoveResult_t *pResult );
 
 	virtual	bool		AllowedToIgnite( void ) { return true; }
-
-public:
-	CAI_ActBusyBehavior		m_ActBusyBehavior;
-
 
 
 protected:
@@ -254,7 +247,7 @@ protected:
 	float	m_flBurnDamage;				// Keeps track of how much burn damage we've incurred in the last few seconds.
 	float	m_flBurnDamageResetTime;	// Time at which we reset the burn damage.
 
-	EHANDLE m_hPhysicsEnt;
+	CFakeHandle m_hPhysicsEnt;
 
 	float m_flNextMoanSound;
 	float m_flNextSwat;
@@ -262,7 +255,7 @@ protected:
 	float m_crabHealth;
 	float m_flMoanPitch;
 
-	EHANDLE	m_hObstructor;
+	CFakeHandle	m_hObstructor;
 
 	static int g_numZombies;	// counts total number of existing zombies.
 
@@ -275,6 +268,8 @@ protected:
 	static int ACT_ZOM_RELEASECRAB;
 	static int ACT_ZOM_FALL;
 
+	DECLARE_DATADESC();
+
 	DEFINE_CUSTOM_AI;
 
 private:
@@ -282,96 +277,5 @@ private:
 
 };
 
-
-
-//=============================================================================
-
-/*class CE_Zombie : public CAI_BlendingHost<CE_BaseZombie>
-{
-public:
-	DECLARE_CLASS( CE_Zombie, CAI_BlendingHost<CE_BaseZombie> );
-
-
-	CE_Zombie()
-	 : m_DurationDoorBash( 2, 6),
-	   m_NextTimeToStartDoorBash( 3.0 )
-	{
-	}
-
-	void Spawn( void );
-	void Precache( void );
-
-	void SetZombieModel( void );
-	void MoanSound( envelopePoint_t *pEnvelope, int iEnvelopeSize );
-	bool ShouldBecomeTorso( const CTakeDamageInfo &info, float flDamageThreshold );
-//	bool CanBecomeLiveTorso() { return !m_fIsHeadless; }
-
-	void GatherConditions( void );
-
-	int SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFailureCode_t taskFailCode );
-	int TranslateSchedule( int scheduleType );
-
-#ifndef HL2_EPISODIC
-	void CheckFlinches() {} // Zombie has custom flinch code
-#endif // HL2_EPISODIC
-
-	Activity NPC_TranslateActivity( Activity newActivity );
-
-	void OnStateChange( NPC_STATE OldState, NPC_STATE NewState );
-
-	void StartTask( const Task_t *pTask );
-	void RunTask( const Task_t *pTask );
-
-	virtual const char *GetLegsModel( void );
-	virtual const char *GetTorsoModel( void );
-	virtual const char *GetHeadcrabClassname( void );
-	virtual const char *GetHeadcrabModel( void );
-
-	virtual bool OnObstructingDoor( AILocalMoveGoal_t *pMoveGoal, 
-								 CBaseDoor *pDoor,
-								 float distClear, 
-								 AIMoveResult_t *pResult );
-
-	Activity SelectDoorBash();
-
-	void Ignite( float flFlameLifetime, bool bNPCOnly = true, float flSize = 0.0f, bool bCalledByLevelDesigner = false );
-	void Extinguish();
-	int OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo );
-	bool IsHeavyDamage( const CTakeDamageInfo &info );
-	bool IsSquashed( const CTakeDamageInfo &info );
-	void BuildScheduleTestBits( void );
-
-	void PrescheduleThink( void );
-	int SelectSchedule ( void );
-
-	void PainSound( const CTakeDamageInfo &info );
-	void DeathSound( const CTakeDamageInfo &info );
-	void AlertSound( void );
-	void IdleSound( void );
-	void AttackSound( void );
-	void AttackHitSound( void );
-	void AttackMissSound( void );
-	void FootstepSound( bool fRightFoot );
-	void FootscuffSound( bool fRightFoot );
-
-	const char *GetMoanSound( int nSound );
-	
-public:
-	//DEFINE_CUSTOM_AI;
-
-protected:
-	static const char *pMoanSounds[];
-
-
-private:
-	CHandle< CBaseDoor > m_hBlockingDoor;
-	float				 m_flDoorBashYaw;
-	
-	CRandSimTimer 		 m_DurationDoorBash;
-	CSimTimer 	  		 m_NextTimeToStartDoorBash;
-
-	Vector				 m_vPositionCharged;
-};
-*/
 
 #endif
