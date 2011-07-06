@@ -55,8 +55,6 @@ DETOUR_DECL_MEMBER1(RemoveEntity, void, CBaseHandle, handle)
 	CEntity *cent = CEntity::Instance(handle);
 	if(cent)
 	{
-		if(strcmp(cent->GetClassname(),"info_target") == 0)
-			META_CONPRINTF("Destroy %s\n",cent->GetClassname());
 		cent->Destroy();
 	}
 	DETOUR_MEMBER_CALL(RemoveEntity)(handle);

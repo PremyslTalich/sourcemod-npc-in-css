@@ -73,6 +73,7 @@ public:
 
 	void			OnStateChange( NPC_STATE OldState, NPC_STATE NewState );
 
+	//CE_TOD , SF_MANHACK_CARRIED
 	//virtual bool	CreateVPhysics( void );
 
 	virtual void	DeathSound( const CTakeDamageInfo &info );
@@ -144,6 +145,10 @@ public:
 	void			InputUnpack( inputdata_t &inputdata );
 
 	// 	CDefaultPlayerPickupVPhysics
+	//CE_TODO
+	//virtual void	OnPhysGunPickup( CPlayer *pPhysGunUser, PhysGunPickup_t reason );
+	//virtual void	OnPhysGunDrop( CPlayer *pPhysGunUser, PhysGunDrop_t Reason );
+
 
 	CBaseEntity *HasPhysicsAttacker( float dt );
 

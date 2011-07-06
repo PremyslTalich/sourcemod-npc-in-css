@@ -1,6 +1,5 @@
 
 #include "extension.h"
-#include "command.h"
 #include "CAI_NetworkManager.h"
 #include "GameSystem.h"
 #include "tier3.h"

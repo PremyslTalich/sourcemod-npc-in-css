@@ -2387,7 +2387,8 @@ public:
 	void Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CEntity *pAttacker, bool bIgnoreSpread );
 };
 
-LINK_ENTITY_TO_CUSTOM_CLASS(func_tank, func_brush, CFuncTankGun);
+LINK_ENTITY_TO_CUSTOM_CLASS(func_tank, into_target, CFuncTankGun);
+
 
 //-----------------------------------------------------------------------------
 // Purpose: 

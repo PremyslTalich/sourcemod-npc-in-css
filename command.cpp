@@ -1,5 +1,4 @@
 
-#include "command.h"
 #include "CAI_NPC.h"
 
 
@@ -132,8 +131,8 @@ void monster_dump_CommandCallback(const CCommand &command)
 bool CommandInitialize()
 {
 	//new ConCommand("e5",cmd1_CommandCallback, "", FCVAR_GAMEDLL);
-	//new ConCommand("e6",cmd2_CommandCallback, "", FCVAR_GAMEDLL);
-	new ConCommand("monster_dump",monster_dump_CommandCallback, "", FCVAR_GAMEDLL);
+	//new ConCommand("e6",cmd2_CommandCallback, "", 0);
+	new ConCommand("monster_dump",monster_dump_CommandCallback, "", 0);
 
 	GET_CONVAR(sv_gravity);
 	GET_CONVAR(phys_pushscale);
