@@ -246,7 +246,7 @@ void CNPC_Antlion::Spawn( void )
 
 	m_NPCState	= NPC_STATE_NONE;
 
-	m_iHealth	= sk_antlion_health.GetInt();
+	m_iHealth = ( IsWorker() ) ? sk_antlion_worker_health.GetFloat() : sk_antlion_health.GetFloat();
 
 	SetSolid( SOLID_BBOX );
 	AddSolidFlags( FSOLID_NOT_STANDABLE );

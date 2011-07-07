@@ -170,6 +170,7 @@ DEFINE_PROP(m_RelationshipString, CCombatCharacter);
 DEFINE_PROP(m_iAmmo, CCombatCharacter);
 DEFINE_PROP(m_bPreventWeaponPickup, CCombatCharacter);
 DEFINE_PROP(m_flDamageAccumulator, CCombatCharacter);
+DEFINE_PROP(m_LastHitGroup, CCombatCharacter);
 
 
 

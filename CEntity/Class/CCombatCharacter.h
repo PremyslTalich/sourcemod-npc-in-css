@@ -114,6 +114,9 @@ public:
 
 	bool				SwitchToNextBestWeapon(CCombatWeapon *pCurrent);
 
+	int					LastHitGroup() const { return m_LastHitGroup; }
+	void				SetLastHitGroup( int nHitGroup ) { m_LastHitGroup = nHitGroup; }
+
 private:
 	void ThrowDirForWeaponStrip( CCombatWeapon *pWeapon, const Vector &vecForward, Vector *pVecThrowDir );
 	void DropWeaponForWeaponStrip( CCombatWeapon *pWeapon, const Vector &vecForward, const QAngle &vecAngles, float flDiameter );
@@ -218,6 +221,7 @@ protected: //Datamaps
 	DECLARE_DATAMAP(int , m_iAmmo);
 	DECLARE_DATAMAP(bool , m_bPreventWeaponPickup);
 	DECLARE_DATAMAP(float , m_flDamageAccumulator);
+	DECLARE_DATAMAP(int , m_LastHitGroup);
 
 	
 };

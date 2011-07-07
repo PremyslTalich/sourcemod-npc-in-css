@@ -50,21 +50,8 @@ void cmd1_CommandCallback(const CCommand &command)
 
 
 		//CEntity *cent = CreateEntityByName("npc_headcrab");
-		/*CEntity *cent2 = CEntity::Instance(cbase2);
-		cent2->Spawn();
-		cent2->Teleport(&vec, NULL,NULL);
-
-		CAI_NPC *hc2 = dynamic_cast<CAI_NPC *>(cent2);*/
-
-		//CE_NPC_Headcrab *hc = dynamic_cast<CE_NPC_Headcrab *>(cent);
-
 		//CEntity *cent = CreateEntityByName("npc_headcrab_fast");
-		//CEntity *cent = CEntity::Instance(cbase);
-		//CE_NPC_FastHeadcrab *hc = dynamic_cast<CE_NPC_FastHeadcrab *>(cent);
-
 		//CEntity *cent = CreateEntityByName("npc_headcrab_black");
-		//CEntity *cent = CEntity::Instance(cbase);
-		//CE_NPC_BlackHeadcrab *hc = dynamic_cast<CE_NPC_BlackHeadcrab *>(cent);
 
 		//CEntity *cent = CreateEntityByName("npc_fastzombie");
 		//CEntity *cent = CreateEntityByName("npc_fastzombie_torso");
@@ -76,6 +63,7 @@ void cmd1_CommandCallback(const CCommand &command)
 		//CEntity *cent = CreateEntityByName("npc_antlionguard");
 
 		//CEntity *cent = CreateEntityByName("npc_stalker");
+
 		//CEntity *cent = CreateEntityByName("npc_antlion");
 
 		//CEntity *cent = CreateEntityByName("npc_vortigaunt");
@@ -83,7 +71,7 @@ void cmd1_CommandCallback(const CCommand &command)
 		//CEntity *cent = CreateEntityByName("npc_rollermine");
 		
 		//CEntity *cent = CreateEntityByName("npc_test");
-
+		
 		CBaseEntity *cbase = cent->BaseEntity();
 
 		CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);
@@ -130,8 +118,8 @@ void monster_dump_CommandCallback(const CCommand &command)
 
 bool CommandInitialize()
 {
-	//new ConCommand("e5",cmd1_CommandCallback, "", FCVAR_GAMEDLL);
-	//new ConCommand("e6",cmd2_CommandCallback, "", 0);
+	//new ConCommand("a",cmd1_CommandCallback, "", FCVAR_GAMEDLL);
+	//new ConCommand("b",cmd2_CommandCallback, "", 0);
 	new ConCommand("monster_dump",monster_dump_CommandCallback, "", 0);
 
 	GET_CONVAR(sv_gravity);
