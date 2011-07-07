@@ -92,10 +92,10 @@ enum ManhackTasks
 	TASK_MANHACK_MOVEAT_SAVEPOSITION,
 };
 
-LINK_ENTITY_TO_CUSTOM_CLASS( npc_manhack, cycler, CE_NPC_Manhack );
+LINK_ENTITY_TO_CUSTOM_CLASS( npc_manhack, cycler, CNPC_Manhack );
 
 
-BEGIN_DATADESC( CE_NPC_Manhack )
+BEGIN_DATADESC( CNPC_Manhack )
 	DEFINE_FIELD( m_vForceVelocity,			FIELD_VECTOR),
 
 	DEFINE_FIELD( m_vTargetBanking,			FIELD_VECTOR),
@@ -169,7 +169,7 @@ END_DATADESC()
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-CE_NPC_Manhack::CE_NPC_Manhack()
+CNPC_Manhack::CNPC_Manhack()
 {
 	m_vForceMoveTarget.Init();
 	m_vSwarmMoveTarget.Init();
@@ -223,14 +223,14 @@ CE_NPC_Manhack::CE_NPC_Manhack()
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-CE_NPC_Manhack::~CE_NPC_Manhack()
+CNPC_Manhack::~CNPC_Manhack()
 {
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Indicates this NPC's place in the relationship table.
 //-----------------------------------------------------------------------------
-Class_T	CE_NPC_Manhack::Classify(void)
+Class_T	CNPC_Manhack::Classify(void)
 {
 	return (m_bHeld||m_bHackedByAlyx) ? CLASS_PLAYER_ALLY : CLASS_MANHACK; 
 }
@@ -238,7 +238,7 @@ Class_T	CE_NPC_Manhack::Classify(void)
 //-----------------------------------------------------------------------------
 // Purpose: Turns the manhack into a physics corpse when dying.
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::Event_Dying(CTakeDamageInfo const& info)
+void CNPC_Manhack::Event_Dying(CTakeDamageInfo const& info)
 {
 	DestroySmokeTrail();
 	SetHullSizeNormal();
@@ -248,7 +248,7 @@ void CE_NPC_Manhack::Event_Dying(CTakeDamageInfo const& info)
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::GatherConditions()
+void CNPC_Manhack::GatherConditions()
 {
 	BaseClass::GatherConditions();
 
@@ -264,7 +264,7 @@ void CE_NPC_Manhack::GatherConditions()
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::PrescheduleThink( void )
+void CNPC_Manhack::PrescheduleThink( void )
 {
 	BaseClass::PrescheduleThink();
 
@@ -315,7 +315,7 @@ void CE_NPC_Manhack::PrescheduleThink( void )
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
+void CNPC_Manhack::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	*g_vecAttackDir = vecDir;
 
@@ -336,7 +336,7 @@ void CE_NPC_Manhack::TraceAttack( const CTakeDamageInfo &info, const Vector &vec
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::DeathSound( const CTakeDamageInfo &info )
+void CNPC_Manhack::DeathSound( const CTakeDamageInfo &info )
 {
 	StopSound("NPC_Manhack.Stunned");
 	CPASAttenuationFilter filter2( this, "NPC_Manhack.Die" );
@@ -348,7 +348,7 @@ void CE_NPC_Manhack::DeathSound( const CTakeDamageInfo &info )
 // Purpose: 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CE_NPC_Manhack::ShouldGib( const CTakeDamageInfo &info )
+bool CNPC_Manhack::ShouldGib( const CTakeDamageInfo &info )
 {
 	return ( m_bGib );
 }
@@ -359,7 +359,7 @@ bool CE_NPC_Manhack::ShouldGib( const CTakeDamageInfo &info )
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::Event_Killed( const CTakeDamageInfo &info )
+void CNPC_Manhack::Event_Killed( const CTakeDamageInfo &info )
 {
 	// turn off the blur!
 	SetBodygroup( MANHACK_BODYGROUP_BLUR, MANHACK_BODYGROUP_OFF );
@@ -402,7 +402,7 @@ void CE_NPC_Manhack::Event_Killed( const CTakeDamageInfo &info )
 	BaseClass::Event_Killed( info );
 }
 
-void CE_NPC_Manhack::HitPhysicsObject( CEntity *pOther )
+void CNPC_Manhack::HitPhysicsObject( CEntity *pOther )
 {
 	IPhysicsObject *pOtherPhysics = pOther->VPhysicsGetObject();
 	Vector pos, posOther;
@@ -428,7 +428,7 @@ void CE_NPC_Manhack::HitPhysicsObject( CEntity *pOther )
 //-----------------------------------------------------------------------------
 // Take damage from a vehicle; it's like a really big crowbar 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::TakeDamageFromVehicle( int index, gamevcollisionevent_t *pEvent )
+void CNPC_Manhack::TakeDamageFromVehicle( int index, gamevcollisionevent_t *pEvent )
 {
 	// Use the vehicle velocity to determine the damage
 	int otherIndex = !index;
@@ -461,7 +461,7 @@ void CE_NPC_Manhack::TakeDamageFromVehicle( int index, gamevcollisionevent_t *pE
 //-----------------------------------------------------------------------------
 // Take damage from combine ball
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::TakeDamageFromPhysicsImpact( int index, gamevcollisionevent_t *pEvent )
+void CNPC_Manhack::TakeDamageFromPhysicsImpact( int index, gamevcollisionevent_t *pEvent )
 {
 	CBaseEntity *pHitEntity = pEvent->pEntities[!index];
 
@@ -492,7 +492,7 @@ void CE_NPC_Manhack::TakeDamageFromPhysicsImpact( int index, gamevcollisionevent
 // Purpose: 
 //-----------------------------------------------------------------------------
 #define MANHACK_SMASH_TIME	0.35		// How long after being thrown from a physcannon that a manhack is eligible to die from impact
-void CE_NPC_Manhack::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CNPC_Manhack::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 {
 	BaseClass::VPhysicsCollision( index, pEvent );
 
@@ -537,7 +537,7 @@ void CE_NPC_Manhack::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent
 }
 
 
-void CE_NPC_Manhack::VPhysicsShadowCollision( int index, gamevcollisionevent_t *pEvent )
+void CNPC_Manhack::VPhysicsShadowCollision( int index, gamevcollisionevent_t *pEvent )
 {
 	int otherIndex = !index;
 	CBaseEntity *cbase = pEvent->pEntities[otherIndex];
@@ -556,7 +556,7 @@ void CE_NPC_Manhack::VPhysicsShadowCollision( int index, gamevcollisionevent_t *
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::CrashTouch( CEntity *pOther )
+void CNPC_Manhack::CrashTouch( CEntity *pOther )
 {
 	CTakeDamageInfo	info( GetWorldEntity()->BaseEntity(), GetWorldEntity()->BaseEntity(), 25, DMG_CRUSH );
 
@@ -567,7 +567,7 @@ void CE_NPC_Manhack::CrashTouch( CEntity *pOther )
 //-----------------------------------------------------------------------------
 // Create smoke trail!
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::CreateSmokeTrail()
+void CNPC_Manhack::CreateSmokeTrail()
 {
 	if ( HasSpawnFlags( SF_MANHACK_NO_DAMAGE_EFFECTS ) )
 		return;
@@ -596,7 +596,7 @@ void CE_NPC_Manhack::CreateSmokeTrail()
 	m_hSmokeTrail = pSmokeTrail;
 }
 
-void CE_NPC_Manhack::DestroySmokeTrail()
+void CNPC_Manhack::DestroySmokeTrail()
 {
 	if ( m_hSmokeTrail )
 	{
@@ -612,7 +612,7 @@ void CE_NPC_Manhack::DestroySmokeTrail()
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-int	CE_NPC_Manhack::OnTakeDamage_Alive( const CTakeDamageInfo &info )
+int	CNPC_Manhack::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 {
 	// Hafta make a copy of info cause we might need to scale damage.(sjb)
 	CTakeDamageInfo tdInfo = info;
@@ -761,7 +761,7 @@ int	CE_NPC_Manhack::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-bool CE_NPC_Manhack::CorpseGib( const CTakeDamageInfo &info )
+bool CNPC_Manhack::CorpseGib( const CTakeDamageInfo &info )
 {
 	Vector			vecGibVelocity;
 	AngularImpulse	vecGibAVelocity;
@@ -800,7 +800,7 @@ bool CE_NPC_Manhack::CorpseGib( const CTakeDamageInfo &info )
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-int	CE_NPC_Manhack::OnTakeDamage_Dying( const CTakeDamageInfo &info )
+int	CNPC_Manhack::OnTakeDamage_Dying( const CTakeDamageInfo &info )
 {
 	// Ignore damage for the first 1 second of crashing behavior.
 	// If we don't do this, manhacks always just explode under 
@@ -814,7 +814,7 @@ int	CE_NPC_Manhack::OnTakeDamage_Dying( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 // Turn on the engine sound if we're gagged!
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::OnStateChange( NPC_STATE OldState, NPC_STATE NewState )
+void CNPC_Manhack::OnStateChange( NPC_STATE OldState, NPC_STATE NewState )
 {
 	if( m_vNoiseMod.z == MANHACK_NOISEMOD_HIDE && !(m_spawnflags & SF_NPC_WAIT_FOR_SCRIPT) && !(m_spawnflags & SF_MANHACK_PACKED_UP) )
 	{
@@ -836,7 +836,7 @@ void CE_NPC_Manhack::OnStateChange( NPC_STATE OldState, NPC_STATE NewState )
 // Purpose: 
 // Input  : Type - 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::HandleAnimEvent( animevent_t *pEvent )
+void CNPC_Manhack::HandleAnimEvent( animevent_t *pEvent )
 {
 	Vector vecNewVelocity;
 	switch( pEvent->event )
@@ -867,7 +867,7 @@ void CE_NPC_Manhack::HandleAnimEvent( animevent_t *pEvent )
 //-----------------------------------------------------------------------------
 // Purpose: Returns whether or not the given activity would translate to flying.
 //-----------------------------------------------------------------------------
-bool CE_NPC_Manhack::IsFlyingActivity( Activity baseAct )
+bool CNPC_Manhack::IsFlyingActivity( Activity baseAct )
 {
 	return ((baseAct == ACT_FLY || baseAct == ACT_IDLE || baseAct == ACT_RUN || baseAct == ACT_WALK) && m_bBladesActive);
 }
@@ -877,7 +877,7 @@ bool CE_NPC_Manhack::IsFlyingActivity( Activity baseAct )
 // Purpose: 
 // Input  : Type - 
 //-----------------------------------------------------------------------------
-Activity CE_NPC_Manhack::NPC_TranslateActivity( Activity baseAct )
+Activity CNPC_Manhack::NPC_TranslateActivity( Activity baseAct )
 {
 	if (IsFlyingActivity( baseAct ))
 	{
@@ -892,7 +892,7 @@ Activity CE_NPC_Manhack::NPC_TranslateActivity( Activity baseAct )
 // Purpose: 
 // Input  : Type - 
 //-----------------------------------------------------------------------------
-int CE_NPC_Manhack::TranslateSchedule( int scheduleType ) 
+int CNPC_Manhack::TranslateSchedule( int scheduleType ) 
 {
 	// Fail-safe for deployment if packed up and interrupted
 	if ( m_spawnflags & SF_MANHACK_PACKED_UP )
@@ -975,7 +975,7 @@ int CE_NPC_Manhack::TranslateSchedule( int scheduleType )
 }
 
 #define MAX_LOITER_DIST_SQR 144 // (12 inches sqr)
-void CE_NPC_Manhack::Loiter()
+void CNPC_Manhack::Loiter()
 {
 	//NDebugOverlay::Line( GetAbsOrigin(), m_vecLoiterPosition, 255, 255, 255, false, 0.1 );
 
@@ -1025,7 +1025,7 @@ void CE_NPC_Manhack::Loiter()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::MaintainGroundHeight( void )
+void CNPC_Manhack::MaintainGroundHeight( void )
 {
 	float zSpeed = GetCurrentVelocity().z;
 
@@ -1058,7 +1058,7 @@ void CE_NPC_Manhack::MaintainGroundHeight( void )
 // Purpose: Handles movement towards the last move target.
 // Input  : flInterval - 
 //-----------------------------------------------------------------------------
-bool CE_NPC_Manhack::OverrideMove( float flInterval )
+bool CNPC_Manhack::OverrideMove( float flInterval )
 {
 	SpinBlades( flInterval );
 		
@@ -1146,7 +1146,7 @@ bool CE_NPC_Manhack::OverrideMove( float flInterval )
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::TurnHeadRandomly(float flInterval )
+void CNPC_Manhack::TurnHeadRandomly(float flInterval )
 {
 	float desYaw = random->RandomFloat(0,360);
 
@@ -1166,7 +1166,7 @@ void CE_NPC_Manhack::TurnHeadRandomly(float flInterval )
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::MoveToTarget(float flInterval, const Vector &vMoveTarget)
+void CNPC_Manhack::MoveToTarget(float flInterval, const Vector &vMoveTarget)
 {
 	if (flInterval <= 0)
 	{
@@ -1307,7 +1307,7 @@ void CE_NPC_Manhack::MoveToTarget(float flInterval, const Vector &vMoveTarget)
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-int CE_NPC_Manhack::MoveCollisionMask(void)
+int CNPC_Manhack::MoveCollisionMask(void)
 {
 	return MASK_NPCSOLID;
 }
@@ -1318,7 +1318,7 @@ int CE_NPC_Manhack::MoveCollisionMask(void)
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::Splash( const Vector &vecSplashPos )
+void CNPC_Manhack::Splash( const Vector &vecSplashPos )
 {
 	CEffectData	data;
 
@@ -1360,7 +1360,7 @@ void CE_NPC_Manhack::Splash( const Vector &vecSplashPos )
 //-----------------------------------------------------------------------------
 // Computes the slice bounce velocity
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::ComputeSliceBounceVelocity( CEntity *pHitEntity, trace_t &tr )
+void CNPC_Manhack::ComputeSliceBounceVelocity( CEntity *pHitEntity, trace_t &tr )
 {
 	if( pHitEntity->IsAlive() && FClassnameIs( pHitEntity, "func_breakable_surf" ) )
 	{
@@ -1393,7 +1393,7 @@ void CE_NPC_Manhack::ComputeSliceBounceVelocity( CEntity *pHitEntity, trace_t &t
 //-----------------------------------------------------------------------------
 // Is the manhack being held?
 //-----------------------------------------------------------------------------
-bool CE_NPC_Manhack::IsHeldByPhyscannon( )
+bool CNPC_Manhack::IsHeldByPhyscannon( )
 {
 	return VPhysicsGetObject() && (VPhysicsGetObject()->GetGameFlags() & FVPHYSICS_PLAYER_HELD);
 }
@@ -1403,7 +1403,7 @@ bool CE_NPC_Manhack::IsHeldByPhyscannon( )
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::Slice( CEntity *pHitEntity, float flInterval, trace_t &tr )
+void CNPC_Manhack::Slice( CEntity *pHitEntity, float flInterval, trace_t &tr )
 {
 	// Don't hurt the player if I'm in water
 	if( GetWaterLevel() > 0 && pHitEntity->IsPlayer() )
@@ -1513,7 +1513,7 @@ void CE_NPC_Manhack::Slice( CEntity *pHitEntity, float flInterval, trace_t &tr )
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::Bump( CEntity *pHitEntity, float flInterval, trace_t &tr )
+void CNPC_Manhack::Bump( CEntity *pHitEntity, float flInterval, trace_t &tr )
 {
 	if ( !VPhysicsGetObject() )
 		return;
@@ -1656,7 +1656,7 @@ void CE_NPC_Manhack::Bump( CEntity *pHitEntity, float flInterval, trace_t &tr )
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::CheckCollisions(float flInterval)
+void CNPC_Manhack::CheckCollisions(float flInterval)
 {
 	// Trace forward to see if I hit anything. But trace forward along the
 	// owner's view direction if you're being carried.
@@ -1727,7 +1727,7 @@ void CE_NPC_Manhack::CheckCollisions(float flInterval)
 // Output :
 //-----------------------------------------------------------------------------
 #define tempTIME_STEP = 0.5;
-void CE_NPC_Manhack::PlayFlySound(void)
+void CNPC_Manhack::PlayFlySound(void)
 {
 	float flEnemyDist;
 
@@ -1816,7 +1816,7 @@ void CE_NPC_Manhack::PlayFlySound(void)
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::MoveExecute_Alive(float flInterval)
+void CNPC_Manhack::MoveExecute_Alive(float flInterval)
 {
 	PhysicsCheckWaterTransition();
 
@@ -1998,7 +1998,7 @@ void CE_NPC_Manhack::MoveExecute_Alive(float flInterval)
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::SpinBlades(float flInterval)
+void CNPC_Manhack::SpinBlades(float flInterval)
 {
 	if (!m_bBladesActive)
 	{
@@ -2059,7 +2059,7 @@ void CE_NPC_Manhack::SpinBlades(float flInterval)
 //-----------------------------------------------------------------------------
 // Purpose: Smokes and sparks, exploding periodically. Eventually it goes away.
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::MoveExecute_Dead(float flInterval)
+void CNPC_Manhack::MoveExecute_Dead(float flInterval)
 {
 	if( GetWaterLevel() > 0 )
 	{
@@ -2126,7 +2126,7 @@ void CE_NPC_Manhack::MoveExecute_Dead(float flInterval)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::Precache(void)
+void CNPC_Manhack::Precache(void)
 {
 	//
 	// Model.
@@ -2160,7 +2160,7 @@ void CE_NPC_Manhack::Precache(void)
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::GatherEnemyConditions( CBaseEntity *pEnemy )
+void CNPC_Manhack::GatherEnemyConditions( CBaseEntity *pEnemy )
 {
 	// The Manhack "regroups" when its in attack range but to
 	// far above or below its enemy.  Set the start attack
@@ -2200,7 +2200,7 @@ void CE_NPC_Manhack::GatherEnemyConditions( CBaseEntity *pEnemy )
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-int CE_NPC_Manhack::MeleeAttack1Conditions( float flDot, float flDist )
+int CNPC_Manhack::MeleeAttack1Conditions( float flDot, float flDist )
 {
 	if ( GetEnemy() == NULL )
 		return COND_NONE;
@@ -2255,7 +2255,7 @@ int CE_NPC_Manhack::MeleeAttack1Conditions( float flDot, float flDist )
 // Purpose: 
 // Input  : *pTask - 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::RunTask( const Task_t *pTask )
+void CNPC_Manhack::RunTask( const Task_t *pTask )
 {
 	switch ( pTask->iTask )
 	{
@@ -2328,7 +2328,7 @@ void CE_NPC_Manhack::RunTask( const Task_t *pTask )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::Spawn(void)
+void CNPC_Manhack::Spawn(void)
 {
 	Precache();
 
@@ -2423,7 +2423,7 @@ void CE_NPC_Manhack::Spawn(void)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::StartEye( void )
+void CNPC_Manhack::StartEye( void )
 {
 	//Create our Eye sprite
 	if ( m_pEyeGlow == NULL )
@@ -2473,7 +2473,7 @@ void CE_NPC_Manhack::StartEye( void )
 
 //-----------------------------------------------------------------------------
 
-void CE_NPC_Manhack::Activate()
+void CNPC_Manhack::Activate()
 {
 	BaseClass::Activate();
 
@@ -2487,14 +2487,14 @@ void CE_NPC_Manhack::Activate()
 //-----------------------------------------------------------------------------
 // Purpose: Get the engine sound started. Unless we're not supposed to have it on yet!
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::PostNPCInit( void )
+void CNPC_Manhack::PostNPCInit( void )
 {
 	// SetAbsVelocity( vec3_origin ); 
 	m_bBladesActive = (m_spawnflags & (SF_MANHACK_PACKED_UP|SF_MANHACK_CARRIED)) ? false : true;
 	BladesInit();
 }
 
-void CE_NPC_Manhack::BladesInit()
+void CNPC_Manhack::BladesInit()
 {
 	if( !m_bBladesActive )
 	{
@@ -2517,7 +2517,7 @@ void CE_NPC_Manhack::BladesInit()
 //-----------------------------------------------------------------------------
 // Crank up the engine!
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::StartEngine( bool fStartSound )
+void CNPC_Manhack::StartEngine( bool fStartSound )
 {
 	if( fStartSound )
 	{
@@ -2546,7 +2546,7 @@ void CE_NPC_Manhack::StartEngine( bool fStartSound )
 //-----------------------------------------------------------------------------
 // Purpose: Start the manhack's engine sound.
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::SoundInit( void )
+void CNPC_Manhack::SoundInit( void )
 {
 	m_nEnginePitch1 = MANHACK_MIN_PITCH1;
 	m_flEnginePitch1Time = gpGlobals->curtime;
@@ -2562,7 +2562,7 @@ void CE_NPC_Manhack::SoundInit( void )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::StopLoopingSounds(void)
+void CNPC_Manhack::StopLoopingSounds(void)
 {
 	BaseClass::StopLoopingSounds();
 	m_nEnginePitch1 = -1;
@@ -2576,7 +2576,7 @@ void CE_NPC_Manhack::StopLoopingSounds(void)
 // Purpose: 
 // Input  : pTask - 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::StartTask( const Task_t *pTask )
+void CNPC_Manhack::StartTask( const Task_t *pTask )
 {
 	switch (pTask->iTask)
 	{	
@@ -2760,7 +2760,7 @@ void CE_NPC_Manhack::StartTask( const Task_t *pTask )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::UpdateOnRemove( void )
+void CNPC_Manhack::UpdateOnRemove( void )
 {
 	DestroySmokeTrail();
 	KillSprites( 0.0 );
@@ -2776,7 +2776,7 @@ void CE_NPC_Manhack::UpdateOnRemove( void )
 // Output :	 true  - if sub-class has a response for the interaction
 //			 false - if sub-class has no response
 //-----------------------------------------------------------------------------
-bool CE_NPC_Manhack::HandleInteraction(int interactionType, void* data, CBaseEntity* sourceEnt)
+bool CNPC_Manhack::HandleInteraction(int interactionType, void* data, CBaseEntity* sourceEnt)
 {
 	if (interactionType == g_interactionVortigauntClaw)
 	{
@@ -2796,7 +2796,7 @@ bool CE_NPC_Manhack::HandleInteraction(int interactionType, void* data, CBaseEnt
 // Purpose: 
 // Output : float
 //-----------------------------------------------------------------------------
-float CE_NPC_Manhack::ManhackMaxSpeed( void )
+float CNPC_Manhack::ManhackMaxSpeed( void )
 {
 	if( m_flWaterSuspendTime > gpGlobals->curtime )
 	{
@@ -2818,7 +2818,7 @@ float CE_NPC_Manhack::ManhackMaxSpeed( void )
 // Purpose: 
 // Output :
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::ClampMotorForces( Vector &linear, AngularImpulse &angular )
+void CNPC_Manhack::ClampMotorForces( Vector &linear, AngularImpulse &angular )
 {
 	float scale = m_flBladeSpeed / 100.0;
 
@@ -2848,7 +2848,7 @@ void CE_NPC_Manhack::ClampMotorForces( Vector &linear, AngularImpulse &angular )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::KillSprites( float flDelay )
+void CNPC_Manhack::KillSprites( float flDelay )
 {
 	if( m_pEyeGlow )
 	{
@@ -2879,7 +2879,7 @@ void CE_NPC_Manhack::KillSprites( float flDelay )
 // Purpose: Tests whether we're above the target's feet but also below their top
 // Input  : *pTarget - who we're testing against
 //-----------------------------------------------------------------------------
-bool CE_NPC_Manhack::IsInEffectiveTargetZone( CEntity *pTarget )
+bool CNPC_Manhack::IsInEffectiveTargetZone( CEntity *pTarget )
 {
 	Vector	vecMaxPos, vecMinPos;
 	float	ourHeight = WorldSpaceCenter().z;
@@ -2914,7 +2914,7 @@ bool CE_NPC_Manhack::IsInEffectiveTargetZone( CEntity *pTarget )
 //			&chasePosition - 
 //			&tolerance - 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::TranslateNavGoal( CBaseEntity *pEnemy, Vector &chasePosition )
+void CNPC_Manhack::TranslateNavGoal( CBaseEntity *pEnemy, Vector &chasePosition )
 {
 	CEntity *cent_pEnemy = CEntity::Instance(pEnemy);
 
@@ -2934,7 +2934,7 @@ void CE_NPC_Manhack::TranslateNavGoal( CBaseEntity *pEnemy, Vector &chasePositio
 	}
 }
 
-float CE_NPC_Manhack::GetDefaultNavGoalTolerance()
+float CNPC_Manhack::GetDefaultNavGoalTolerance()
 {
 	return GetHullWidth();
 }
@@ -2942,7 +2942,7 @@ float CE_NPC_Manhack::GetDefaultNavGoalTolerance()
 //-----------------------------------------------------------------------------
 // Purpose: Input that disables the manhack's swarm behavior
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::InputDisableSwarm( inputdata_t &inputdata )
+void CNPC_Manhack::InputDisableSwarm( inputdata_t &inputdata )
 {
 	m_bDoSwarmBehavior = false;
 }
@@ -2951,7 +2951,7 @@ void CE_NPC_Manhack::InputDisableSwarm( inputdata_t &inputdata )
 // Purpose: 
 // Input  : &inputdata - 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::InputUnpack( inputdata_t &inputdata )
+void CNPC_Manhack::InputUnpack( inputdata_t &inputdata )
 {
 	if ( HasSpawnFlags( SF_MANHACK_PACKED_UP ) == false )
 		return;
@@ -2959,7 +2959,7 @@ void CE_NPC_Manhack::InputUnpack( inputdata_t &inputdata )
 	SetCondition( COND_LIGHT_DAMAGE );
 }
 
-void CE_NPC_Manhack::StartLoitering( const Vector &vecLoiterPosition )
+void CNPC_Manhack::StartLoitering( const Vector &vecLoiterPosition )
 {
 	//Msg("Start Loitering\n");
 
@@ -2969,7 +2969,7 @@ void CE_NPC_Manhack::StartLoitering( const Vector &vecLoiterPosition )
 	SetCurrentVelocity( vec3_origin );
 }
 
-CBaseEntity *CE_NPC_Manhack::HasPhysicsAttacker( float dt )
+CBaseEntity *CNPC_Manhack::HasPhysicsAttacker( float dt )
 {
 	// If the player is holding me now, or I've been recently thrown
 	// then return a pointer to that player
@@ -2983,7 +2983,7 @@ CBaseEntity *CE_NPC_Manhack::HasPhysicsAttacker( float dt )
 //-----------------------------------------------------------------------------
 // Manhacks that have been hacked by Alyx get more engine power (fly faster)
 //-----------------------------------------------------------------------------
-float CE_NPC_Manhack::GetMaxEnginePower()
+float CNPC_Manhack::GetMaxEnginePower()
 {
 	if( m_bHackedByAlyx )
 	{
@@ -2997,7 +2997,7 @@ float CE_NPC_Manhack::GetMaxEnginePower()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::UpdatePanels( void )
+void CNPC_Manhack::UpdatePanels( void )
 {
 	if ( m_flEngineStallTime > gpGlobals->curtime )
 	{
@@ -3032,7 +3032,7 @@ void CE_NPC_Manhack::UpdatePanels( void )
 // Purpose: 
 // Input  : hostile - 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::ShowHostile( bool hostile /*= true*/)
+void CNPC_Manhack::ShowHostile( bool hostile /*= true*/)
 {
 	if ( m_bShowingHostile == hostile )
 		return;
@@ -3053,7 +3053,7 @@ void CE_NPC_Manhack::ShowHostile( bool hostile /*= true*/)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::StartBurst( const Vector &vecDirection )
+void CNPC_Manhack::StartBurst( const Vector &vecDirection )
 {
 	if ( m_flBurstDuration > gpGlobals->curtime )
 		return;
@@ -3071,7 +3071,7 @@ void CE_NPC_Manhack::StartBurst( const Vector &vecDirection )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::StopBurst( bool bInterruptSchedule /*= false*/ )
+void CNPC_Manhack::StopBurst( bool bInterruptSchedule /*= false*/ )
 {
 	if ( m_flBurstDuration < gpGlobals->curtime )
 		return;
@@ -3092,7 +3092,7 @@ void CE_NPC_Manhack::StopBurst( bool bInterruptSchedule /*= false*/ )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CE_NPC_Manhack::SetEyeState( int state )
+void CNPC_Manhack::SetEyeState( int state )
 {
 	// Make sure we're active
 	StartEye();
@@ -3169,7 +3169,7 @@ void CE_NPC_Manhack::SetEyeState( int state )
 }
 
 
-unsigned int CE_NPC_Manhack::PhysicsSolidMaskForEntity( void ) const 
+unsigned int CNPC_Manhack::PhysicsSolidMaskForEntity( void ) const 
 { 
 	unsigned int mask = BaseClass::PhysicsSolidMaskForEntity();
 	if ( m_bIgnoreClipbrushes )
@@ -3183,7 +3183,7 @@ unsigned int CE_NPC_Manhack::PhysicsSolidMaskForEntity( void ) const
 // Purpose: 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-/*bool CE_NPC_Manhack::CreateVPhysics( void )
+/*bool CNPC_Manhack::CreateVPhysics( void )
 {
 	if ( HasSpawnFlags( SF_MANHACK_CARRIED ) )
 		return false;
@@ -3197,7 +3197,7 @@ unsigned int CE_NPC_Manhack::PhysicsSolidMaskForEntity( void ) const
 // Schedules
 //
 //-----------------------------------------------------------------------------
-AI_BEGIN_CUSTOM_NPC( npc_manhack, CE_NPC_Manhack )
+AI_BEGIN_CUSTOM_NPC( npc_manhack, CNPC_Manhack )
 
 	DECLARE_TASK( TASK_MANHACK_HOVER );
 	DECLARE_TASK( TASK_MANHACK_UNPACK );
@@ -3336,7 +3336,7 @@ AI_END_CUSTOM_NPC()
 
 
 
-// CE_NPC_Manhack
+// CNPC_Manhack
 
 
 

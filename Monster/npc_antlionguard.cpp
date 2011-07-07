@@ -196,15 +196,15 @@ struct PhysicsObjectCriteria_t
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CE_NPC_AntlionGuard : public CAI_BlendedNPC
+class CNPC_AntlionGuard : public CAI_BlendedNPC
 {
 public:
-	CE_DECLARE_CLASS( CE_NPC_AntlionGuard, CAI_BlendedNPC );
+	CE_DECLARE_CLASS( CNPC_AntlionGuard, CAI_BlendedNPC );
 
 	//DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
 
-	CE_NPC_AntlionGuard( void );
+	CNPC_AntlionGuard( void );
 
 	Class_T	Classify( void ) { return CLASS_ANTLION; }
 	virtual int		GetSoundInterests( void ) { return (SOUND_WORLD|SOUND_COMBAT|SOUND_PLAYER|SOUND_DANGER); }
@@ -267,11 +267,11 @@ public:
 	//---------------------------------
 	// Navigation & Movement -- prevent stopping paths for the guard
 	//---------------------------------
-	class CNavigator : public CAI_ComponentWithOuter<CE_NPC_AntlionGuard, CAI_Navigator>
+	class CNavigator : public CAI_ComponentWithOuter<CNPC_AntlionGuard, CAI_Navigator>
 	{
-		typedef CAI_ComponentWithOuter<CE_NPC_AntlionGuard, CAI_Navigator> BaseClass;
+		typedef CAI_ComponentWithOuter<CNPC_AntlionGuard, CAI_Navigator> BaseClass;
 	public:
-		CNavigator( CE_NPC_AntlionGuard *pOuter )
+		CNavigator( CNPC_AntlionGuard *pOuter )
 			:	BaseClass( pOuter )
 		{
 		}
@@ -380,11 +380,11 @@ public:
 
 
 
-LINK_ENTITY_TO_CUSTOM_CLASS( npc_antlionguard, cycler, CE_NPC_AntlionGuard );
+LINK_ENTITY_TO_CUSTOM_CLASS( npc_antlionguard, cycler, CNPC_AntlionGuard );
 
 
 
-BEGIN_DATADESC( CE_NPC_AntlionGuard )
+BEGIN_DATADESC( CNPC_AntlionGuard )
 
 	DEFINE_FIELD( m_nFlinchActivity,	FIELD_INTEGER ),
 	DEFINE_FIELD( m_bStopped,			FIELD_BOOLEAN ), 	
@@ -592,7 +592,7 @@ impactdamagetable_t gAntlionGuardImpactDamageTable =
 // Purpose: 
 // Output : const impactdamagetable_t
 //-----------------------------------------------------------------------------
-const impactdamagetable_t &CE_NPC_AntlionGuard::GetPhysicsImpactDamageTable( void )
+const impactdamagetable_t &CNPC_AntlionGuard::GetPhysicsImpactDamageTable( void )
 {
 	return gAntlionGuardImpactDamageTable;
 }
@@ -601,7 +601,7 @@ const impactdamagetable_t &CE_NPC_AntlionGuard::GetPhysicsImpactDamageTable( voi
 // CNPC_AntlionGuard
 //==================================================
 
-CE_NPC_AntlionGuard::CE_NPC_AntlionGuard( void )
+CNPC_AntlionGuard::CNPC_AntlionGuard( void )
 {
 	m_bCavernBreed = false;
 	m_bInCavern = false;
@@ -646,7 +646,7 @@ CE_NPC_AntlionGuard::CE_NPC_AntlionGuard( void )
 }
 
 
-void CE_NPC_AntlionGuard::UpdateOnRemove( void )
+void CNPC_AntlionGuard::UpdateOnRemove( void )
 {
 	DestroyGlows();
 
@@ -654,7 +654,7 @@ void CE_NPC_AntlionGuard::UpdateOnRemove( void )
 	BaseClass::UpdateOnRemove();
 }
 
-void CE_NPC_AntlionGuard::Precache( void )
+void CNPC_AntlionGuard::Precache( void )
 {
 	PrecacheModel( ANTLIONGUARD_MODEL );
 
@@ -698,7 +698,7 @@ void CE_NPC_AntlionGuard::Precache( void )
 	BaseClass::Precache();
 }
 
-void CE_NPC_AntlionGuard::DestroyGlows( void )
+void CNPC_AntlionGuard::DestroyGlows( void )
 {
 	if ( m_hCaveGlow[0] )
 	{
@@ -717,7 +717,7 @@ void CE_NPC_AntlionGuard::DestroyGlows( void )
 	}
 }
 
-void CE_NPC_AntlionGuard::CreateGlow( CE_CSprite **pSprite, const char *pAttachName )
+void CNPC_AntlionGuard::CreateGlow( CE_CSprite **pSprite, const char *pAttachName )
 {
 	if ( pSprite == NULL )
 		return;
@@ -741,7 +741,7 @@ void CE_NPC_AntlionGuard::CreateGlow( CE_CSprite **pSprite, const char *pAttachN
 	(*pSprite)->SetNextThink( TICK_NEVER_THINK );
 }
 
-void CE_NPC_AntlionGuard::Spawn( void )
+void CNPC_AntlionGuard::Spawn( void )
 {
 	Precache();
 
@@ -833,7 +833,7 @@ void CE_NPC_AntlionGuard::Spawn( void )
 	CollisionProp()->SetSurroundingBoundsType( USE_SPECIFIED_BOUNDS, &absMin, &absMax );
 }
 
-void CE_NPC_AntlionGuard::Activate( void )
+void CNPC_AntlionGuard::Activate( void )
 {
 	BaseClass::Activate();
 
@@ -860,7 +860,7 @@ void CE_NPC_AntlionGuard::Activate( void )
 	}
 }
 
-bool CE_NPC_AntlionGuard::CanSummon( bool bIgnoreTime )
+bool CNPC_AntlionGuard::CanSummon( bool bIgnoreTime )
 {
 	if ( !m_bBarkEnabled )
 		return false;
@@ -875,7 +875,7 @@ bool CE_NPC_AntlionGuard::CanSummon( bool bIgnoreTime )
 	return true;
 }
 
-int CE_NPC_AntlionGuard::SelectUnreachableSchedule( void )
+int CNPC_AntlionGuard::SelectUnreachableSchedule( void )
 {
 	// If we're in the cavern setting, we opt out of this
 	if ( m_bInCavern )
@@ -957,7 +957,7 @@ int CE_NPC_AntlionGuard::SelectUnreachableSchedule( void )
 	return SCHED_ANTLIONGUARD_CANT_ATTACK;
 }
 
-int CE_NPC_AntlionGuard::SelectCombatSchedule( void )
+int CNPC_AntlionGuard::SelectCombatSchedule( void )
 {
 	ClearHintGroup();
 
@@ -1010,7 +1010,7 @@ int CE_NPC_AntlionGuard::SelectCombatSchedule( void )
 }
 
 
-bool CE_NPC_AntlionGuard::ShouldCharge( const Vector &startPos, const Vector &endPos, bool useTime, bool bCheckForCancel )
+bool CNPC_AntlionGuard::ShouldCharge( const Vector &startPos, const Vector &endPos, bool useTime, bool bCheckForCancel )
 {
 	// Don't charge in tight spaces unless forced to
 	if ( hl2_episodic->GetBool() && m_bInCavern && !(m_hChargeTarget && m_hChargeTarget->IsAlive()) )
@@ -1110,7 +1110,7 @@ bool CE_NPC_AntlionGuard::ShouldCharge( const Vector &startPos, const Vector &en
 	return true;
 }
 
-int CE_NPC_AntlionGuard::SelectSchedule( void )
+int CNPC_AntlionGuard::SelectSchedule( void )
 {
 	// Don't do anything if we're burrowed
 	if ( m_bIsBurrowed )
@@ -1184,7 +1184,7 @@ int CE_NPC_AntlionGuard::SelectSchedule( void )
 }
 
 
-int CE_NPC_AntlionGuard::MeleeAttack1Conditions( float flDot, float flDist )
+int CNPC_AntlionGuard::MeleeAttack1Conditions( float flDot, float flDist )
 {
 	// Don't attack again too soon
 	if ( GetNextAttack() > gpGlobals->curtime )
@@ -1227,7 +1227,7 @@ int CE_NPC_AntlionGuard::MeleeAttack1Conditions( float flDot, float flDist )
 	return 0;
 }
 
-float CE_NPC_AntlionGuard::MaxYawSpeed( void )
+float CNPC_AntlionGuard::MaxYawSpeed( void )
 {
 	Activity eActivity = GetActivity();
 
@@ -1292,7 +1292,7 @@ float CE_NPC_AntlionGuard::MaxYawSpeed( void )
 	}
 }
 
-bool CE_NPC_AntlionGuard::OverrideMove( float flInterval )
+bool CNPC_AntlionGuard::OverrideMove( float flInterval )
 {
 	// If the guard's charging, we're handling the movement
 	if ( IsCurSchedule( SCHED_ANTLIONGUARD_CHARGE ) )
@@ -1314,7 +1314,7 @@ bool CE_NPC_AntlionGuard::OverrideMove( float flInterval )
 	return BaseClass::OverrideMove( flInterval );
 }
 
-void CE_NPC_AntlionGuard::Shove( void )
+void CNPC_AntlionGuard::Shove( void )
 {
 	if ( GetNextAttack() > gpGlobals->curtime )
 		return;
@@ -1423,7 +1423,7 @@ public:
 	// It does have a base, but we'll never network anything below here..
 	DECLARE_CLASS_NOBASE( CTraceFilterCharge );
 	
-	CTraceFilterCharge( const IHandleEntity *passentity, int collisionGroup, CE_NPC_AntlionGuard *pAttacker )
+	CTraceFilterCharge( const IHandleEntity *passentity, int collisionGroup, CNPC_AntlionGuard *pAttacker )
 		: m_pPassEnt(passentity), m_collisionGroup(collisionGroup), m_pAttacker(pAttacker)
 	{
 	}
@@ -1495,13 +1495,13 @@ public:
 public:
 	const IHandleEntity *m_pPassEnt;
 	int					m_collisionGroup;
-	CE_NPC_AntlionGuard	*m_pAttacker;
+	CNPC_AntlionGuard	*m_pAttacker;
 };
 
 
 #define	MIN_FOOTSTEP_NEAR_DIST	Square( 80*12.0f )// ft
 
-void CE_NPC_AntlionGuard::Footstep( bool bHeavy )
+void CNPC_AntlionGuard::Footstep( bool bHeavy )
 {
 	CPlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin());
 	Assert( pPlayer != NULL );
@@ -1540,7 +1540,7 @@ void CE_NPC_AntlionGuard::Footstep( bool bHeavy )
 	}
 }
 
-void CE_NPC_AntlionGuard::GetPhysicsShoveDir( CEntity *pObject, float flMass, Vector *pOut )
+void CNPC_AntlionGuard::GetPhysicsShoveDir( CEntity *pObject, float flMass, Vector *pOut )
 {
 	const Vector vecStart = pObject->WorldSpaceCenter();
 	const Vector vecTarget = GetEnemy()->WorldSpaceCenter();
@@ -1577,7 +1577,7 @@ void CE_NPC_AntlionGuard::GetPhysicsShoveDir( CEntity *pObject, float flMass, Ve
 	}
 }
 
-void CE_NPC_AntlionGuard::HandleAnimEvent( animevent_t *pEvent )
+void CNPC_AntlionGuard::HandleAnimEvent( animevent_t *pEvent )
 {
 	if ( pEvent->event == AE_ANTLIONGUARD_CHARGE_EARLYOUT )
 	{
@@ -1960,7 +1960,7 @@ void CE_NPC_AntlionGuard::HandleAnimEvent( animevent_t *pEvent )
 	BaseClass::HandleAnimEvent( pEvent );
 }
 
-void CE_NPC_AntlionGuard::SetHeavyDamageAnim( const Vector &vecSource )
+void CNPC_AntlionGuard::SetHeavyDamageAnim( const Vector &vecSource )
 {
 	if ( !m_bInCavern )
 	{
@@ -2005,7 +2005,7 @@ void CE_NPC_AntlionGuard::SetHeavyDamageAnim( const Vector &vecSource )
 	}
 }
 
-int CE_NPC_AntlionGuard::OnTakeDamage_Alive( const CTakeDamageInfo &info )
+int CNPC_AntlionGuard::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 {
 	CTakeDamageInfo dInfo = info;
 	
@@ -2144,7 +2144,7 @@ int CE_NPC_AntlionGuard::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 	return nDamageTaken;
 }
 
-void CE_NPC_AntlionGuard::TraceAttack( const CTakeDamageInfo &inputInfo, const Vector &vecDir, trace_t *ptr )
+void CNPC_AntlionGuard::TraceAttack( const CTakeDamageInfo &inputInfo, const Vector &vecDir, trace_t *ptr )
 {
 	CTakeDamageInfo info = inputInfo;
 
@@ -2168,7 +2168,7 @@ void CE_NPC_AntlionGuard::TraceAttack( const CTakeDamageInfo &inputInfo, const V
 }
 
 
-void CE_NPC_AntlionGuard::StartTask( const Task_t *pTask )
+void CNPC_AntlionGuard::StartTask( const Task_t *pTask )
 {
 	switch ( pTask->iTask )
 	{
@@ -2426,9 +2426,9 @@ void ApplyChargeDamage( CEntity *pAntlionGuard, CEntity *pTarget, float flDamage
 
 #if HL2_EPISODIC
 	// If I am a cavern guard attacking the player, and he still lives, then poison him too.
-	Assert( dynamic_cast<CE_NPC_AntlionGuard *>(pAntlionGuard) );
+	Assert( dynamic_cast<CNPC_AntlionGuard *>(pAntlionGuard) );
 
-	if ( static_cast<CE_NPC_AntlionGuard *>(pAntlionGuard)->IsInCavern() && pTarget->IsPlayer() && pTarget->IsAlive() && pTarget->m_iHealth > ANTLIONGUARD_POISON_TO)
+	if ( static_cast<CNPC_AntlionGuard *>(pAntlionGuard)->IsInCavern() && pTarget->IsPlayer() && pTarget->IsAlive() && pTarget->m_iHealth > ANTLIONGUARD_POISON_TO)
 	{
 		// That didn't finish them. Take them down to one point with poison damage. It'll heal.
 		pTarget->TakeDamage( CTakeDamageInfo( pAntlionGuard, pAntlionGuard, pTarget->m_iHealth - ANTLIONGUARD_POISON_TO, DMG_POISON ) );
@@ -2504,7 +2504,7 @@ inline void TraceHull_SkipPhysics( const Vector &vecAbsStart, const Vector &vecA
 	enginetrace->TraceRay( ray, mask, &traceFilter, ptr );
 }
 
-bool CE_NPC_AntlionGuard::EnemyIsRightInFrontOfMe( CEntity **pEntity )
+bool CNPC_AntlionGuard::EnemyIsRightInFrontOfMe( CEntity **pEntity )
 {
 	if ( !GetEnemy() )
 		return false;
@@ -2531,7 +2531,7 @@ bool CE_NPC_AntlionGuard::EnemyIsRightInFrontOfMe( CEntity **pEntity )
 	return false;
 }
 
-void CE_NPC_AntlionGuard::ChargeLookAhead( void )
+void CNPC_AntlionGuard::ChargeLookAhead( void )
 {
 	trace_t	tr;
 	Vector vecForward;
@@ -2551,7 +2551,7 @@ void CE_NPC_AntlionGuard::ChargeLookAhead( void )
 	}
 }
 
-bool CE_NPC_AntlionGuard::HandleChargeImpact( Vector vecImpact, CEntity *pEntity )
+bool CNPC_AntlionGuard::HandleChargeImpact( Vector vecImpact, CEntity *pEntity )
 {
 	// Cause a shock wave from this point which will disrupt nearby physics objects
 	ImpactShock( vecImpact, 128, 350 );
@@ -2657,7 +2657,7 @@ bool CE_NPC_AntlionGuard::HandleChargeImpact( Vector vecImpact, CEntity *pEntity
 }
 
 
-float CE_NPC_AntlionGuard::ChargeSteer( void )
+float CNPC_AntlionGuard::ChargeSteer( void )
 {
 	trace_t	tr;
 	Vector	testPos, steer, forward, right;
@@ -2741,7 +2741,7 @@ float CE_NPC_AntlionGuard::ChargeSteer( void )
 	return UTIL_AngleDiff( UTIL_VecToYaw( steer ), faceYaw );
 }
 
-void CE_NPC_AntlionGuard::RunTask( const Task_t *pTask )
+void CNPC_AntlionGuard::RunTask( const Task_t *pTask )
 {
 	switch (pTask->iTask)
 	{
@@ -2963,7 +2963,7 @@ void CE_NPC_AntlionGuard::RunTask( const Task_t *pTask )
 	}
 }
 
-void CE_NPC_AntlionGuard::SummonAntlions( void )
+void CNPC_AntlionGuard::SummonAntlions( void )
 {
 	// We want to spawn them around the guard
 	Vector vecForward, vecRight;
@@ -3084,13 +3084,13 @@ void CE_NPC_AntlionGuard::SummonAntlions( void )
 	}
 }
 
-void CE_NPC_AntlionGuard::FoundEnemy( void )
+void CNPC_AntlionGuard::FoundEnemy( void )
 {
 	m_flAngerNoiseTime = gpGlobals->curtime + 2.0f;
 	SetState( NPC_STATE_COMBAT );
 }
 
-void CE_NPC_AntlionGuard::LostEnemy( void )
+void CNPC_AntlionGuard::LostEnemy( void )
 {
 	m_flSearchNoiseTime = gpGlobals->curtime + 2.0f;
 	SetState( NPC_STATE_ALERT );
@@ -3098,7 +3098,7 @@ void CE_NPC_AntlionGuard::LostEnemy( void )
 	m_OnLostPlayer->FireOutput( this, this );
 }
 
-void CE_NPC_AntlionGuard::InputSetShoveTarget( inputdata_t &inputdata )
+void CNPC_AntlionGuard::InputSetShoveTarget( inputdata_t &inputdata )
 {
 	if ( IsAlive() == false )
 		return;
@@ -3115,7 +3115,7 @@ void CE_NPC_AntlionGuard::InputSetShoveTarget( inputdata_t &inputdata )
 	m_hShoveTarget.Set(pTarget->BaseEntity());
 }
 
-void CE_NPC_AntlionGuard::InputSetChargeTarget( inputdata_t &inputdata )
+void CNPC_AntlionGuard::InputSetChargeTarget( inputdata_t &inputdata )
 {
 	if ( !IsAlive() )
 		return;
@@ -3156,12 +3156,12 @@ void CE_NPC_AntlionGuard::InputSetChargeTarget( inputdata_t &inputdata )
 	m_hChargeTargetPosition.Set(pPosition->BaseEntity());
 }
 
-void CE_NPC_AntlionGuard::InputClearChargeTarget( inputdata_t &inputdata )
+void CNPC_AntlionGuard::InputClearChargeTarget( inputdata_t &inputdata )
 {
 	m_hChargeTarget.Set(NULL);
 }
 
-Activity CE_NPC_AntlionGuard::NPC_TranslateActivity( Activity baseAct )
+Activity CNPC_AntlionGuard::NPC_TranslateActivity( Activity baseAct )
 {
 	//See which run to use
 	if ( ( baseAct == ACT_RUN ) && IsCurSchedule( SCHED_ANTLIONGUARD_CHARGE ) )
@@ -3177,7 +3177,7 @@ Activity CE_NPC_AntlionGuard::NPC_TranslateActivity( Activity baseAct )
 	return baseAct;
 }
 
-bool CE_NPC_AntlionGuard::ShouldWatchEnemy( void )
+bool CNPC_AntlionGuard::ShouldWatchEnemy( void )
 {
 	Activity nActivity = GetActivity();
 
@@ -3201,7 +3201,7 @@ bool CE_NPC_AntlionGuard::ShouldWatchEnemy( void )
 	return true;
 }
 
-void CE_NPC_AntlionGuard::UpdateHead( void )
+void CNPC_AntlionGuard::UpdateHead( void )
 {
 	float yaw = GetPoseParameter( m_poseHead_Yaw );
 	float pitch = GetPoseParameter( m_poseHead_Pitch );
@@ -3232,7 +3232,7 @@ void CE_NPC_AntlionGuard::UpdateHead( void )
 	}
 }
 
-void CE_NPC_AntlionGuard::MaintainPhysicsTarget( void )
+void CNPC_AntlionGuard::MaintainPhysicsTarget( void )
 {
 	if ( m_hPhysicsTarget == NULL || GetEnemy() == NULL )
 		return;
@@ -3257,7 +3257,7 @@ void CE_NPC_AntlionGuard::MaintainPhysicsTarget( void )
 	}
 }
 
-void CE_NPC_AntlionGuard::UpdatePhysicsTarget( bool bPreferObjectsAlongTargetVector, float flRadius )
+void CNPC_AntlionGuard::UpdatePhysicsTarget( bool bPreferObjectsAlongTargetVector, float flRadius )
 {
 	if ( GetEnemy() == NULL )
 		return;
@@ -3293,7 +3293,7 @@ void CE_NPC_AntlionGuard::UpdatePhysicsTarget( bool bPreferObjectsAlongTargetVec
 	m_flPhysicsCheckTime = gpGlobals->curtime + 1.0f;
 }
 
-bool CE_NPC_AntlionGuard::ShouldProbeCollideAgainstEntity( CBaseEntity *pEntity )
+bool CNPC_AntlionGuard::ShouldProbeCollideAgainstEntity( CBaseEntity *pEntity )
 {
 	CEntity *cent_pEntity = CEntity::Instance(pEntity);
 	if(strstr(cent_pEntity->GetClassname(), STRING(m_iszPhysicsPropClass)) == NULL)
@@ -3315,7 +3315,7 @@ bool CE_NPC_AntlionGuard::ShouldProbeCollideAgainstEntity( CBaseEntity *pEntity 
 	return BaseClass::ShouldProbeCollideAgainstEntity( pEntity );
 }
 
-void CE_NPC_AntlionGuard::PrescheduleThink( void )
+void CNPC_AntlionGuard::PrescheduleThink( void )
 {
 	BaseClass::PrescheduleThink();
 
@@ -3397,7 +3397,7 @@ void CE_NPC_AntlionGuard::PrescheduleThink( void )
 	}
 }
 
-void CE_NPC_AntlionGuard::GatherConditions( void )
+void CNPC_AntlionGuard::GatherConditions( void )
 {
 	BaseClass::GatherConditions();
 
@@ -3437,7 +3437,7 @@ void CE_NPC_AntlionGuard::GatherConditions( void )
 	}
 }
 
-void CE_NPC_AntlionGuard::StopLoopingSounds()
+void CNPC_AntlionGuard::StopLoopingSounds()
 {
 	//Stop all sounds
 	g_SoundController->SoundDestroy( m_pGrowlHighSound );
@@ -3454,7 +3454,7 @@ void CE_NPC_AntlionGuard::StopLoopingSounds()
 	BaseClass::StopLoopingSounds();
 }
 
-void CE_NPC_AntlionGuard::InputUnburrow( inputdata_t &inputdata )
+void CNPC_AntlionGuard::InputUnburrow( inputdata_t &inputdata )
 {
 	if ( IsAlive() == false )
 		return;
@@ -3474,7 +3474,7 @@ void CE_NPC_AntlionGuard::InputUnburrow( inputdata_t &inputdata )
 	m_bIsBurrowed = false;
 }
 
-bool CE_NPC_AntlionGuard::IsUnreachable(CBaseEntity *pEntity)
+bool CNPC_AntlionGuard::IsUnreachable(CBaseEntity *pEntity)
 {
 	CEntity *cent_pEntity = CEntity::Instance(pEntity);
 
@@ -3506,7 +3506,7 @@ bool CE_NPC_AntlionGuard::IsUnreachable(CBaseEntity *pEntity)
 	return false;
 }
 
-Vector CE_NPC_AntlionGuard::GetPhysicsHitPosition( CEntity *pObject, CEntity *pTarget, Vector *vecTrajectory, float *flClearDistance )
+Vector CNPC_AntlionGuard::GetPhysicsHitPosition( CEntity *pObject, CEntity *pTarget, Vector *vecTrajectory, float *flClearDistance )
 {
 	// Get the trajectory we want to knock the object along
 	Vector vecToTarget = pTarget->WorldSpaceCenter() - pObject->WorldSpaceCenter();
@@ -3532,7 +3532,7 @@ Vector CE_NPC_AntlionGuard::GetPhysicsHitPosition( CEntity *pObject, CEntity *pT
 	return (pObject->WorldSpaceCenter() + ( vecToTarget * -flDist ));
 }
 
-inline bool CE_NPC_AntlionGuard::CanStandAtPoint( const Vector &vecPos, Vector *pOut )
+inline bool CNPC_AntlionGuard::CanStandAtPoint( const Vector &vecPos, Vector *pOut )
 {
 	Vector vecStart = vecPos + Vector( 0, 0, (4*12) );
 	Vector vecEnd = vecPos - Vector( 0, 0, (4*12) );
@@ -3570,7 +3570,7 @@ inline bool CE_NPC_AntlionGuard::CanStandAtPoint( const Vector &vecPos, Vector *
 	return true;
 }
 
-bool CE_NPC_AntlionGuard::CanStandAtShoveTarget( CEntity *pShoveObject, CEntity *pTarget, Vector *pOut )
+bool CNPC_AntlionGuard::CanStandAtShoveTarget( CEntity *pShoveObject, CEntity *pTarget, Vector *pOut )
 {
 	// Get the position we want to be at to swing at the object
 	float flClearDistance;
@@ -3610,7 +3610,7 @@ bool CE_NPC_AntlionGuard::CanStandAtShoveTarget( CEntity *pShoveObject, CEntity 
 	return true;
 }
 
-CEntity *CE_NPC_AntlionGuard::GetNextShoveTarget( CEntity *pLastEntity, AISightIter_t &iter )
+CEntity *CNPC_AntlionGuard::GetNextShoveTarget( CEntity *pLastEntity, AISightIter_t &iter )
 {
 	// Try to find scripted items first
 	if ( m_strShoveTargets != NULL_STRING )
@@ -3627,7 +3627,7 @@ CEntity *CE_NPC_AntlionGuard::GetNextShoveTarget( CEntity *pLastEntity, AISightI
     return GetSenses()->GetFirstSeenEntity( &iter, SEEN_MISC );
 }
 
-CEntity *CE_NPC_AntlionGuard::FindPhysicsObjectTarget( const PhysicsObjectCriteria_t &criteria )
+CEntity *CNPC_AntlionGuard::FindPhysicsObjectTarget( const PhysicsObjectCriteria_t &criteria )
 {
 	// Must have a valid target entity
  	if ( criteria.pTarget == NULL )
@@ -3747,7 +3747,7 @@ CEntity *CE_NPC_AntlionGuard::FindPhysicsObjectTarget( const PhysicsObjectCriter
 	return pNearest;
 }
 
-void CE_NPC_AntlionGuard::BuildScheduleTestBits( void )
+void CNPC_AntlionGuard::BuildScheduleTestBits( void )
 {
 	BaseClass::BuildScheduleTestBits();
 
@@ -3774,7 +3774,7 @@ void CE_NPC_AntlionGuard::BuildScheduleTestBits( void )
 	SetCustomInterruptCondition( COND_HEAVY_DAMAGE );
 }
 
-void CE_NPC_AntlionGuard::ImpactShock( const Vector &origin, float radius, float magnitude, CEntity *pIgnored )
+void CNPC_AntlionGuard::ImpactShock( const Vector &origin, float radius, float magnitude, CEntity *pIgnored )
 {
 	// Also do a local physics explosion to push objects away
 	float	adjustedDamage, flDist;
@@ -3820,7 +3820,7 @@ void CE_NPC_AntlionGuard::ImpactShock( const Vector &origin, float radius, float
 	}
 }
 
-void CE_NPC_AntlionGuard::ChargeDamage( CEntity *pTarget )
+void CNPC_AntlionGuard::ChargeDamage( CEntity *pTarget )
 {
 	if ( pTarget == NULL )
 		return;
@@ -3854,7 +3854,7 @@ void CE_NPC_AntlionGuard::ChargeDamage( CEntity *pTarget )
 	ApplyChargeDamage( this, pTarget, flDamage );
 }
 
-void CE_NPC_AntlionGuard::InputRagdoll( inputdata_t &inputdata )
+void CNPC_AntlionGuard::InputRagdoll( inputdata_t &inputdata )
 {
 	if ( IsAlive() == false )
 		return;
@@ -3866,17 +3866,17 @@ void CE_NPC_AntlionGuard::InputRagdoll( inputdata_t &inputdata )
 	BaseClass::TakeDamage( info );
 }
 
-void CE_NPC_AntlionGuard::InputEnablePreferPhysicsAttack( inputdata_t &inputdata )
+void CNPC_AntlionGuard::InputEnablePreferPhysicsAttack( inputdata_t &inputdata )
 {
 	m_bPreferPhysicsAttack = true;
 }
 
-void CE_NPC_AntlionGuard::InputDisablePreferPhysicsAttack( inputdata_t &inputdata )
+void CNPC_AntlionGuard::InputDisablePreferPhysicsAttack( inputdata_t &inputdata )
 {
 	m_bPreferPhysicsAttack = false;
 }
 
-int CE_NPC_AntlionGuard::SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFailureCode_t taskFailCode )
+int CNPC_AntlionGuard::SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFailureCode_t taskFailCode )
 {
 	// Figure out what to do next
 	if ( failedSchedule == SCHED_ANTLIONGUARD_CHASE_ENEMY && HasCondition( COND_ENEMY_UNREACHABLE ) )
@@ -3885,7 +3885,7 @@ int CE_NPC_AntlionGuard::SelectFailSchedule( int failedSchedule, int failedTask,
 	return BaseClass::SelectFailSchedule( failedSchedule,failedTask, taskFailCode );
 }
 
-int CE_NPC_AntlionGuard::TranslateSchedule( int scheduleType )
+int CNPC_AntlionGuard::TranslateSchedule( int scheduleType )
 {
 	switch( scheduleType )
 	{
@@ -3897,7 +3897,7 @@ int CE_NPC_AntlionGuard::TranslateSchedule( int scheduleType )
 	return BaseClass::TranslateSchedule( scheduleType );
 }
 
-void CE_NPC_AntlionGuard::StartSounds( void )
+void CNPC_AntlionGuard::StartSounds( void )
 {
 	//Initialize the additive sound channels
 	CPASAttenuationFilter filter( this );
@@ -3944,22 +3944,22 @@ void CE_NPC_AntlionGuard::StartSounds( void )
 
 }
 
-void CE_NPC_AntlionGuard::InputEnableBark( inputdata_t &inputdata )
+void CNPC_AntlionGuard::InputEnableBark( inputdata_t &inputdata )
 {
 	m_bBarkEnabled = true;
 }
 
-void CE_NPC_AntlionGuard::InputDisableBark( inputdata_t &inputdata )
+void CNPC_AntlionGuard::InputDisableBark( inputdata_t &inputdata )
 {
 	m_bBarkEnabled = false;
 }
 
-void CE_NPC_AntlionGuard::DeathSound( const CTakeDamageInfo &info )
+void CNPC_AntlionGuard::DeathSound( const CTakeDamageInfo &info )
 {
 	EmitSound( "NPC_AntlionGuard.Die" );
 }
 
-void CE_NPC_AntlionGuard::Event_Killed( const CTakeDamageInfo &info )
+void CNPC_AntlionGuard::Event_Killed( const CTakeDamageInfo &info )
 {
 	BaseClass::Event_Killed( info );
 
@@ -3984,7 +3984,7 @@ void CE_NPC_AntlionGuard::Event_Killed( const CTakeDamageInfo &info )
 	DestroyGlows();
 }
 
-bool CE_NPC_AntlionGuard::CanBecomeRagdoll( void )
+bool CNPC_AntlionGuard::CanBecomeRagdoll( void )
 {
 	if ( IsCurSchedule( SCHED_DIE ) )
 		return true;
@@ -3992,7 +3992,7 @@ bool CE_NPC_AntlionGuard::CanBecomeRagdoll( void )
 	return hl2_episodic->GetBool();
 }
 
-bool CE_NPC_AntlionGuard::BecomeRagdollOnClient( const Vector &force )
+bool CNPC_AntlionGuard::BecomeRagdollOnClient( const Vector &force )
 {
 	if ( !CanBecomeRagdoll() ) 
 		return false;
@@ -4025,7 +4025,7 @@ bool CE_NPC_AntlionGuard::BecomeRagdollOnClient( const Vector &force )
 	return BaseClass::BecomeRagdollOnClient( force );
 }
 
-bool CE_NPC_AntlionGuard::OverrideMoveFacing( const AILocalMoveGoal_t &move, float flInterval )
+bool CNPC_AntlionGuard::OverrideMoveFacing( const AILocalMoveGoal_t &move, float flInterval )
 {
   	Vector		vecFacePosition = vec3_origin;
 	CEntity		*pFaceTarget = NULL;
@@ -4069,7 +4069,7 @@ bool CE_NPC_AntlionGuard::OverrideMoveFacing( const AILocalMoveGoal_t &move, flo
 	return BaseClass::OverrideMoveFacing( move, flInterval );
 }
 
-bool CE_NPC_AntlionGuard::IsHeavyDamage( const CTakeDamageInfo &info )
+bool CNPC_AntlionGuard::IsHeavyDamage( const CTakeDamageInfo &info )
 {
 	// Struck by blast
 	if ( info.GetDamageType() & DMG_BLAST )
@@ -4103,18 +4103,18 @@ bool CE_NPC_AntlionGuard::IsHeavyDamage( const CTakeDamageInfo &info )
 	return false;
 }
 
-bool CE_NPC_AntlionGuard::IsLightDamage( const CTakeDamageInfo &info )
+bool CNPC_AntlionGuard::IsLightDamage( const CTakeDamageInfo &info )
 {
 	return false;
 }
 
-void CE_NPC_AntlionGuard::InputSummonedAntlionDied( inputdata_t &inputdata )
+void CNPC_AntlionGuard::InputSummonedAntlionDied( inputdata_t &inputdata )
 {
 	m_iNumLiveAntlions--;
 	Assert( m_iNumLiveAntlions >= 0 );
 }
 
-bool CE_NPC_AntlionGuard::QueryHearSound( CSound *pSound )
+bool CNPC_AntlionGuard::QueryHearSound( CSound *pSound )
 {
 	// Don't bother with danger sounds from antlions or other guards
 	CEntity *pEntity = CEntity::Instance(pSound->m_hOwner);
@@ -4128,7 +4128,7 @@ bool CE_NPC_AntlionGuard::QueryHearSound( CSound *pSound )
 //---------------------------------------------------------
 // Prevent the cavern guard from using stopping paths, as it occasionally forces him off the navmesh.
 //---------------------------------------------------------
-bool CE_NPC_AntlionGuard::CNavigator::GetStoppingPath( CAI_WaypointList *pClippedWaypoints )
+bool CNPC_AntlionGuard::CNavigator::GetStoppingPath( CAI_WaypointList *pClippedWaypoints )
 {
 	if (GetOuter()->m_bInCavern)
 	{
@@ -4141,7 +4141,7 @@ bool CE_NPC_AntlionGuard::CNavigator::GetStoppingPath( CAI_WaypointList *pClippe
 }
 #endif
 
-bool CE_NPC_AntlionGuard::RememberFailedPhysicsTarget( CEntity *pTarget )
+bool CNPC_AntlionGuard::RememberFailedPhysicsTarget( CEntity *pTarget )
 {
 	// Already in the list?
 	if ( m_FailedPhysicsTargets.Find( pTarget ) != m_FailedPhysicsTargets.InvalidIndex() )
@@ -4156,7 +4156,7 @@ bool CE_NPC_AntlionGuard::RememberFailedPhysicsTarget( CEntity *pTarget )
 	return true;
 }
 
-bool CE_NPC_AntlionGuard::HandleInteraction( int interactionType, void *data, CBaseEntity *sender )
+bool CNPC_AntlionGuard::HandleInteraction( int interactionType, void *data, CBaseEntity *sender )
 {
 	CEntity *pEntity = CEntity::Instance(sender);
 	// Don't chase targets that other guards in our squad may be going after!
@@ -4177,7 +4177,7 @@ bool CE_NPC_AntlionGuard::HandleInteraction( int interactionType, void *data, CB
 	return BaseClass::HandleInteraction( interactionType, data, sender );
 }
 
-void CE_NPC_AntlionGuard::PopulatePoseParameters( void )
+void CNPC_AntlionGuard::PopulatePoseParameters( void )
 {
 	m_poseThrow = LookupPoseParameter("throw");
 	m_poseHead_Pitch = LookupPoseParameter("head_pitch");
@@ -4187,7 +4187,7 @@ void CE_NPC_AntlionGuard::PopulatePoseParameters( void )
 }
 
 
-AI_BEGIN_CUSTOM_NPC( npc_antlionguard, CE_NPC_AntlionGuard )
+AI_BEGIN_CUSTOM_NPC( npc_antlionguard, CNPC_AntlionGuard )
 
 	// Interactions	
 	DECLARE_INTERACTION( g_interactionAntlionGuardFoundPhysicsObject )

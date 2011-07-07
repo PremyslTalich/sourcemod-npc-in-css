@@ -48,14 +48,14 @@ class CSoundPatch;
 //-----------------------------------------------------------------------------
 // Manhack 
 //-----------------------------------------------------------------------------
-class CE_NPC_Manhack : public CNPCBaseInteractive<CAI_BasePhysicsFlyingBot>
+class CNPC_Manhack : public CNPCBaseInteractive<CAI_BasePhysicsFlyingBot>
 {
 public:
-	CE_DECLARE_CLASS( CE_NPC_Manhack, CNPCBaseInteractive<CAI_BasePhysicsFlyingBot> );
+	CE_DECLARE_CLASS( CNPC_Manhack, CNPCBaseInteractive<CAI_BasePhysicsFlyingBot> );
 
 public:
-	CE_NPC_Manhack();
-	~CE_NPC_Manhack();
+	CNPC_Manhack();
+	~CNPC_Manhack();
 
 	Class_T			Classify(void);
 

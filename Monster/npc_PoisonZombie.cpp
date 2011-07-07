@@ -112,12 +112,12 @@ static const char *pMoanSounds[] =
 };
 
 
-class CEPoisonZombie : public CAI_BlendingHost<CE_BaseZombie>
+class CNPC_PoisonZombie : public CAI_BlendingHost<CE_BaseZombie>
 {
 public:
-	CE_DECLARE_CLASS( CEPoisonZombie, CAI_BlendingHost<CE_BaseZombie> );
+	CE_DECLARE_CLASS( CNPC_PoisonZombie, CAI_BlendingHost<CE_BaseZombie> );
 
-	CEPoisonZombie();
+	CNPC_PoisonZombie();
 
 	//
 	// CBaseZombie implemenation.
@@ -208,9 +208,9 @@ private:
 	int m_nThrowCrab;				// The crab we are about to throw.
 };
 
-LINK_ENTITY_TO_CUSTOM_CLASS( npc_poisonzombie, cycler, CEPoisonZombie );
+LINK_ENTITY_TO_CUSTOM_CLASS( npc_poisonzombie, cycler, CNPC_PoisonZombie );
 
-BEGIN_DATADESC( CEPoisonZombie )
+BEGIN_DATADESC( CNPC_PoisonZombie )
 
 	//DEFINE_SOUNDPATCH( m_pFastBreathSound ),
 	//DEFINE_SOUNDPATCH( m_pSlowBreathSound ),
@@ -227,7 +227,7 @@ BEGIN_DATADESC( CEPoisonZombie )
 
 END_DATADESC()
 
-CEPoisonZombie::CEPoisonZombie()
+CNPC_PoisonZombie::CNPC_PoisonZombie()
 {
 	m_pFastBreathSound = NULL;
 	m_pSlowBreathSound = NULL;
@@ -242,7 +242,7 @@ CEPoisonZombie::CEPoisonZombie()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::Precache( void )
+void CNPC_PoisonZombie::Precache( void )
 {
 	PrecacheModel("models/zombie/poison.mdl");
 
@@ -269,7 +269,7 @@ void CEPoisonZombie::Precache( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::Spawn( void )
+void CNPC_PoisonZombie::Spawn( void )
 {
 	Precache();
 
@@ -337,7 +337,7 @@ void CEPoisonZombie::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: Returns a moan sound for this class of zombie.
 //-----------------------------------------------------------------------------
-const char *CEPoisonZombie::GetMoanSound( int nSound )
+const char *CNPC_PoisonZombie::GetMoanSound( int nSound )
 {
 	return pMoanSounds[nSound % ARRAYSIZE( pMoanSounds )];
 }
@@ -346,14 +346,14 @@ const char *CEPoisonZombie::GetMoanSound( int nSound )
 //-----------------------------------------------------------------------------
 // Purpose: Returns the model to use for our legs ragdoll when we are blown in twain.
 //-----------------------------------------------------------------------------
-const char *CEPoisonZombie::GetLegsModel( void )
+const char *CNPC_PoisonZombie::GetLegsModel( void )
 {
 	return s_szLegsModel;
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-const char *CEPoisonZombie::GetTorsoModel( void )
+const char *CNPC_PoisonZombie::GetTorsoModel( void )
 {
 	return "models/zombie/classic_torso.mdl";
 }
@@ -363,12 +363,12 @@ const char *CEPoisonZombie::GetTorsoModel( void )
 //-----------------------------------------------------------------------------
 // Purpose: Returns the classname (ie "npc_headcrab") to spawn when our headcrab bails.
 //-----------------------------------------------------------------------------
-const char *CEPoisonZombie::GetHeadcrabClassname( void )
+const char *CNPC_PoisonZombie::GetHeadcrabClassname( void )
 {
 	return s_szHeadcrabClassname;
 }
 
-const char *CEPoisonZombie::GetHeadcrabModel( void )
+const char *CNPC_PoisonZombie::GetHeadcrabModel( void )
 {
 	return s_szHeadcrabModel;
 }
@@ -377,7 +377,7 @@ const char *CEPoisonZombie::GetHeadcrabModel( void )
 //-----------------------------------------------------------------------------
 // Purpose: Turns the given crab on or off.
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::EnableCrab( int nCrab, bool bEnable )
+void CNPC_PoisonZombie::EnableCrab( int nCrab, bool bEnable )
 {
 	if ( ( nCrab >= 0 ) && ( nCrab < MAX_CRABS ) )
 	{
@@ -395,7 +395,7 @@ void CEPoisonZombie::EnableCrab( int nCrab, bool bEnable )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::StopLoopingSounds( void )
+void CNPC_PoisonZombie::StopLoopingSounds( void )
 {
 	g_SoundController->SoundDestroy( m_pFastBreathSound );
 	m_pFastBreathSound = NULL;
@@ -411,7 +411,7 @@ void CEPoisonZombie::StopLoopingSounds( void )
 // Purpose: 
 // Input  : info - 
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::Event_Killed( const CTakeDamageInfo &info )
+void CNPC_PoisonZombie::Event_Killed( const CTakeDamageInfo &info )
 {
 	if ( !( info.GetDamageType() & ( DMG_BLAST | DMG_ALWAYSGIB) ) ) 
 	{
@@ -432,7 +432,7 @@ void CEPoisonZombie::Event_Killed( const CTakeDamageInfo &info )
 // Input  : &inputInfo - 
 // Output : int
 //-----------------------------------------------------------------------------
-int CEPoisonZombie::OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo )
+int CNPC_PoisonZombie::OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo )
 {
 	//
 	// Calculate what percentage of the creature's max health
@@ -455,7 +455,7 @@ int CEPoisonZombie::OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-float CEPoisonZombie::MaxYawSpeed( void )
+float CNPC_PoisonZombie::MaxYawSpeed( void )
 {
 	return BaseClass::MaxYawSpeed();
 }
@@ -464,7 +464,7 @@ float CEPoisonZombie::MaxYawSpeed( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-Class_T	CEPoisonZombie::Classify( void )
+Class_T	CNPC_PoisonZombie::Classify( void )
 {
 	return CLASS_ZOMBIE;
 }
@@ -476,7 +476,7 @@ Class_T	CEPoisonZombie::Classify( void )
 // NOTE: This function is still heavy with common code (found at the bottom).
 //		 we should consider moving some into the base class! (sjb)
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::SetZombieModel( void )
+void CNPC_PoisonZombie::SetZombieModel( void )
 {
 	Hull_t lastHull = GetHullType();
 
@@ -512,7 +512,7 @@ void CEPoisonZombie::SetZombieModel( void )
 //-----------------------------------------------------------------------------
 // Purpose: Checks conditions for letting a headcrab leap off our back at our enemy.
 //-----------------------------------------------------------------------------
-int CEPoisonZombie::RangeAttack1Conditions( float flDot, float flDist )
+int CNPC_PoisonZombie::RangeAttack1Conditions( float flDot, float flDist )
 {
 	if ( !m_nCrabCount )
 	{
@@ -554,7 +554,7 @@ int CEPoisonZombie::RangeAttack1Conditions( float flDot, float flDist )
 //-----------------------------------------------------------------------------
 // Purpose: Checks conditions for throwing a headcrab leap at our enemy.
 //-----------------------------------------------------------------------------
-int CEPoisonZombie::RangeAttack2Conditions( float flDot, float flDist )
+int CNPC_PoisonZombie::RangeAttack2Conditions( float flDot, float flDist )
 {
 	if ( !m_nCrabCount )
 	{
@@ -594,7 +594,7 @@ int CEPoisonZombie::RangeAttack2Conditions( float flDot, float flDist )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-Vector CEPoisonZombie::HeadTarget( const Vector &posSrc )
+Vector CNPC_PoisonZombie::HeadTarget( const Vector &posSrc )
 {
 	int iCrabAttachment = LookupAttachment( "headcrab1" );
 	Assert( iCrabAttachment > 0 );
@@ -610,7 +610,7 @@ Vector CEPoisonZombie::HeadTarget( const Vector &posSrc )
 // Purpose: Turns off our breath so we can play another vocal sound.
 //			TODO: pass in duration
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::BreatheOffShort( void )
+void CNPC_PoisonZombie::BreatheOffShort( void )
 {
 	if ( m_bNearEnemy )
 	{
@@ -628,7 +628,7 @@ void CEPoisonZombie::BreatheOffShort( void )
 //			frames are played.
 // Input  : pEvent - 
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::HandleAnimEvent( animevent_t *pEvent )
+void CNPC_PoisonZombie::HandleAnimEvent( animevent_t *pEvent )
 {
 	
 	if ( pEvent->event == AE_ZOMBIE_POISON_PICKUP_CRAB )
@@ -656,7 +656,7 @@ void CEPoisonZombie::HandleAnimEvent( animevent_t *pEvent )
 	{
 		SetBodygroup( ZOMBIE_BODYGROUP_THROW, 0 );
 
-		CE_NPC_BlackHeadcrab *pCrab = (CE_NPC_BlackHeadcrab *)CreateNoSpawn( GetHeadcrabClassname(), EyePosition(), vec3_angle, BaseEntity() );
+		CBlackHeadcrab *pCrab = (CBlackHeadcrab *)CreateNoSpawn( GetHeadcrabClassname(), EyePosition(), vec3_angle, BaseEntity() );
 		pCrab->AddSpawnFlags( SF_NPC_FALL_TO_GROUND );
 		
 		// Fade if our parent is supposed to
@@ -715,7 +715,7 @@ void CEPoisonZombie::HandleAnimEvent( animevent_t *pEvent )
 //-----------------------------------------------------------------------------
 // Purpose: Returns the index of a randomly chosen crab to throw.
 //-----------------------------------------------------------------------------
-int CEPoisonZombie::RandomThrowCrab( void )
+int CNPC_PoisonZombie::RandomThrowCrab( void )
 {
 	// FIXME: this could take a long time, theoretically
 	int nCrab = -1;
@@ -737,7 +737,7 @@ int CEPoisonZombie::RandomThrowCrab( void )
 // Input  : bExplosion - We were evicted by an explosion so we should go a-flying.
 //			flDamage - The damage that was done to cause the evacuation.
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::EvacuateNest( bool bExplosion, float flDamage, CBaseEntity *pAttacker )
+void CNPC_PoisonZombie::EvacuateNest( bool bExplosion, float flDamage, CBaseEntity *pAttacker )
 {
 	// HACK: if we were in mid-throw, drop the throwing crab also.
 	if ( GetBodygroup( ZOMBIE_BODYGROUP_THROW ) )
@@ -773,7 +773,7 @@ void CEPoisonZombie::EvacuateNest( bool bExplosion, float flDamage, CBaseEntity 
 			// Now slam the angles because the attachment point will have pitch and roll, which we can't use.
 			vecAngles = QAngle( 0, random->RandomFloat( 0, 360 ), 0 );
 
-			CE_NPC_BlackHeadcrab *pCrab = (CE_NPC_BlackHeadcrab *)CreateNoSpawn( GetHeadcrabClassname(), vecPosition, vecAngles, BaseEntity() );
+			CBlackHeadcrab *pCrab = (CBlackHeadcrab *)CreateNoSpawn( GetHeadcrabClassname(), vecPosition, vecAngles, BaseEntity() );
 			pCrab->Spawn();
 
 			if( !HeadcrabFits(pCrab) )
@@ -803,7 +803,7 @@ void CEPoisonZombie::EvacuateNest( bool bExplosion, float flDamage, CBaseEntity 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::PrescheduleThink( void )
+void CNPC_PoisonZombie::PrescheduleThink( void )
 {
 	if ( HasCondition( COND_NEW_ENEMY ) )
 	{
@@ -853,7 +853,7 @@ void CEPoisonZombie::PrescheduleThink( void )
 // Purpose: Allows for modification of the interrupt mask for the current schedule.
 //			In the most cases the base implementation should be called first.
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::BuildScheduleTestBits( void )
+void CNPC_PoisonZombie::BuildScheduleTestBits( void )
 {
 	BaseClass::BuildScheduleTestBits();
 
@@ -873,7 +873,7 @@ void CEPoisonZombie::BuildScheduleTestBits( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CEPoisonZombie::SelectFailSchedule( int nFailedSchedule, int nFailedTask, AI_TaskFailureCode_t eTaskFailCode )
+int CNPC_PoisonZombie::SelectFailSchedule( int nFailedSchedule, int nFailedTask, AI_TaskFailureCode_t eTaskFailCode )
 {
 	int nSchedule = BaseClass::SelectFailSchedule( nFailedSchedule, nFailedTask, eTaskFailCode );
 
@@ -890,7 +890,7 @@ int CEPoisonZombie::SelectFailSchedule( int nFailedSchedule, int nFailedTask, AI
 // Purpose: 
 // Output : int
 //-----------------------------------------------------------------------------
-int CEPoisonZombie::SelectSchedule( void )
+int CNPC_PoisonZombie::SelectSchedule( void )
 {
 	int nSchedule = BaseClass::SelectSchedule();
 
@@ -908,7 +908,7 @@ int CEPoisonZombie::SelectSchedule( void )
 // Input  : scheduleType - 
 // Output : int
 //-----------------------------------------------------------------------------
-int CEPoisonZombie::TranslateSchedule( int scheduleType )
+int CNPC_PoisonZombie::TranslateSchedule( int scheduleType )
 {
 	if ( scheduleType == SCHED_RANGE_ATTACK2 )
 	{
@@ -934,7 +934,7 @@ int CEPoisonZombie::TranslateSchedule( int scheduleType )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CEPoisonZombie::ShouldPlayIdleSound( void )
+bool CNPC_PoisonZombie::ShouldPlayIdleSound( void )
 {
 	return CAI_NPC::ShouldPlayIdleSound();
 }
@@ -943,7 +943,7 @@ bool CEPoisonZombie::ShouldPlayIdleSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random attack hit sound
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::AttackHitSound( void )
+void CNPC_PoisonZombie::AttackHitSound( void )
 {
 	EmitSound( "Zombie.AttackHit" );
 }
@@ -951,7 +951,7 @@ void CEPoisonZombie::AttackHitSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random attack miss sound
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::AttackMissSound( void )
+void CNPC_PoisonZombie::AttackMissSound( void )
 {
 	EmitSound( "Zombie.AttackMiss" );
 }
@@ -959,7 +959,7 @@ void CEPoisonZombie::AttackMissSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random attack sound.
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::AttackSound( void )
+void CNPC_PoisonZombie::AttackSound( void )
 {
 	EmitSound( "NPC_PoisonZombie.Attack" );
 }
@@ -967,7 +967,7 @@ void CEPoisonZombie::AttackSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random idle sound.
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::IdleSound( void )
+void CNPC_PoisonZombie::IdleSound( void )
 {
 	// HACK: base zombie code calls IdleSound even when not idle!
 	if ( m_NPCState != NPC_STATE_COMBAT )
@@ -980,7 +980,7 @@ void CEPoisonZombie::IdleSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random pain sound.
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::PainSound( const CTakeDamageInfo &info )
+void CNPC_PoisonZombie::PainSound( const CTakeDamageInfo &info )
 {
 	// Don't make pain sounds too often.
 	if ( m_flNextPainSoundTime <= gpGlobals->curtime )
@@ -994,7 +994,7 @@ void CEPoisonZombie::PainSound( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random alert sound.
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::AlertSound( void )
+void CNPC_PoisonZombie::AlertSound( void )
 {
 	BreatheOffShort();
 
@@ -1005,7 +1005,7 @@ void CEPoisonZombie::AlertSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Sound of a footstep
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::FootstepSound( bool fRightFoot )
+void CNPC_PoisonZombie::FootstepSound( bool fRightFoot )
 {
 	if( fRightFoot )
 	{
@@ -1027,7 +1027,7 @@ void CEPoisonZombie::FootstepSound( bool fRightFoot )
 //-----------------------------------------------------------------------------
 // Purpose: If we don't have any headcrabs to throw, we must close to attack our enemy.
 //-----------------------------------------------------------------------------
-bool CEPoisonZombie::MustCloseToAttack(void)
+bool CNPC_PoisonZombie::MustCloseToAttack(void)
 {
 	return (m_nCrabCount == 0);
 }
@@ -1037,7 +1037,7 @@ bool CEPoisonZombie::MustCloseToAttack(void)
 // Purpose: Open a window and let a little bit of the looping moan sound
 //			come through.
 //-----------------------------------------------------------------------------
-void CEPoisonZombie::MoanSound( envelopePoint_t *pEnvelope, int iEnvelopeSize )
+void CNPC_PoisonZombie::MoanSound( envelopePoint_t *pEnvelope, int iEnvelopeSize )
 {
 	if( !m_pMoanSound )
 	{
@@ -1072,7 +1072,7 @@ void CEPoisonZombie::MoanSound( envelopePoint_t *pEnvelope, int iEnvelopeSize )
 //-----------------------------------------------------------------------------
 // Purpose: Overloaded so that explosions don't split the poison zombie in twain.
 //-----------------------------------------------------------------------------
-bool CEPoisonZombie::ShouldBecomeTorso( const CTakeDamageInfo &info, float flDamageThreshold )
+bool CNPC_PoisonZombie::ShouldBecomeTorso( const CTakeDamageInfo &info, float flDamageThreshold )
 {
 	return false;
 }
@@ -1081,7 +1081,7 @@ bool CEPoisonZombie::ShouldBecomeTorso( const CTakeDamageInfo &info, float flDam
 int ACT_ZOMBIE_POISON_THREAT;
 
 
-AI_BEGIN_CUSTOM_NPC( npc_poisonzombie, CEPoisonZombie )
+AI_BEGIN_CUSTOM_NPC( npc_poisonzombie, CNPC_PoisonZombie )
 
 	DECLARE_ACTIVITY( ACT_ZOMBIE_POISON_THREAT )
 

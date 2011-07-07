@@ -7,12 +7,12 @@
 #include "CAI_NPC.h"
 #include "CSoundent.h"
 
-abstract_class CE_BaseHeadcrab : public CE_Cycler_Fix
+abstract_class CBaseHeadcrab : public CE_Cycler_Fix
 {
 public:
-	CE_DECLARE_CLASS(CE_BaseHeadcrab, CE_Cycler_Fix);
+	CE_DECLARE_CLASS(CBaseHeadcrab, CE_Cycler_Fix);
 
-	CE_BaseHeadcrab();
+	CBaseHeadcrab();
 
 public:
 	void Spawn( void );
@@ -147,10 +147,10 @@ protected:
 // The ever popular chubby classic headcrab
 //=========================================================
 //=========================================================
-class CE_NPC_Headcrab : public CE_BaseHeadcrab
+class CHeadcrab : public CBaseHeadcrab
 {
 public:
-	CE_DECLARE_CLASS(CE_NPC_Headcrab, CE_BaseHeadcrab);
+	CE_DECLARE_CLASS(CHeadcrab, CBaseHeadcrab);
 
 	void Precache( void );
 	void Spawn( void );
@@ -174,12 +174,12 @@ public:
 // The spindly, fast headcrab
 //=========================================================
 //=========================================================
-class CE_NPC_FastHeadcrab : public CE_BaseHeadcrab
+class CFastHeadcrab : public CBaseHeadcrab
 {
 public:
-	CE_DECLARE_CLASS( CE_NPC_FastHeadcrab, CE_BaseHeadcrab );
+	CE_DECLARE_CLASS( CFastHeadcrab, CBaseHeadcrab );
 	DECLARE_DATADESC();
-	CE_NPC_FastHeadcrab();
+	CFastHeadcrab();
 
 	void	Precache( void );
 	void	Spawn( void );
@@ -224,13 +224,12 @@ public:
 // Treacherous black headcrab
 //=========================================================
 //=========================================================
-class CE_NPC_BlackHeadcrab : public CE_BaseHeadcrab
+class CBlackHeadcrab : public CBaseHeadcrab
 {
 public:
-	public:
-	CE_DECLARE_CLASS( CE_NPC_BlackHeadcrab, CE_BaseHeadcrab );
+	CE_DECLARE_CLASS( CBlackHeadcrab, CBaseHeadcrab );
 	
-	CE_NPC_BlackHeadcrab();
+	CBlackHeadcrab();
 
 	void Eject( const QAngle &vecAngles, float flVelocityScale, CEntity *pEnemy );
 	void EjectTouch( CEntity *pOther );

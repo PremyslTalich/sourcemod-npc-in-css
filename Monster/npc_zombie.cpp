@@ -61,14 +61,14 @@ envelopePoint_t envZombieMoanIgnited[] =
 //=============================================================================
 //=============================================================================
 
-class CEZombie : public CAI_BlendingHost<CE_BaseZombie>
+class CZombie : public CAI_BlendingHost<CE_BaseZombie>
 {
 public:
-	CE_DECLARE_CLASS( CEZombie, CAI_BlendingHost<CE_BaseZombie> );
+	CE_DECLARE_CLASS( CZombie, CAI_BlendingHost<CE_BaseZombie> );
 	DECLARE_DATADESC();
 
 public:
-	CEZombie()
+	CZombie()
 	 : m_DurationDoorBash( 2, 6),
 	   m_NextTimeToStartDoorBash( 3.0 )
 	{
@@ -152,14 +152,14 @@ private:
 	Vector				 m_vPositionCharged;
 };
 
-LINK_ENTITY_TO_CUSTOM_CLASS( npc_zombie, cycler, CEZombie );
-LINK_ENTITY_TO_CUSTOM_CLASS( npc_zombie_torso, cycler, CEZombie );
+LINK_ENTITY_TO_CUSTOM_CLASS( npc_zombie, cycler, CZombie );
+LINK_ENTITY_TO_CUSTOM_CLASS( npc_zombie_torso, cycler, CZombie );
 
 
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-const char *CEZombie::pMoanSounds[] =
+const char *CZombie::pMoanSounds[] =
 {
 	 "NPC_BaseZombie.Moan1",
 	 "NPC_BaseZombie.Moan2",
@@ -205,7 +205,7 @@ int ACT_ZOMBIE_TANTRUM;
 int ACT_ZOMBIE_WALLPOUND;
 
 
-BEGIN_DATADESC( CEZombie )
+BEGIN_DATADESC( CZombie )
 
 	DEFINE_FIELD( m_hBlockingDoor, FIELD_EHANDLE ),
 	DEFINE_FIELD( m_flDoorBashYaw, FIELD_FLOAT ),
@@ -218,7 +218,7 @@ END_DATADESC()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEZombie::Precache( void )
+void CZombie::Precache( void )
 {
 	BaseClass::Precache();
 
@@ -249,7 +249,7 @@ void CEZombie::Precache( void )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CEZombie::Spawn( void )
+void CZombie::Spawn( void )
 {
 	Precache();
 
@@ -282,7 +282,7 @@ void CEZombie::Spawn( void )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CEZombie::PrescheduleThink( void )
+void CZombie::PrescheduleThink( void )
 {
   	if( gpGlobals->curtime > m_flNextMoanSound )
   	{
@@ -306,7 +306,7 @@ void CEZombie::PrescheduleThink( void )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-int CEZombie::SelectSchedule ( void )
+int CZombie::SelectSchedule ( void )
 {
 	 
 	if( HasCondition( COND_PHYSICS_DAMAGE ))
@@ -320,7 +320,7 @@ int CEZombie::SelectSchedule ( void )
 //-----------------------------------------------------------------------------
 // Purpose: Sound of a footstep
 //-----------------------------------------------------------------------------
-void CEZombie::FootstepSound( bool fRightFoot )
+void CZombie::FootstepSound( bool fRightFoot )
 {
 	if( fRightFoot )
 	{
@@ -335,7 +335,7 @@ void CEZombie::FootstepSound( bool fRightFoot )
 //-----------------------------------------------------------------------------
 // Purpose: Sound of a foot sliding/scraping
 //-----------------------------------------------------------------------------
-void CEZombie::FootscuffSound( bool fRightFoot )
+void CZombie::FootscuffSound( bool fRightFoot )
 {
 	if( fRightFoot )
 	{
@@ -350,7 +350,7 @@ void CEZombie::FootscuffSound( bool fRightFoot )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random attack hit sound
 //-----------------------------------------------------------------------------
-void CEZombie::AttackHitSound( void )
+void CZombie::AttackHitSound( void )
 {
 	EmitSound( "Zombie.AttackHit" );
 }
@@ -358,7 +358,7 @@ void CEZombie::AttackHitSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random attack miss sound
 //-----------------------------------------------------------------------------
-void CEZombie::AttackMissSound( void )
+void CZombie::AttackMissSound( void )
 {
 	// Play a random attack miss sound
 	EmitSound( "Zombie.AttackMiss" );
@@ -367,7 +367,7 @@ void CEZombie::AttackMissSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEZombie::PainSound( const CTakeDamageInfo &info )
+void CZombie::PainSound( const CTakeDamageInfo &info )
 {
 	// We're constantly taking damage when we are on fire. Don't make all those noises!
 	if ( IsOnFire() )
@@ -380,7 +380,7 @@ void CEZombie::PainSound( const CTakeDamageInfo &info )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CEZombie::DeathSound( const CTakeDamageInfo &info ) 
+void CZombie::DeathSound( const CTakeDamageInfo &info ) 
 {
 	EmitSound( "Zombie.Die" );
 }
@@ -388,7 +388,7 @@ void CEZombie::DeathSound( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEZombie::AlertSound( void )
+void CZombie::AlertSound( void )
 {
 	EmitSound( "Zombie.Alert" );
 
@@ -399,7 +399,7 @@ void CEZombie::AlertSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Returns a moan sound for this class of zombie.
 //-----------------------------------------------------------------------------
-const char *CEZombie::GetMoanSound( int nSound )
+const char *CZombie::GetMoanSound( int nSound )
 {
 	return pMoanSounds[ nSound % ARRAYSIZE( pMoanSounds ) ];
 }
@@ -407,7 +407,7 @@ const char *CEZombie::GetMoanSound( int nSound )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random idle sound.
 //-----------------------------------------------------------------------------
-void CEZombie::IdleSound( void )
+void CZombie::IdleSound( void )
 {
 	if( GetState() == NPC_STATE_IDLE && random->RandomFloat( 0, 1 ) == 0 )
 	{
@@ -427,7 +427,7 @@ void CEZombie::IdleSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random attack sound.
 //-----------------------------------------------------------------------------
-void CEZombie::AttackSound( void )
+void CZombie::AttackSound( void )
 {
 	EmitSound( "Zombie.Attack" );
 }
@@ -435,14 +435,14 @@ void CEZombie::AttackSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Returns the classname (ie "npc_headcrab") to spawn when our headcrab bails.
 //-----------------------------------------------------------------------------
-const char *CEZombie::GetHeadcrabClassname( void )
+const char *CZombie::GetHeadcrabClassname( void )
 {
 	return "npc_headcrab";
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-const char *CEZombie::GetHeadcrabModel( void )
+const char *CZombie::GetHeadcrabModel( void )
 {
 	return "models/headcrabclassic.mdl";
 }
@@ -450,14 +450,14 @@ const char *CEZombie::GetHeadcrabModel( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-const char *CEZombie::GetLegsModel( void )
+const char *CZombie::GetLegsModel( void )
 {
 	return "models/zombie/classic_legs.mdl";
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-const char *CEZombie::GetTorsoModel( void )
+const char *CZombie::GetTorsoModel( void )
 {
 	return "models/zombie/classic_torso.mdl";
 }
@@ -465,7 +465,7 @@ const char *CEZombie::GetTorsoModel( void )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-void CEZombie::SetZombieModel( void )
+void CZombie::SetZombieModel( void )
 {
 	Hull_t lastHull = GetHullType();
 
@@ -501,7 +501,7 @@ void CEZombie::SetZombieModel( void )
 //---------------------------------------------------------
 // Classic zombie only uses moan sound if on fire.
 //---------------------------------------------------------
-void CEZombie::MoanSound( envelopePoint_t *pEnvelope, int iEnvelopeSize )
+void CZombie::MoanSound( envelopePoint_t *pEnvelope, int iEnvelopeSize )
 {
 	if( IsOnFire() )
 	{
@@ -511,7 +511,7 @@ void CEZombie::MoanSound( envelopePoint_t *pEnvelope, int iEnvelopeSize )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-bool CEZombie::ShouldBecomeTorso( const CTakeDamageInfo &info, float flDamageThreshold )
+bool CZombie::ShouldBecomeTorso( const CTakeDamageInfo &info, float flDamageThreshold )
 {
 	if( IsSlumped() ) 
 	{
@@ -528,7 +528,7 @@ bool CEZombie::ShouldBecomeTorso( const CTakeDamageInfo &info, float flDamageThr
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-void CEZombie::GatherConditions( void )
+void CZombie::GatherConditions( void )
 {
 	BaseClass::GatherConditions();
 
@@ -573,7 +573,7 @@ void CEZombie::GatherConditions( void )
 //---------------------------------------------------------
 //---------------------------------------------------------
 
-int CEZombie::SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFailureCode_t taskFailCode )
+int CZombie::SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFailureCode_t taskFailCode )
 {
 	if ( HasCondition( COND_BLOCKED_BY_DOOR ) && m_hBlockingDoor.Get() != NULL )
 	{
@@ -603,7 +603,7 @@ int CEZombie::SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFai
 //---------------------------------------------------------
 //---------------------------------------------------------
 
-int CEZombie::TranslateSchedule( int scheduleType )
+int CZombie::TranslateSchedule( int scheduleType )
 {
 	if ( scheduleType == SCHED_COMBAT_FACE && IsUnreachable( GetEnemy_CBase() ) )
 		return SCHED_TAKE_COVER_FROM_ENEMY;
@@ -616,7 +616,7 @@ int CEZombie::TranslateSchedule( int scheduleType )
 
 //---------------------------------------------------------
 
-Activity CEZombie::NPC_TranslateActivity( Activity newActivity )
+Activity CZombie::NPC_TranslateActivity( Activity newActivity )
 {
 	newActivity = BaseClass::NPC_TranslateActivity( newActivity );
 
@@ -631,7 +631,7 @@ Activity CEZombie::NPC_TranslateActivity( Activity newActivity )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-void CEZombie::OnStateChange( NPC_STATE OldState, NPC_STATE NewState )
+void CZombie::OnStateChange( NPC_STATE OldState, NPC_STATE NewState )
 {
 	BaseClass::OnStateChange( OldState, NewState );
 }
@@ -639,7 +639,7 @@ void CEZombie::OnStateChange( NPC_STATE OldState, NPC_STATE NewState )
 //---------------------------------------------------------
 //---------------------------------------------------------
 
-void CEZombie::StartTask( const Task_t *pTask )
+void CZombie::StartTask( const Task_t *pTask )
 {
 	switch( pTask->iTask )
 	{
@@ -698,7 +698,7 @@ void CEZombie::StartTask( const Task_t *pTask )
 //---------------------------------------------------------
 //---------------------------------------------------------
 
-void CEZombie::RunTask( const Task_t *pTask )
+void CZombie::RunTask( const Task_t *pTask )
 {
 	switch( pTask->iTask )
 	{
@@ -740,7 +740,7 @@ void CEZombie::RunTask( const Task_t *pTask )
 //---------------------------------------------------------
 //---------------------------------------------------------
 
-bool CEZombie::OnObstructingDoor( AILocalMoveGoal_t *pMoveGoal, CBaseEntity *pDoor, 
+bool CZombie::OnObstructingDoor( AILocalMoveGoal_t *pMoveGoal, CBaseEntity *pDoor, 
 							  float distClear, AIMoveResult_t *pResult )
 {
 	if ( BaseClass::OnObstructingDoor( pMoveGoal, pDoor, distClear, pResult ) )
@@ -759,7 +759,7 @@ bool CEZombie::OnObstructingDoor( AILocalMoveGoal_t *pMoveGoal, CBaseEntity *pDo
 //---------------------------------------------------------
 //---------------------------------------------------------
 
-Activity CEZombie::SelectDoorBash()
+Activity CZombie::SelectDoorBash()
 {
 	if ( random->RandomInt( 1, 3 ) == 1 )
 		return ACT_MELEE_ATTACK1;
@@ -770,7 +770,7 @@ Activity CEZombie::SelectDoorBash()
 // Zombies should scream continuously while burning, so long
 // as they are alive... but NOT IN GERMANY!
 //---------------------------------------------------------
-void CEZombie::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize, bool bCalledByLevelDesigner )
+void CZombie::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize, bool bCalledByLevelDesigner )
 {
  	if( !IsOnFire() && IsAlive() )
 	{
@@ -794,7 +794,7 @@ void CEZombie::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize, bool 
 //---------------------------------------------------------
 // If a zombie stops burning and hasn't died, quiet him down
 //---------------------------------------------------------
-void CEZombie::Extinguish()
+void CZombie::Extinguish()
 {
 	if( m_pMoanSound )
 	{
@@ -808,7 +808,7 @@ void CEZombie::Extinguish()
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-int CEZombie::OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo )
+int CZombie::OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo )
 {
 #ifndef HL2_EPISODIC
 	if ( inputInfo.GetDamageType() & DMG_BUCKSHOT )
@@ -829,7 +829,7 @@ int CEZombie::OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-bool CEZombie::IsHeavyDamage( const CTakeDamageInfo &info )
+bool CZombie::IsHeavyDamage( const CTakeDamageInfo &info )
 {
 #ifdef HL2_EPISODIC
 	if ( info.GetDamageType() & DMG_BUCKSHOT )
@@ -862,7 +862,7 @@ bool CEZombie::IsHeavyDamage( const CTakeDamageInfo &info )
 //---------------------------------------------------------
 //---------------------------------------------------------
 #define ZOMBIE_SQUASH_MASS	300.0f  // Anything this heavy or heavier squashes a zombie good. (show special fx)
-bool CEZombie::IsSquashed( const CTakeDamageInfo &info )
+bool CZombie::IsSquashed( const CTakeDamageInfo &info )
 {
 	if( GetHealth() > 0 )
 	{
@@ -887,7 +887,7 @@ bool CEZombie::IsSquashed( const CTakeDamageInfo &info )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-void CEZombie::BuildScheduleTestBits( void )
+void CZombie::BuildScheduleTestBits( void )
 {
 	BaseClass::BuildScheduleTestBits();
 
@@ -904,12 +904,12 @@ void CEZombie::BuildScheduleTestBits( void )
 
 
 
-// CEZombie
+// CZombie
 
 	
 //=============================================================================
 
-AI_BEGIN_CUSTOM_NPC( npc_zombie, CEZombie )
+AI_BEGIN_CUSTOM_NPC( npc_zombie, CZombie )
 
 	DECLARE_CONDITION( COND_BLOCKED_BY_DOOR )
 	DECLARE_CONDITION( COND_DOOR_OPENED )
