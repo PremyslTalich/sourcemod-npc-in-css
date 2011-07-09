@@ -40,6 +40,8 @@ class CCombatWeapon;
 class HelperFunction
 {
 public:
+	HelperFunction();
+
 	bool Initialize();
 	void Shutdown();
 

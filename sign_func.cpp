@@ -79,6 +79,12 @@ string_t AllocPooledString( const char * pszValue )
 	return g_helpfunc.AllocPooledString(pszValue);
 }
 
+HelperFunction::HelperFunction()
+{
+	my_g_pGameRules = NULL;
+	g_SoundEmitterSystem = NULL;
+}
+
 void HelperFunction::LevelInitPreEntity()
 {
 	g_pStringTableParticleEffectNames = netstringtables->FindTable("ParticleEffectNames");
@@ -264,6 +270,9 @@ bool HelperFunction::GameRules_FAllowNPCs()
 
 void HelperFunction::HookGameRules()
 {
+	if(my_g_pGameRules == NULL)
+		return;
+
 	void *rules = NULL;
 	memcpy(&rules, reinterpret_cast<void*>(my_g_pGameRules), sizeof(char*));
 	if(rules == NULL)
@@ -276,6 +285,9 @@ void HelperFunction::HookGameRules()
 
 void HelperFunction::UnHookGameRules()
 {
+	if(my_g_pGameRules == NULL)
+		return;
+
 	void *rules = NULL;
 	memcpy(&rules, reinterpret_cast<void*>(my_g_pGameRules), sizeof(char*));
 	if(rules == NULL)
