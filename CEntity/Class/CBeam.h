@@ -41,6 +41,7 @@ public:
 	void EntsInit( CEntity *pStartEntity, CEntity *pEndEntity );
 
 	void LiveForTime( float time );
+	void SetFireTime( float flFireTime );
 
 	void SetColor( int r, int g, int b );
 	void SetBrightness( int brightness );
@@ -69,6 +70,19 @@ public:
 	CEntity	*GetStartEntity( void );
 	CEntity *GetEndEntity( void );
 
+	void SetBeamFlag( int flag );
+	void PointsInit( const Vector &start, const Vector &end );
+
+	void SetAbsEndPos( const Vector &pos );
+	void BeamDamage( trace_t *ptr );
+	void DoSparks( const Vector &start, const Vector &end );
+
+	CEntity *RandomTargetname( const char *szName );
+
+public:
+	// not going to hook this
+	virtual const char *GetDecalName( void ) { return "BigShot"; }
+
 private:
 	CEntity *Get_m_hAttachEntity(int index);
 	void Set_m_hAttachEntity(int index, CBaseEntity *pEntity);
@@ -95,7 +109,11 @@ protected: //Sendprops
 
 protected: //Datamaps
 	DECLARE_DATAMAP(CFakeHandle, m_hEndEntity);
+	DECLARE_DATAMAP(float, m_flFireTime);
+	DECLARE_DATAMAP(int, m_nDissolveType);
+	DECLARE_DATAMAP(float, m_flDamage);
 
+	
 };
 
 inline void CE_CBeam::SetWidth( float width )				
@@ -186,6 +204,12 @@ inline void CE_CBeam::LiveForTime( float time )
 	SetThink(&CE_CBeam::SUB_Remove); 
 	SetNextThink( gpGlobals->curtime + time ); 
 }
+
+inline void	CE_CBeam::SetFireTime( float flFireTime )		
+{ 
+	m_flFireTime = flFireTime; 
+}
+
 
 // Start/End Entity is encoded as 12 bits of entity index, and 4 bits of attachment (4:12)
 #define BEAMENT_ENTITY(x)		((x)&0xFFF)

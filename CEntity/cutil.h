@@ -310,6 +310,10 @@ void UTIL_Smoke( const Vector &origin, const float scale, const float framerate 
 
 void UTIL_BloodImpact( const Vector &pos, const Vector &dir, int color, int amount );
 
+void UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName = NULL );
+
+bool UTIL_IsValidEntity( CEntity *pEnt );
+
 void SpawnBlood(Vector vecSpot, const Vector &vecDir, int bloodColor, float flDamage);
 
 const char *nexttoken(char *token, const char *str, char sep);

@@ -46,7 +46,7 @@ void cmd1_CommandCallback(const CCommand &command)
 
 		//vec.Init(73.18,-54.81,-60.0);
 
-		//vec.Init(952.65466,61.566082,-58.339985);
+		vec.Init(952.65466,61.566082,-58.339985);
 
 
 		//CEntity *cent = CreateEntityByName("npc_headcrab");
@@ -76,13 +76,11 @@ void cmd1_CommandCallback(const CCommand &command)
 
 		CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);
 		
-		//DispatchSpawn(cbase);
-		
 		hc->Spawn();
 
-		hc->SetMoveType(MOVETYPE_NONE);
-
 		hc->Teleport(&vec, NULL,NULL);
+
+		//hc->Dissolve(NULL, gpGlobals->curtime, false, 0 );
 
 		edict_t *pEdict = servergameents->BaseEntityToEdict(cbase);
 		META_CONPRINTF("%p %d %d\n",cbase, cent->entindex_non_network(), engine->IndexOfEdict(pEdict));
@@ -118,8 +116,11 @@ void monster_dump_CommandCallback(const CCommand &command)
 
 bool CommandInitialize()
 {
-	//new ConCommand("a",cmd1_CommandCallback, "", FCVAR_GAMEDLL);
-	//new ConCommand("b",cmd2_CommandCallback, "", 0);
+#if 1
+	new ConCommand("e1",cmd1_CommandCallback, "", FCVAR_GAMEDLL);
+	new ConCommand("e2",cmd2_CommandCallback, "", 0);
+	new ConCommand("pp",monster_dump_CommandCallback, "", 0);
+#endif
 	new ConCommand("monster_dump",monster_dump_CommandCallback, "", 0);
 
 	GET_CONVAR(sv_gravity);

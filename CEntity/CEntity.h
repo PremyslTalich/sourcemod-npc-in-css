@@ -404,6 +404,7 @@ public: // CBaseEntity virtuals
 	virtual bool IsTriggered( CBaseEntity *pActivator );
 	virtual void FireBullets( const FireBulletsInfo_t &info );
 	virtual const char *GetTracerType( void );
+	virtual int	UpdateTransmitState();
 
 public:
 	void SetLocalOrigin(const Vector& origin);
@@ -671,6 +672,8 @@ public: // custom
 	float		GetLocalTime( void ) const;
 
 	int			CBaseEntity_ObjectCaps( void );
+	
+	int			SetTransmitState( int nFlag);
 
 private:
 	bool		NameMatchesComplex( const char *pszNameOrWildcard );
@@ -748,6 +751,7 @@ public: // All the internal hook implementations for the above virtuals
 	DECLARE_DEFAULTHEADER(IsTriggered, bool, ( CBaseEntity *pActivator ));
 	DECLARE_DEFAULTHEADER(FireBullets, void, ( const FireBulletsInfo_t &info ));
 	DECLARE_DEFAULTHEADER(GetTracerType, const char	*,());
+	DECLARE_DEFAULTHEADER(UpdateTransmitState, int, ());
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetLocalOrigin, void, (const Vector& origin));

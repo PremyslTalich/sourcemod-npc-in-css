@@ -22,6 +22,10 @@ DEFINE_PROP(m_vecEndPos, CE_CBeam);
 
 
 DEFINE_PROP(m_hEndEntity, CE_CBeam);
+DEFINE_PROP(m_flFireTime, CE_CBeam);
+DEFINE_PROP(m_nDissolveType, CE_CBeam);
+DEFINE_PROP(m_flDamage, CE_CBeam);
+
 
 
 #define BEAM_DEFAULT_HALO_SCALE		10
@@ -196,3 +200,104 @@ const Vector &CE_CBeam::GetAbsEndPos( void )
 	VectorTransform( m_vecEndPos, EntityToWorldTransform(), vecAbsPos );
 	return vecAbsPos;
 }
+
+void CE_CBeam::SetBeamFlag( int flag )		
+{ 
+	m_nBeamFlags |= flag;
+}
+
+void CE_CBeam::PointsInit( const Vector &start, const Vector &end )
+{
+	SetType( BEAM_POINTS );
+	m_nNumBeamEnts = 2;
+	SetStartPos( start );
+	SetEndPos( end );
+	SetStartAttachment( 0 );
+	SetEndAttachment( 0 );
+	RelinkBeam();
+}
+
+void CE_CBeam::SetAbsEndPos( const Vector &pos )
+{
+	if (!GetMoveParent())
+	{
+		SetEndPos( pos );
+		return;
+	}
+
+	Vector vecLocalPos;
+	matrix3x4_t worldToBeam;
+	MatrixInvert( EntityToWorldTransform(), worldToBeam );
+	VectorTransform( pos, worldToBeam, vecLocalPos );
+	SetEndPos( vecLocalPos );
+}
+
+void CE_CBeam::BeamDamage( trace_t *ptr )
+{
+	RelinkBeam();
+	if ( ptr->fraction != 1.0 && ptr->m_pEnt != NULL )
+	{
+		CEntity *pHit = CEntity::Instance(ptr->m_pEnt);
+		if ( pHit )
+		{
+			ClearMultiDamage();
+			Vector dir = ptr->endpos - GetAbsOrigin();
+			VectorNormalize( dir );
+			int nDamageType = DMG_ENERGYBEAM;
+
+			if (m_nDissolveType == 0)
+			{
+				nDamageType = DMG_DISSOLVE;
+			}
+			else if ( m_nDissolveType > 0 )
+			{
+				nDamageType = DMG_DISSOLVE | DMG_SHOCK; 
+			}
+
+			CTakeDamageInfo info( BaseEntity(), BaseEntity(), m_flDamage * (gpGlobals->curtime - m_flFireTime), nDamageType );
+			CalculateMeleeDamageForce( &info, dir, ptr->endpos );
+			pHit->DispatchTraceAttack( info, dir, ptr );
+			ApplyMultiDamage();
+			if ( HasSpawnFlags( SF_BEAM_DECALS ) )
+			{
+				if ( pHit->IsBSPModel() )
+				{
+					UTIL_DecalTrace( ptr, GetDecalName() );
+				}
+			}
+		}
+	}
+	m_flFireTime = gpGlobals->curtime;
+}
+
+
+void CE_CBeam::DoSparks( const Vector &start, const Vector &end )
+{
+	if ( HasSpawnFlags(SF_BEAM_SPARKSTART|SF_BEAM_SPARKEND) )
+	{
+		if ( HasSpawnFlags( SF_BEAM_SPARKSTART ) )
+		{
+			g_pEffects->Sparks( start );
+		}
+		if ( HasSpawnFlags( SF_BEAM_SPARKEND ) )
+		{
+			g_pEffects->Sparks( end );
+		}
+	}
+}
+
+CEntity *CE_CBeam::RandomTargetname( const char *szName )
+{
+	int total = 0;
+
+	CEntity *pEntity = NULL;
+	CEntity *pNewEntity = NULL;
+	while ((pNewEntity = g_helpfunc.FindEntityByName( pNewEntity, szName )) != NULL)
+	{
+		total++;
+		if (random->RandomInt(0,total-1) < 1)
+			pEntity = pNewEntity;
+	}
+	return pEntity;
+}
+

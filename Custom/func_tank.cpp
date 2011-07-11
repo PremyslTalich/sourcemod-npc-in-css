@@ -15,7 +15,8 @@
 #include "CSprite.h"
 #include "rumble_shared.h"
 #include "CE_recipientfilter.h"
-
+#include "grenade_beam.h"
+#include "CEnvLaser.h"
 
 
 extern Vector PointOnLineNearestPoint(const Vector& vStartPos, const Vector& vEndPos, const Vector& vPoint);
@@ -2457,7 +2458,8 @@ void CFuncTankGun::Fire( int bulletCount, const Vector &barrelEnd, const Vector 
 	CFuncTank::Fire( bulletCount, barrelEnd, forward, pAttacker, bIgnoreSpread );
 }
 
-#if 0
+
+
 // #############################################################################
 //   CFuncTankPulseLaser
 // #############################################################################
@@ -2466,6 +2468,23 @@ class CFuncTankPulseLaser : public CFuncTankGun
 public:
 	CE_DECLARE_CLASS( CFuncTankPulseLaser, CFuncTankGun );
 	DECLARE_DATADESC();
+
+	CFuncTankPulseLaser()
+	{
+		// Default setting from hammer
+		m_flPulseSpeed = 1000.0f;
+		m_flPulseWidth = 20.0f;
+		m_flPulseLife = 2.0f;
+		m_flPulseLag = 0.05;
+
+		m_sPulseFireSound = NULL_STRING;
+
+		m_flPulseColor.r = 255;
+		m_flPulseColor.g = 0;
+		m_flPulseColor.b = 0;
+		m_flPulseColor.a = 255;
+
+	}
 
 	void Precache();
 	void Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CEntity *pAttacker, bool bIgnoreSpread );
@@ -2478,7 +2497,7 @@ public:
 	string_t	m_sPulseFireSound;
 };
 
-LINK_ENTITY_TO_CUSTOM_CLASS( func_tankpulselaser, info_target,CFuncTankPulseLaser );
+LINK_ENTITY_TO_CUSTOM_CLASS( func_tankpulselaser, info_target, CFuncTankPulseLaser );
 
 BEGIN_DATADESC( CFuncTankPulseLaser )
 
@@ -2533,11 +2552,10 @@ void CFuncTankPulseLaser::Fire( int bulletCount, const Vector &barrelEnd, const 
 
 		Vector vecDir = vecForward + x * gTankSpread[m_spread].x * vecRight + y * gTankSpread[m_spread].y * vecUp;
 
-		//CE_TODO
-		/*CGrenadeBeam *pPulse =  CGrenadeBeam::Create( pAttacker, barrelEnd);
+		CGrenadeBeam *pPulse =  CGrenadeBeam::Create( pAttacker, barrelEnd);
 		pPulse->Format(m_flPulseColor, m_flPulseWidth);
 		pPulse->Shoot(vecDir,m_flPulseSpeed,m_flPulseLife,m_flPulseLag,m_iBulletDamage);
-*/
+
 		if ( m_sPulseFireSound != NULL_STRING )
 		{
 			CPASAttenuationFilter filter( this, 0.6f );
@@ -2555,4 +2573,115 @@ void CFuncTankPulseLaser::Fire( int bulletCount, const Vector &barrelEnd, const 
 	CFuncTank::Fire( bulletCount, barrelEnd, vecForward, pAttacker, bIgnoreSpread );
 }
 
-#endif
+
+
+// #############################################################################
+//   CFuncTankLaser
+// #############################################################################
+class CFuncTankLaser : public CFuncTank
+{
+	CE_DECLARE_CLASS( CFuncTankLaser, CFuncTank );
+public:
+	CFuncTankLaser()
+	{
+		m_pLaser = NULL;
+		m_laserTime = 0.0f;
+		m_iszLaserName = NULL_STRING;
+	}
+	void	Activate( void );
+	void	Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CEntity *pAttacker, bool bIgnoreSpread );
+	void	Think( void );
+	CE_CEnvLaser *GetLaser( void );
+
+	DECLARE_DATADESC();
+
+private:
+	CE_CEnvLaser	*m_pLaser;
+	float			m_laserTime;
+	string_t		m_iszLaserName;
+};
+
+
+LINK_ENTITY_TO_CUSTOM_CLASS( func_tanklaser, info_target, CFuncTankLaser );
+
+
+BEGIN_DATADESC( CFuncTankLaser )
+
+	DEFINE_KEYFIELD( m_iszLaserName, FIELD_STRING, "laserentity" ),
+
+	DEFINE_FIELD( m_pLaser, FIELD_CLASSPTR ),
+	DEFINE_FIELD( m_laserTime, FIELD_TIME ),
+
+END_DATADESC()
+
+
+void CFuncTankLaser::Activate( void )
+{
+	BaseClass::Activate();
+
+	if ( !GetLaser() )
+	{
+		UTIL_Remove(this);
+		Warning( "Laser tank with no env_laser!\n" );
+	}
+	else
+	{
+		m_pLaser->TurnOff();
+	}
+}
+
+
+CE_CEnvLaser *CFuncTankLaser::GetLaser( void )
+{
+	if ( m_pLaser )
+		return m_pLaser;
+
+	CEntity *pLaser = g_helpfunc.FindEntityByName( (CBaseEntity *)NULL, m_iszLaserName );
+	while ( pLaser )
+	{
+		// Found the landmark
+		if ( FClassnameIs( pLaser, "env_laser" ) )
+		{
+			m_pLaser = (CE_CEnvLaser *)pLaser;
+			break;
+		}
+		else
+		{
+			pLaser = g_helpfunc.FindEntityByName( pLaser, m_iszLaserName );
+		}
+	}
+
+	return m_pLaser;
+}
+
+
+void CFuncTankLaser::Think( void )
+{
+	if ( m_pLaser && (gpGlobals->curtime > m_laserTime) )
+		m_pLaser->TurnOff();
+
+	CFuncTank::Think();
+}
+
+
+void CFuncTankLaser::Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CEntity *pAttacker, bool bIgnoreSpread )
+{
+	int i;
+	trace_t tr;
+
+	if ( GetLaser() )
+	{
+		for ( i = 0; i < bulletCount; i++ )
+		{
+			m_pLaser->SetLocalOrigin( barrelEnd );
+			TankTrace( barrelEnd, forward, gTankSpread[m_spread], tr );
+			
+			m_laserTime = gpGlobals->curtime;
+			m_pLaser->TurnOn();
+			m_pLaser->SetFireTime( gpGlobals->curtime - 1.0 );
+			m_pLaser->FireAtPoint( tr );
+			m_pLaser->SetNextThink( TICK_NEVER_THINK );
+		}
+		CFuncTank::Fire( bulletCount, barrelEnd, forward, this, bIgnoreSpread );
+	}
+}

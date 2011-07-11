@@ -109,6 +109,7 @@ SH_DECL_MANUALHOOK1_void(SetModel, 0, 0, 0, const char *);
 SH_DECL_MANUALHOOK1(IsTriggered, 0, 0, 0, bool, CBaseEntity *);
 SH_DECL_MANUALHOOK1_void(FireBullets, 0, 0, 0, const FireBulletsInfo_t &);
 SH_DECL_MANUALHOOK0(GetTracerType, 0, 0, 0, const char	*);
+SH_DECL_MANUALHOOK0(UpdateTransmitState, 0, 0, 0, int);
 
 
 
@@ -184,6 +185,7 @@ DECLARE_HOOK(SetModel, CEntity);
 DECLARE_HOOK(IsTriggered, CEntity);
 DECLARE_HOOK(FireBullets, CEntity);
 DECLARE_HOOK(GetTracerType, CEntity);
+DECLARE_HOOK(UpdateTransmitState, CEntity);
 
 
 DECLARE_DEFAULTHANDLER_void(CEntity, Teleport, (const Vector *origin, const QAngle* angles, const Vector *velocity), (origin, angles, velocity));
@@ -248,6 +250,7 @@ DECLARE_DEFAULTHANDLER_void(CEntity,SetModel,(const char *model),(model));
 DECLARE_DEFAULTHANDLER(CEntity,IsTriggered, bool, (CBaseEntity *pActivator), (pActivator));
 DECLARE_DEFAULTHANDLER_void(CEntity,FireBullets, ( const FireBulletsInfo_t &info ), (info));
 DECLARE_DEFAULTHANDLER(CEntity,GetTracerType, const char *, (), ());
+DECLARE_DEFAULTHANDLER(CEntity,UpdateTransmitState, int, (), ());
 
 
 //Sendprops
@@ -2194,3 +2197,22 @@ int	CEntity::CBaseEntity_ObjectCaps( void )
 	return 0;
 }
 
+int	CEntity::SetTransmitState( int nFlag)
+{
+	edict_t *ed = edict();
+
+	if ( !ed )
+		return 0;
+
+	// clear current flags = check ShouldTransmit()
+	ed->ClearTransmitState();	
+	
+	int oldFlags = ed->m_fStateFlags;
+	ed->m_fStateFlags |= nFlag;
+	
+	// Tell the engine (used for a network backdoor optimization).
+	if ( (oldFlags & FL_EDICT_DONTSEND) != (ed->m_fStateFlags & FL_EDICT_DONTSEND) )
+		engine->NotifyEdictFlagsChange( entindex() );
+
+	return ed->m_fStateFlags;
+}

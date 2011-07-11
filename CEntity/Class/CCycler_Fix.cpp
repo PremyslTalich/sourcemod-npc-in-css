@@ -41,6 +41,10 @@ void CE_Cycler_Fix::Think(void)
 
 int CE_Cycler_Fix::OnTakeDamage_Alive(const CTakeDamageInfo& info)
 {
+#if 0
+	return BaseClass::OnTakeDamage_Alive(info);
+#endif
+
 	Forget( bits_MEMORY_INCOVER );
 
 	if ( !CCombatCharacter::FAKE_OnTakeDamage_Alive( info ) )

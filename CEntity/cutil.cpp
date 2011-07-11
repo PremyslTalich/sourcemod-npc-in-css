@@ -1067,6 +1067,31 @@ void UTIL_BloodImpact( const Vector &pos, const Vector &dir, int color, int amou
 	g_helpfunc.DispatchEffect("bloodimpact", data );
 }
 
+void UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
+{
+	CEntity *pEntity = CEntity::Instance(pTrace->m_pEnt);
+
+	// Is the entity valid, is the surface sky?
+	if ( !pEntity || !UTIL_IsValidEntity( pEntity ) || (pTrace->surface.flags & SURF_SKY) )
+		return;
+
+	if ( pTrace->fraction == 1.0 )
+		return;
+
+	pEntity->ImpactTrace( pTrace, iDamageType, pCustomImpactName );
+}
+
+bool UTIL_IsValidEntity( CEntity *pEnt )
+{
+	if(!pEnt)
+		return false;
+	edict_t *pEdict = pEnt->edict();
+	if ( !pEdict || pEdict->IsFree() )
+		return false;
+	return true;
+}
+
+
 //-----------------------------------------------------------------------------
 // Purpose: Spawn some blood particles
 //-----------------------------------------------------------------------------
