@@ -176,13 +176,14 @@ protected: //Sendprops
 	DECLARE_SENDPROP(float,m_flPlaybackRate);
 	DECLARE_SENDPROP(float *,m_flPoseParameter);
 	DECLARE_SENDPROP(int,m_nBody);
-	DECLARE_SENDPROP(int,m_nSkin);
 	DECLARE_SENDPROP(int,m_nNewSequenceParity);
 	DECLARE_SENDPROP(int,m_nResetEventsParity);
 	DECLARE_SENDPROP(int,m_nHitboxSet);
 	DECLARE_SENDPROP(unsigned char,m_nMuzzleFlashParity);
 
-	
+public:
+	DECLARE_SENDPROP(int,m_nSkin);
+
 	
 protected: //Datamaps
 	DECLARE_DATAMAP(float, m_flCycle);

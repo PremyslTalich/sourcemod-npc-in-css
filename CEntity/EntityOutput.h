@@ -141,4 +141,48 @@ typedef CEntityOutputTemplate<Vector,FIELD_VECTOR>			COutputVector;
 typedef CEntityOutputTemplate<Vector,FIELD_POSITION_VECTOR>	COutputPositionVector;
 typedef CEntityOutputTemplate<color32,FIELD_COLOR32>		COutputColor32;
 
+
+
+abstract_class CBaseEntityClassList
+{
+public:
+	CBaseEntityClassList();
+	~CBaseEntityClassList();
+	virtual void LevelShutdownPostEntity() = 0;
+
+	CBaseEntityClassList *m_pNextClassList;
+};
+
+template< class T >
+class CEntityClassList : public CBaseEntityClassList
+{
+public:
+	virtual void LevelShutdownPostEntity()  { m_pClassList = NULL; }
+
+	void Insert( T *pEntity )
+	{
+		pEntity->m_pNext = m_pClassList;
+		m_pClassList = pEntity;
+	}
+
+	void Remove( T *pEntity )
+	{
+		T **pPrev = &m_pClassList;
+		T *pCur = *pPrev;
+		while ( pCur )
+		{
+			if ( pCur == pEntity )
+			{
+				*pPrev = pCur->m_pNext;
+				return;
+			}
+			pPrev = &pCur->m_pNext;
+			pCur = *pPrev;
+		}
+	}
+
+	static T *m_pClassList;
+};
+
+
 #endif // _INCLUDE_ENTITYOUTPUT_H_

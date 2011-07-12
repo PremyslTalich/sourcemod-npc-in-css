@@ -28,6 +28,8 @@
 #include "CAI_Criteria.h"
 #include "CE_recipientfilter.h"
 #include "groundlink.h"
+#include "CSkyCamera.h"
+
 
 
 IHookTracker *IHookTracker::m_Head = NULL;
@@ -110,6 +112,7 @@ SH_DECL_MANUALHOOK1(IsTriggered, 0, 0, 0, bool, CBaseEntity *);
 SH_DECL_MANUALHOOK1_void(FireBullets, 0, 0, 0, const FireBulletsInfo_t &);
 SH_DECL_MANUALHOOK0(GetTracerType, 0, 0, 0, const char	*);
 SH_DECL_MANUALHOOK0(UpdateTransmitState, 0, 0, 0, int);
+SH_DECL_MANUALHOOK2_void(SetTransmit, 0, 0, 0, CCheckTransmitInfo *, bool);
 
 
 
@@ -186,6 +189,7 @@ DECLARE_HOOK(IsTriggered, CEntity);
 DECLARE_HOOK(FireBullets, CEntity);
 DECLARE_HOOK(GetTracerType, CEntity);
 DECLARE_HOOK(UpdateTransmitState, CEntity);
+DECLARE_HOOK(SetTransmit, CEntity);
 
 
 DECLARE_DEFAULTHANDLER_void(CEntity, Teleport, (const Vector *origin, const QAngle* angles, const Vector *velocity), (origin, angles, velocity));
@@ -251,6 +255,7 @@ DECLARE_DEFAULTHANDLER(CEntity,IsTriggered, bool, (CBaseEntity *pActivator), (pA
 DECLARE_DEFAULTHANDLER_void(CEntity,FireBullets, ( const FireBulletsInfo_t &info ), (info));
 DECLARE_DEFAULTHANDLER(CEntity,GetTracerType, const char *, (), ());
 DECLARE_DEFAULTHANDLER(CEntity,UpdateTransmitState, int, (), ());
+DECLARE_DEFAULTHANDLER_void(CEntity,SetTransmit, (CCheckTransmitInfo *pInfo, bool bAlways), (pInfo, bAlways));
 
 
 //Sendprops
@@ -321,6 +326,7 @@ DEFINE_PROP(m_triggerBloat, CEntity);
 DEFINE_PROP(m_flFriction, CEntity);
 DEFINE_PROP(m_flMoveDoneTime, CEntity);
 DEFINE_PROP(m_flLocalTime, CEntity);
+DEFINE_PROP(m_aThinkFunctions, CEntity);
 
 
 
@@ -860,38 +866,136 @@ void CEntity::CEntityThink()
 	}
 }
 
+int	CEntity::GetIndexForThinkContext( const char *pszContext )
+{
+	for ( int i = 0; i < m_aThinkFunctions->Size(); i++ )
+	{
+		if ( !Q_strncmp( STRING( m_aThinkFunctions->Element(i).m_iszContext ), pszContext, MAX_CONTEXT_LENGTH ) )
+			return i;
+	}
+
+	return NO_THINK_CONTEXT;
+}
+
 BASEPTR	CEntity::ThinkSet(BASEPTR func, float thinkTime, const char *szContext)
 {
 	//m_pfnThink = NULL;
-	*(m_pfnThink) = reinterpret_cast<VALVE_BASEPTR>(&CEntity::CBaseEntityThink);
 	if ( !szContext )
 	{
+		*(m_pfnThink) = reinterpret_cast<VALVE_BASEPTR>(&CEntity::CBaseEntityThink);
 		ce_m_pfnThink = func;
 		return ce_m_pfnThink;
 	}
-	return NULL;
+
+	int iIndex = GetIndexForThinkContext( szContext );
+	if ( iIndex == NO_THINK_CONTEXT )
+	{
+		iIndex = RegisterThinkContext( szContext );
+	}
+
+	m_aThinkFunctions->Element(iIndex).m_pfnThink = func;
+
+	if ( thinkTime != 0 )
+	{
+		int thinkTick = ( thinkTime == TICK_NEVER_THINK ) ? TICK_NEVER_THINK : TIME_TO_TICKS( thinkTime );
+		m_aThinkFunctions->Element(iIndex).m_nNextThinkTick = thinkTick;
+		CheckHasThinkFunction( thinkTick == TICK_NEVER_THINK ? false : true );
+	}
+	return func;
+}
+
+int CEntity::RegisterThinkContext( const char *szContext )
+{
+	int iIndex = GetIndexForThinkContext( szContext );
+	if ( iIndex != NO_THINK_CONTEXT )
+		return iIndex;
+
+	// Make a new think func
+	thinkfunc_t sNewFunc;
+	Q_memset( &sNewFunc, 0, sizeof( sNewFunc ) );
+	sNewFunc.m_pfnThink = NULL;
+	sNewFunc.m_nNextThinkTick = 0;
+	sNewFunc.m_iszContext = AllocPooledString(szContext);
+
+	// Insert it into our list
+	return m_aThinkFunctions->AddToTail( sNewFunc );
 }
 
 float CEntity::GetNextThink( const char *szContext)
 {
-	if ( m_nNextThinkTick == TICK_NEVER_THINK )
+	/*if ( m_nNextThinkTick == TICK_NEVER_THINK )
 		return TICK_NEVER_THINK;
 
 	// Old system
-	return TICK_INTERVAL * (m_nNextThinkTick );
+	return TICK_INTERVAL * (m_nNextThinkTick );*/
+
+	int iIndex = 0;
+	if ( !szContext )
+	{
+		if ( m_nNextThinkTick == TICK_NEVER_THINK )
+			return TICK_NEVER_THINK;
+
+		// Old system
+		return TICK_INTERVAL * (m_nNextThinkTick );
+	}
+	else
+	{
+		// Find the think function in our list
+		iIndex = GetIndexForThinkContext( szContext );
+	}
+
+	if ( iIndex == m_aThinkFunctions->InvalidIndex() )
+		return TICK_NEVER_THINK;
+
+	if ( m_aThinkFunctions->Element(iIndex).m_nNextThinkTick == TICK_NEVER_THINK )
+	{
+		return TICK_NEVER_THINK;
+	}
+	return TICK_INTERVAL * (m_aThinkFunctions->Element(iIndex).m_nNextThinkTick );
 }
 
-static int think_offset = -1;
+int	CEntity::GetNextThinkTick( const char *szContext)
+{
+	// Are we currently in a think function with a context?
+	int iIndex = 0;
+	if ( !szContext )
+	{
+		if ( m_nNextThinkTick == TICK_NEVER_THINK )
+			return TICK_NEVER_THINK;
+
+		// Old system
+		return m_nNextThinkTick;
+	}
+	else
+	{
+		// Find the think function in our list
+		iIndex = GetIndexForThinkContext( szContext );
+
+		// Looking up an invalid think context!
+		Assert( iIndex != -1 );
+	}
+
+	if ( ( iIndex == -1 ) || ( m_aThinkFunctions->Element(iIndex).m_nNextThinkTick == TICK_NEVER_THINK ) )
+	{
+		return TICK_NEVER_THINK;
+	}
+
+	return m_aThinkFunctions->Element(iIndex).m_nNextThinkTick;
+}
+
+
+//static int think_offset = -1;
 VALVE_BASEPTR CEntity::GetCurrentThinkPointer()
 {
-	if(think_offset == -1)
+	return m_pfnThink;
+	/*if(think_offset == -1)
 	{
 		datamap_t *pMap = gamehelpers->GetDataMap(BaseEntity());
 		typedescription_t *td = gamehelpers->FindInDataMap(pMap,"m_pfnThink");
 		think_offset = td->fieldOffset[TD_OFFSET_NORMAL];
 	}
 	VALVE_BASEPTR addr = *(VALVE_BASEPTR *)((unsigned char *)BaseEntity() + think_offset);
-	return addr;
+	return addr;*/
 }
 
 void CEntity::SetNextThink(float thinkTime, const char *szContext)
@@ -956,6 +1060,11 @@ void CEntity::SetClassname(const char *pClassName)
 const char* CEntity::GetEntityName()
 {
 	return STRING(*(m_iName));
+}
+
+string_t CEntity::GetEntityName_String()
+{
+	return *(m_iName);
 }
 
 void CEntity::SetName(const char *pTargetName)
@@ -2215,4 +2324,32 @@ int	CEntity::SetTransmitState( int nFlag)
 		engine->NotifyEdictFlagsChange( entindex() );
 
 	return ed->m_fStateFlags;
+}
+
+bool CEntity::DetectInSkybox()
+{
+	if ( GetEntitySkybox() != NULL )
+	{
+		AddEFlags( EFL_IN_SKYBOX );
+		return true;
+	}
+
+	RemoveEFlags( EFL_IN_SKYBOX );
+	return false;
+}
+
+CE_CSkyCamera *CEntity::GetEntitySkybox()
+{
+	int area = engine->GetArea( WorldSpaceCenter() );
+
+	CE_CSkyCamera *pCur = GetSkyCameraList();
+	while ( pCur )
+	{
+		if ( engine->CheckAreasConnected( area, pCur->m_skyboxData->area ) )
+			return pCur;
+
+		pCur = pCur->m_pNext;
+	}
+
+	return NULL;
 }

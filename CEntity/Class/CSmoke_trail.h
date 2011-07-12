@@ -35,6 +35,24 @@ public:
 	DECLARE_SENDPROP( int, m_nAttachment );
 };
 
+class CE_SporeExplosion : public CEntity
+{
+public:
+	CE_DECLARE_CLASS(CE_SporeExplosion, CEntity);
+
+	void InputEnable( inputdata_t &inputdata );
+	void InputDisable( inputdata_t &inputdata );
+
+public:
+	DECLARE_SENDPROP( bool, m_bDontRemove );
+	DECLARE_SENDPROP( bool, m_bEmit );
+	DECLARE_SENDPROP( float, m_flSpawnRate );
+
+public:
+	DECLARE_DATAMAP(bool, m_bDisabled);
+
+};
+
 
 
 #endif

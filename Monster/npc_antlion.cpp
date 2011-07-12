@@ -8,6 +8,9 @@
 #include "CPropVehicleDriveable.h"
 #include "CEnvExplosion.h"
 #include "grenade_spit.h"
+#include "antlion_maker.h"
+
+
 
 LINK_ENTITY_TO_CUSTOM_CLASS( npc_antlion, cycler, CNPC_Antlion );
 
@@ -579,7 +582,7 @@ void CNPC_Antlion::Event_Killed( const CTakeDamageInfo &info )
 	}
 
 	// Stop our zap effect!
-	//SetContextThink( NULL, gpGlobals->curtime, "ZapThink" );
+	SetContextThink( NULL, gpGlobals->curtime, "ZapThink" );
 }
 
 //-----------------------------------------------------------------------------
@@ -2100,6 +2103,15 @@ int CNPC_Antlion::ChooseMoveSchedule( void )
 	return SCHED_NONE;
 }
 
+void CNPC_Antlion::ZapThink_CBE( void )
+{
+	CNPC_Antlion *cent = (CNPC_Antlion *)CEntity::Instance(reinterpret_cast<CBaseEntity *>(this));
+	if(cent)
+	{
+		cent->ZapThink();
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -2114,11 +2126,11 @@ void CNPC_Antlion::ZapThink( void )
 	
 	if ( m_flZapDuration > gpGlobals->curtime )
 	{
-		//SetContextThink( &CNPC_Antlion::ZapThink, gpGlobals->curtime + random->RandomFloat( 0.05f, 0.25f ), "ZapThink" );
+		SetContextThink( &CNPC_Antlion::ZapThink_CBE, gpGlobals->curtime + random->RandomFloat( 0.05f, 0.25f ), "ZapThink" );
 	}
 	else
 	{
-		//SetContextThink( NULL, gpGlobals->curtime, "ZapThink" );
+		SetContextThink( NULL, gpGlobals->curtime, "ZapThink" );
 	}
 }
 
@@ -2150,7 +2162,7 @@ int CNPC_Antlion::SelectSchedule( void )
 		// See if it's a forced, electrical flip
 		if ( m_flZapDuration > gpGlobals->curtime )
 		{
-			//SetContextThink( &CNPC_Antlion::ZapThink, gpGlobals->curtime, "ZapThink" );
+			SetContextThink( &CNPC_Antlion::ZapThink_CBE, gpGlobals->curtime, "ZapThink" );
 			return SCHED_ANTLION_ZAP_FLIP;
 		}
 
@@ -3725,9 +3737,9 @@ bool CNPC_Antlion::ShouldAbandonFollow( void )
 // Purpose: 
 // Input  : *pTarget - 
 //-----------------------------------------------------------------------------
-void CNPC_Antlion::SetFightTarget( CBaseEntity *pTarget )
+void CNPC_Antlion::SetFightTarget( CEntity *pTarget )
 {
-	m_hFightGoalTarget.Set(pTarget);
+	m_hFightGoalTarget.Set((pTarget)?pTarget->BaseEntity():NULL);
 
 	SetCondition( COND_ANTLION_RECEIVED_ORDERS );
 }
@@ -3745,7 +3757,7 @@ void CNPC_Antlion::InputFightToPosition( inputdata_t &inputdata )
 
 	if ( pEntity != NULL )
 	{
-		SetFightTarget( pEntity->BaseEntity() );
+		SetFightTarget( pEntity );
 		SetFollowTarget( NULL );
 	}
 }
@@ -4053,10 +4065,10 @@ void CNPC_Antlion::InputEnableJump( inputdata_t &inputdata )
 // Purpose: 
 // Input  : *pTarget - 
 //-----------------------------------------------------------------------------
-void CNPC_Antlion::SetFollowTarget( CBaseEntity *pTarget )
+void CNPC_Antlion::SetFollowTarget( CEntity *pTarget )
 {
-	m_FollowBehavior.SetFollowTarget( CEntity::Instance(pTarget) );
-	m_hFollowTarget.Set(pTarget);
+	m_FollowBehavior.SetFollowTarget( pTarget );
+	m_hFollowTarget.Set((pTarget)?pTarget->BaseEntity():NULL);
 
 	m_flObeyFollowTime = gpGlobals->curtime + ANTLION_OBEY_FOLLOW_TIME;
 
@@ -4271,6 +4283,96 @@ bool CNPC_Antlion::CanRunAScriptedNPCInteraction( bool bForced /*= false*/ )
 	return BaseClass::CanRunAScriptedNPCInteraction( bForced );
 }
 
+
+
+
+//---------------------------------------------------------
+// Save/Restore
+//---------------------------------------------------------
+BEGIN_DATADESC( CAntlionRepellant )
+	DEFINE_KEYFIELD( m_flRepelRadius,	FIELD_FLOAT,	"repelradius" ),
+	DEFINE_FIELD( m_bEnabled, FIELD_BOOLEAN ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"Enable", InputEnable ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"Disable", InputDisable ),
+END_DATADESC()
+
+static CUtlVector< CHandle< CAntlionRepellant > >m_hRepellantList;
+
+
+CAntlionRepellant::CAntlionRepellant()
+{
+	m_flRepelRadius = 0.0f;
+	m_bEnabled = false;
+}
+
+CAntlionRepellant::~CAntlionRepellant()
+{
+	m_hRepellantList.FindAndRemove( this );
+}
+
+void CAntlionRepellant::Spawn( void )
+{
+	BaseClass::Spawn();
+	m_bEnabled = true;
+
+	m_hRepellantList.AddToTail( this );
+}
+
+void CAntlionRepellant::InputEnable( inputdata_t &inputdata )
+{
+	m_bEnabled = true;
+
+	if ( m_hRepellantList.HasElement( this ) == false )
+		 m_hRepellantList.AddToTail( this );
+}
+
+void CAntlionRepellant::InputDisable( inputdata_t &inputdata )
+{
+	m_bEnabled = false;
+	m_hRepellantList.FindAndRemove( this );
+}
+
+float CAntlionRepellant::GetRadius( void )
+{
+	if ( m_bEnabled == false )
+		 return 0.0f;
+
+	return m_flRepelRadius;
+}
+
+void CAntlionRepellant::OnRestore( void )
+{
+	BaseClass::OnRestore();
+
+	if ( m_bEnabled == true )
+	{
+		if ( m_hRepellantList.HasElement( this ) == false )
+			 m_hRepellantList.AddToTail( this );
+	}
+}
+
+bool CAntlionRepellant::IsPositionRepellantFree( Vector vDesiredPos )
+{
+	for ( int i = 0; i < m_hRepellantList.Count(); i++ )
+	{
+		if ( m_hRepellantList[i] )
+		{
+			CAntlionRepellant *pRep = m_hRepellantList[i].Get();
+
+			if ( pRep )
+			{
+				float flDist = (vDesiredPos - pRep->GetAbsOrigin()).Length();
+
+				if ( flDist <= pRep->GetRadius() )
+					 return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+LINK_ENTITY_TO_CUSTOM_CLASS( point_antlion_repellant, info_target, CAntlionRepellant);
 
 
 //-----------------------------------------------------------------------------

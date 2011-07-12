@@ -229,11 +229,14 @@ bool CHintCriteria::InExcludedZone( const Vector &testPosition ) const
 }
 
 
+CAIHintVector *CAI_HintManager::gm_AllHints;
 
 DEFINE_PROP(m_NodeData, CE_AI_Hint);
 DEFINE_PROP(m_flNextUseTime, CE_AI_Hint);
 DEFINE_PROP(m_hHintOwner, CE_AI_Hint);
 DEFINE_PROP(m_nTargetNodeID, CE_AI_Hint);
+DEFINE_PROP(m_nodeFOV, CE_AI_Hint);
+DEFINE_PROP(m_vecForward, CE_AI_Hint);
 
 
 bool CE_AI_Hint::IsLocked( void )
@@ -265,9 +268,21 @@ bool CE_AI_Hint::Lock( CBaseEntity* pNPC )
 
 void CE_AI_Hint::GetPosition(CCombatCharacter *pBCC, Vector *vPosition)
 {
-	if ( m_NodeData.ptr->nNodeID != NO_NODE )
+	if ( m_NodeData->nNodeID != NO_NODE )
 	{
-		*vPosition = g_pBigAINet->GetNodePosition( pBCC, m_NodeData.ptr->nNodeID );
+		*vPosition = g_pBigAINet->GetNodePosition( pBCC, m_NodeData->nNodeID );
+	}
+	else
+	{
+		*vPosition = GetAbsOrigin();
+	}
+}
+
+void CE_AI_Hint::GetPosition( Hull_t hull, Vector *vPosition )
+{
+	if ( m_NodeData->nNodeID != NO_NODE )
+	{
+		*vPosition = g_pBigAINet->GetNodePosition( hull, m_NodeData->nNodeID );
 	}
 	else
 	{
@@ -308,95 +323,286 @@ float CE_AI_Hint::Yaw(void)
 		return GetLocalAngles().y;
 	}
 }
-/*
-//-----------------------------------------------------------------------------
-// Purpose: Returns true is hint node is open for use
-// Input  :
-// Output :
-//-----------------------------------------------------------------------------
-bool CAI_Hint::IsLocked( void )
+
+bool CE_AI_Hint::HintMatchesCriteria( CAI_NPC *pNPC, const CHintCriteria &hintCriteria, const Vector &position, float *flNearestDistance, bool bIgnoreLock, bool bIgnoreHintType )
 {
-	if (m_NodeData.iDisabled)
+	// Cannot be locked
+	if ( !bIgnoreLock && IsLocked() )
+	{
+		return false;
+	}
+
+	if ( !bIgnoreHintType && !hintCriteria.MatchesHintType( HintType() ) )
+	{
+		return false;
+	}
+
+	if ( GetMinState() > NPC_STATE_IDLE || GetMaxState() < NPC_STATE_COMBAT )
+	{
+		if ( pNPC && ( pNPC->GetState() < GetMinState() || pNPC->GetState() > GetMaxState() ) )
+		{
+			return false;
+		}
+	}
+
+	// See if we're filtering by group name
+	if ( hintCriteria.GetGroup() != NULL_STRING )
+	{
+		//AssertIsValidString( GetGroup() );
+		//AssertIsValidString( hintCriteria.GetGroup() );
+		if ( GetGroup() == NULL_STRING || GetGroup() != hintCriteria.GetGroup() )
+		{
+			Assert(GetGroup() == NULL_STRING || strcmp( STRING(GetGroup()), STRING(hintCriteria.GetGroup())) != 0 );
+			return false;
+		}
+	}
+
+	// If we're watching for include zones, test it
+	if ( ( hintCriteria.HasIncludeZones() ) && ( hintCriteria.InIncludedZone( GetAbsOrigin() ) == false ) )
+	{
+		return false;
+	}
+
+	// If we're watching for exclude zones, test it
+	if ( ( hintCriteria.HasExcludeZones() ) && ( hintCriteria.InExcludedZone( GetAbsOrigin() ) ) )
+	{
+		return false;
+	}
+
+	// See if the class handles this hint type
+	if ( ( pNPC != NULL ) && ( pNPC->FValidateHintType( BaseEntity() ) == false ) )
+	{
+		return false;
+	}
+
+	if ( hintCriteria.HasFlag(bits_HINT_NPC_IN_NODE_FOV) )
+	{
+		if ( pNPC == NULL )
+		{
+			AssertMsg(0,"Hint node attempted to verify NPC in node FOV without NPC!\n");
+		}
+		else
+		{
+			if( !IsInNodeFOV(pNPC) )
+			{
+				return false;
+			}
+		}
+	}
+
+	if ( hintCriteria.HasFlag( bits_HINT_NODE_IN_AIMCONE ) )
+	{
+		if ( pNPC == NULL )
+		{
+			AssertMsg( 0, "Hint node attempted to find node in aimcone without specifying NPC!\n" );
+		}
+		else
+		{
+			if( !pNPC->FInAimCone_Vector( GetAbsOrigin() ) )
+			{
+				return false;
+			}
+		}
+	}
+
+	if ( hintCriteria.HasFlag( bits_HINT_NODE_IN_VIEWCONE ) )
+	{
+		if ( pNPC == NULL )
+		{
+			AssertMsg( 0, "Hint node attempted to find node in viewcone without specifying NPC!\n" );
+		}
+		else
+		{
+			if( !pNPC->FInViewCone_Entity( BaseEntity() ) )
+			{
+				return false;
+			}
+		}
+	}
+
+	if ( hintCriteria.HasFlag( bits_HINT_NOT_CLOSE_TO_ENEMY ) )
+	{
+		if ( pNPC == NULL )
+		{
+			AssertMsg( 0, "Hint node attempted to find node not close to enemy without specifying NPC!\n" );
+		}
+		else
+		{
+			if( pNPC->GetEnemy() )
+			{
+				float flDistHintToEnemySqr = GetAbsOrigin().DistToSqr( pNPC->GetEnemy()->GetAbsOrigin() ) ;
+
+				if( flDistHintToEnemySqr < Square( 30.0f * 12.0f ) )
+				{
+					return false;
+				}
+			}
+		}
+	}
+
+	{
+		// See if we're requesting a visible node
+		if ( hintCriteria.HasFlag( bits_HINT_NODE_VISIBLE ) )
+		{
+			if ( pNPC == NULL )
+			{
+				//NOTENOTE: If you're hitting this, you've asked for a visible node without specifing an NPC!
+				AssertMsg( 0, "Hint node attempted to find visible node without specifying NPC!\n" );
+			}
+			else
+			{
+				if( m_NodeData->nNodeID == NO_NODE )
+				{
+					// This is just an info_hint, not a node.
+					if( !pNPC->FVisible_Entity( BaseEntity() ) )
+					{
+						return false;
+					}
+				}
+				else
+				{
+					// This hint associated with a node.
+					trace_t tr;
+					Vector vHintPos;
+					GetPosition(pNPC,&vHintPos);
+					UTIL_TraceLine ( pNPC->EyePosition(), vHintPos + pNPC->GetViewOffset(), MASK_NPCSOLID_BRUSHONLY, pNPC->BaseEntity(), COLLISION_GROUP_NONE, &tr );
+					if ( tr.fraction != 1.0f )
+					{
+						return false;
+					}
+				}
+			}
+		}
+	}
+
+	// Check for clear if requested
+	if ( hintCriteria.HasFlag( bits_HINT_NODE_CLEAR ) )
+	{
+		if ( pNPC == NULL )
+		{
+			//NOTENOTE: If you're hitting this, you've asked for a clear node without specifing an NPC!
+			AssertMsg( 0, "Hint node attempted to find clear node without specifying NPC!\n" );
+		}
+		else
+		{
+			trace_t tr;
+			// Can my bounding box fit there?
+			UTIL_TraceHull ( GetAbsOrigin(), GetAbsOrigin(), pNPC->WorldAlignMins(), pNPC->WorldAlignMaxs(), 
+				MASK_SOLID, pNPC->BaseEntity(), COLLISION_GROUP_NONE, &tr );
+
+			if ( tr.fraction != 1.0 )
+			{
+				return false;
+			}
+		}
+	}
+
+	// See if this is our next, closest node
+	if ( hintCriteria.HasFlag( bits_HINT_NODE_NEAREST ) )
+	{
+		Assert( flNearestDistance );
+
+		// Calculate our distance
+		float distance = (GetAbsOrigin() - position).Length();
+
+		// Must be closer than the current best
+		if ( distance > *flNearestDistance )
+		{
+			return false;
+		}
+
+		// Remember the distance
+		*flNearestDistance = distance;
+	}
+
+	if ( hintCriteria.HasFlag(bits_HINT_HAS_LOS_TO_PLAYER|bits_HAS_EYEPOSITION_LOS_TO_PLAYER) )
+	{
+		CPlayer *pPlayer = UTIL_GetNearestVisiblePlayer(this);
+		if ( !pPlayer )
+			UTIL_GetNearestPlayer(GetAbsOrigin());
+
+		if( pPlayer != NULL )
+		{
+			Vector vecDest = GetAbsOrigin(); 
+
+			if( hintCriteria.HasFlag(bits_HAS_EYEPOSITION_LOS_TO_PLAYER) )
+			{
+				vecDest += pNPC->GetDefaultEyeOffset();
+			}
+
+			if( !pPlayer->FVisible_Vector(vecDest) )
+			{
+				return false;
+			}
+		}
+	}
+
+	// Must either be visible or not if requested
+	if ( hintCriteria.HasFlag( bits_HINT_NODE_NOT_VISIBLE_TO_PLAYER|bits_HINT_NODE_VISIBLE_TO_PLAYER ) )
+	{
+		bool bWasSeen = false;
+		// Test all potential seers
+		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+		{
+			CPlayer *pPlayer = UTIL_PlayerByIndex(i);
+			
+			if ( pPlayer )
+			{
+				// Only spawn if the player's looking away from me
+				Vector vLookDir = pPlayer->EyeDirection3D();
+				Vector vTargetDir = GetAbsOrigin() - pPlayer->EyePosition();
+				VectorNormalize(vTargetDir);
+
+				float fDotPr = DotProduct(vLookDir,vTargetDir);
+				if ( fDotPr > 0 )
+				{
+					trace_t tr;
+					UTIL_TraceLine( pPlayer->EyePosition(), GetAbsOrigin(), MASK_SOLID_BRUSHONLY, pPlayer->BaseEntity(), COLLISION_GROUP_NONE, &tr);
+					
+					if ( tr.fraction == 1.0 )
+					{
+						if ( hintCriteria.HasFlag( bits_HINT_NODE_NOT_VISIBLE_TO_PLAYER ) )
+						{
+							return false;
+						}
+						bWasSeen = true;
+					}
+				}
+			}
+		}
+
+		if ( !bWasSeen && hintCriteria.HasFlag( bits_HINT_NODE_VISIBLE_TO_PLAYER ) )
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+
+bool CE_AI_Hint::IsInNodeFOV( CEntity *pOther )
+{
+	if( m_nodeFOV == 360 )
 	{
 		return true;
 	}
 
-	if (gpGlobals->curtime < m_flNextUseTime)
+	Vector vecToNPC = pOther->GetAbsOrigin() - GetAbsOrigin();
+	VectorNormalize( vecToNPC );
+	float flDot = DotProduct( vecToNPC, m_vecForward );
+
+	if( flDot > m_nodeFOV )
 	{
 		return true;
 	}
-	
-	if (m_hHintOwner != NULL)
-	{
-		return true;
-	}
+
 	return false;
 }
 
 
 
-//-----------------------------------------------------------------------------
-// Purpose: Locks the node for use by an AI for hints
-// Output : Returns true if the node was available for locking, false on failure.
-//-----------------------------------------------------------------------------
-bool CAI_Hint::Lock( CBaseEntity* pNPC )
-{
-	if ( m_hHintOwner != pNPC && m_hHintOwner != NULL )
-		return false;
-	m_hHintOwner = pNPC;
-	return true;
-}
 
-//------------------------------------------------------------------------------
-// Purpose :  If connected to a node returns node position, otherwise
-//			  returns local hint position
-//
-//			  NOTE: Assumes not using multiple AI networks  
-// Input   :
-// Output  :
-//------------------------------------------------------------------------------
-void CAI_Hint::GetPosition(CCombatCharacter *pBCC, Vector *vPosition)
-{
-	if ( m_NodeData.nNodeID != NO_NODE )
-	{
-		*vPosition = g_pBigAINet->GetNodePosition( pBCC, m_NodeData.nNodeID );
-	}
-	else
-	{
-		*vPosition = GetAbsOrigin();
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Unlocks the node, making it available for hint use by other AIs.
-//			after the given delay time
-//-----------------------------------------------------------------------------
-void CAI_Hint::Unlock( float delay )
-{
-	m_hHintOwner	= NULL;
-	m_flNextUseTime = gpGlobals->curtime + delay;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns true is hint node is open for use
-// Input  :
-// Output :
-//-----------------------------------------------------------------------------
-bool CAI_Hint::IsLockedBy( CEntity *pNPC )
-{
-	CBaseEntity *cbase = (pNPC) ? pNPC->BaseEntity() : NULL;
-	return (m_hHintOwner == cbase);
-}
-*/
-
-
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *token - 
-// Output : int
-//-----------------------------------------------------------------------------
 int CAI_HintManager::GetFlags( const char *token )
 {
 	int len = strlen( token );
@@ -526,6 +732,33 @@ CE_AI_Hint *CAI_HintManager::FindHint( const Vector &position, const CHintCriter
 CE_AI_Hint *CAI_HintManager::FindHintRandom( CAI_NPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria )
 {
 	return (CE_AI_Hint *)g_helpfunc.CAI_HintManager_FindHintRandom( pNPC->BaseEntity(), position, hintCriteria );
+}
+
+int CAI_HintManager::FindAllHints( CAI_NPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria, CUtlVector<CE_AI_Hint *> *pResult )
+{
+	//  If we have no hints, bail
+	int c = CAI_HintManager::gm_AllHints->Count();
+	if ( !c )
+		return 0;
+
+	// Remove the nearest flag. It makes now sense with random.
+	bool hadNearest = hintCriteria.HasFlag( bits_HINT_NODE_NEAREST );
+	(const_cast<CHintCriteria &>(hintCriteria)).ClearFlag( bits_HINT_NODE_NEAREST );
+
+	//  Now loop till we find a valid hint or return to the start
+	CE_AI_Hint *pTestHint;
+	for ( int i = 0; i < c; ++i )
+	{
+		pTestHint = (CE_AI_Hint *)CEntity::Instance(CAI_HintManager::gm_AllHints->Element(i));
+		Assert( pTestHint );
+		if ( pTestHint->HintMatchesCriteria( pNPC, hintCriteria, position, NULL ) )
+			pResult->AddToTail( pTestHint );
+	}
+
+	if ( hadNearest )
+		(const_cast<CHintCriteria &>(hintCriteria)).SetFlag( bits_HINT_NODE_NEAREST );
+
+	return pResult->Count();
 }
 
 

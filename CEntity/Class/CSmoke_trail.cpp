@@ -19,6 +19,18 @@ DEFINE_PROP(m_MaxDirectedSpeed, CSmokeTrail );
 DEFINE_PROP(m_bEmit, CSmokeTrail );
 DEFINE_PROP(m_nAttachment, CSmokeTrail );
 
+
+
+CE_LINK_ENTITY_TO_CLASS(SporeExplosion, CE_SporeExplosion);
+
+DEFINE_PROP(m_bDontRemove, CE_SporeExplosion );
+DEFINE_PROP(m_bEmit, CE_SporeExplosion );
+DEFINE_PROP(m_flSpawnRate, CE_SporeExplosion );
+
+DEFINE_PROP(m_bDisabled, CE_SporeExplosion );
+
+
+
 CSmokeTrail* CSmokeTrail::CreateSmokeTrail()
 {
 	CEntity *cent = CreateEntityByName("env_smoketrail");
@@ -48,3 +60,16 @@ void CSmokeTrail::SetLifetime(float lifetime)
 }
 
 
+void CE_SporeExplosion::InputEnable( inputdata_t &inputdata )
+{
+	m_bDontRemove = true;
+	m_bDisabled = false;
+	m_bEmit = true;
+}
+
+void CE_SporeExplosion::InputDisable( inputdata_t &inputdata )
+{
+	m_bDontRemove = true;
+	m_bDisabled = true;
+	m_bEmit = false;
+}

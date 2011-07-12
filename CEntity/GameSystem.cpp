@@ -66,9 +66,14 @@ void IGameSystem::LevelInitPostEntityAllSystems()
 	InvokeMethod(&IGameSystem::LevelInitPostEntity);
 }
 
-void IGameSystem::LevelShutdownAllSystems()
+void IGameSystem::LevelShutdownPreEntityAllSystems()
 {
-	InvokeMethod(&IGameSystem::LevelShutdown);
+	InvokeMethod(&IGameSystem::LevelShutdownPreEntity);
+}
+
+void IGameSystem::LevelShutdownPostEntityAllSystems()
+{
+	InvokeMethod(&IGameSystem::LevelShutdownPostEntity);
 }
 
 void IGameSystem::SDKShutdownAllSystem()

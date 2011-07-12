@@ -13,7 +13,8 @@ public:
 	virtual bool SDKInit() =0;
 	virtual void LevelInitPreEntity() =0;
 	virtual void LevelInitPostEntity() =0;
-	virtual void LevelShutdown() =0;
+	virtual void LevelShutdownPreEntity() =0;
+	virtual void LevelShutdownPostEntity() =0;
 	virtual void SDKShutdown() =0;
 	virtual char *GetSystemName();
 
@@ -22,7 +23,8 @@ public:
 	static void SDKInitAllSystems();
 	static void LevelInitPreEntityAllSystems();
 	static void LevelInitPostEntityAllSystems();
-	static void LevelShutdownAllSystems();
+	static void LevelShutdownPreEntityAllSystems();
+	static void LevelShutdownPostEntityAllSystems();
 	static void SDKShutdownAllSystem();
 	static void InitAllSystems();
 
@@ -38,7 +40,8 @@ public:
 	virtual bool SDKInit() { return true; };
 	virtual void LevelInitPreEntity() {};
 	virtual void LevelInitPostEntity() {};
-	virtual void LevelShutdown() {};
+	virtual void LevelShutdownPreEntity() {};
+	virtual void LevelShutdownPostEntity() {};
 	virtual void SDKShutdown() {};
 
 public:

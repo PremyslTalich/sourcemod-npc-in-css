@@ -190,10 +190,10 @@ class CE_AI_Hint;
 
 DECLARE_POINTER_HANDLE(AIHintIter_t);
 
-class CAIHintVector : public CUtlVector< CAI_Hint * >
+class CAIHintVector : public CUtlVector< CBaseEntity * >
 {
 public:
-	CAIHintVector() : CUtlVector< CAI_Hint * >( 1, 0 )
+	CAIHintVector() : CUtlVector< CBaseEntity * >( 1, 0 )
 	{
 	}
 
@@ -230,8 +230,8 @@ public:
 
 	// Purpose: Finds a random suitable hint within the requested radious of the npc
 	static CE_AI_Hint		*FindHintRandom( CAI_NPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria );
-	static int			FindAllHints( CAI_NPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria, CUtlVector<CAI_Hint *> *pResult );
-	static int			FindAllHints( const Vector &position, const CHintCriteria &hintCriteria, CUtlVector<CAI_Hint *> *pResult )	{ return FindAllHints( NULL, position, hintCriteria, pResult ); }
+	static int			FindAllHints( CAI_NPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria, CUtlVector<CE_AI_Hint *> *pResult );
+	static int			FindAllHints( const Vector &position, const CHintCriteria &hintCriteria, CUtlVector<CE_AI_Hint *> *pResult )	{ return FindAllHints( NULL, position, hintCriteria, pResult ); }
 //	static int			FindAllHints( CAI_NPC *pNPC, const CHintCriteria &hintCriteria, CUtlVector<CAI_Hint *> *pResult )		{ return FindAllHints( pNPC, pNPC->GetAbsOrigin(), hintCriteria, pResult ); }
 	static int			GetFlags( const char *token );
 
@@ -242,7 +242,7 @@ public:
 
 	static void ValidateHints();
 
-private:
+public:
 	enum
 	{
 		// MUST BE POWER OF 2
@@ -250,16 +250,16 @@ private:
 		HINT_HISTORY_MASK = (HINT_HISTORY-1)
 	};
 
-	static CAI_Hint		*AddFoundHint( CAI_Hint *hint );
-	static int			GetFoundHintCount();
-	static CAI_Hint		*GetFoundHint( int index );
-	static CAI_Hint		*GetLastFoundHint();
-	static void			ResetFoundHints();
-	static bool			IsInFoundHintList( CAI_Hint *hint );
+	static CBaseEntity		*AddFoundHint( CBaseEntity *hint );
+	static int				GetFoundHintCount();
+	static CBaseEntity		*GetFoundHint( int index );
+	static CBaseEntity		*GetLastFoundHint();
+	static void				ResetFoundHints();
+	static bool				IsInFoundHintList( CBaseEntity *hint );
 
-	static int			gm_nFoundHintIndex;
-	static CAI_Hint		*gm_pLastFoundHints[ HINT_HISTORY ];			// Last used hint 
-	static CAIHintVector gm_AllHints;				// A linked list of all hints
+	static int				gm_nFoundHintIndex;
+	static CBaseEntity		*gm_pLastFoundHints[ HINT_HISTORY ];			// Last used hint 
+	static CAIHintVector	*gm_AllHints;				// A linked list of all hints
 	static CUtlMap< int,  CAIHintVector >	gm_TypedHints;
 };
 
@@ -351,6 +351,7 @@ public:
 	bool				IsLocked( void );
 	bool				Lock( CBaseEntity* pNPC );
 	void				GetPosition(CCombatCharacter *pBCC, Vector *vPosition);
+	void				GetPosition( Hull_t hull, Vector *vPosition );
 	void				Unlock( float delay = 0.0 );
 	bool				IsLockedBy( CEntity *pNPC );
 	Hint_e				HintType( void ) const			{ return (Hint_e)m_NodeData.ptr->nHintType;  };
@@ -361,16 +362,23 @@ public:
 	string_t			HintActivityName( void ) const	{ return m_NodeData.ptr->iszActivityName; }
 	HintIgnoreFacing_t	GetIgnoreFacing() const			{ return m_NodeData.ptr->fIgnoreFacing; }
 
+	NPC_STATE			GetMinState() const				{ return m_NodeData.ptr->minState; }
+	NPC_STATE			GetMaxState() const				{ return m_NodeData.ptr->maxState; }
+
+
 	Vector				GetDirection();
 	float				Yaw( void );
+
+	bool				HintMatchesCriteria( CAI_NPC *pNPC, const CHintCriteria &hintCriteria, const Vector &position, float *flNearestDistance, bool bIgnoreLock = false, bool bIgnoreHintType = false );
+	bool				IsInNodeFOV( CEntity *pOther );
 
 public:
 	DECLARE_DATAMAP(HintNodeData, m_NodeData);
 	DECLARE_DATAMAP(float, m_flNextUseTime);
 	DECLARE_DATAMAP(CBaseEntity *, m_hHintOwner);
 	DECLARE_DATAMAP_OFFSET(int, m_nTargetNodeID); // "Node is visible to player"
-
-	
+	DECLARE_DATAMAP(float, m_nodeFOV);
+	DECLARE_DATAMAP(Vector, m_vecForward);
 
 
 };

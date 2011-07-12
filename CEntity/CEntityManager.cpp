@@ -310,7 +310,7 @@ void our_trie_iterator(KTrie<IEntityFactory_CE *> *pTrie, const char *name, IEnt
 		META_CONPRINTF("%s:\t\t\t\t%d\n",name,count);
 	else if(strlen(name) < 15)
 		META_CONPRINTF("%s:\t\t\t%d\n",name,count);
-	else if(strlen(name) < 25)
+	else if(strlen(name) < 22)
 		META_CONPRINTF("%s:\t\t%d\n",name,count);
 	else
 		META_CONPRINTF("%s:\t%d\n",name,count);

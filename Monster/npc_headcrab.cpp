@@ -1038,6 +1038,15 @@ void CBaseHeadcrab::PrescheduleThink( void )
 #define HEADCRAB_ROLL_ELIMINATION_TIME 0.3f
 #define HEADCRAB_PITCH_ELIMINATION_TIME 0.3f
 
+void CBaseHeadcrab::EliminateRollAndPitch_CBE()
+{
+	CBaseHeadcrab *cent = (CBaseHeadcrab *)CEntity::Instance(reinterpret_cast<CBaseEntity *>(this));
+	if(cent)
+	{
+		cent->EliminateRollAndPitch();
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Eliminates roll + pitch potentially in the headcrab at canister jump time
 //-----------------------------------------------------------------------------
@@ -1075,7 +1084,7 @@ void CBaseHeadcrab::EliminateRollAndPitch()
 
 	SetAbsAngles( angles );
 
-	//SetContextThink( &CBaseHeadcrab::EliminateRollAndPitch, gpGlobals->curtime + TICK_INTERVAL, "PitchContext" );
+	SetContextThink( &CBaseHeadcrab::EliminateRollAndPitch_CBE, gpGlobals->curtime + TICK_INTERVAL, "PitchContext" );
 }
 
 

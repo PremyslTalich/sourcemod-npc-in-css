@@ -550,6 +550,7 @@ public:
 	void				SetSquadName( string_t name )	{ m_SquadName = name; 	}
 
 	void				SetDefaultEyeOffset ( void );
+	const Vector &		GetDefaultEyeOffset( void )			{ return m_vDefaultEyeOffset;	}
 
 	bool				ConditionInterruptsCurSchedule( int iCondition );
 

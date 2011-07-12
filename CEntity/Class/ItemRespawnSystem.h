@@ -14,7 +14,7 @@ class ItemRespawnSystem : public CBaseGameSystem
 public:
 	ItemRespawnSystem(const char *name);
 	void LevelInitPreEntity();
-	void LevelShutdown();
+	void LevelShutdownPreEntity();
 	void Think();
 
 	void AddItem( ICItem *pItem );

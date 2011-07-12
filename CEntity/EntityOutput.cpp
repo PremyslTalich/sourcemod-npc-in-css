@@ -19,6 +19,7 @@
 
 #include "EntityOutput.h"
 #include "isaverestore.h"
+#include "GameSystem.h"
 
 #include <mempool.h>
 
@@ -108,4 +109,31 @@ CBaseEntityOutput::~CBaseEntityOutput()
 		ev = pNext;
 	}
 }
+
+static CBaseEntityClassList *s_pClassLists = NULL;
+CBaseEntityClassList::CBaseEntityClassList()
+{
+	m_pNextClassList = s_pClassLists;
+	s_pClassLists = this;
+}
+CBaseEntityClassList::~CBaseEntityClassList()
+{
+}
+
+class CEntityListSystem : public CBaseGameSystem
+{
+public:
+	CEntityListSystem( char const *name ) : CBaseGameSystem( name )
+	{
+	}
+	void LevelShutdownPostEntity()
+	{
+		CBaseEntityClassList *pClassList = s_pClassLists;
+		while ( pClassList )
+		{
+			pClassList->LevelShutdownPostEntity();
+			pClassList = pClassList->m_pNextClassList;
+		}
+	}
+};
 

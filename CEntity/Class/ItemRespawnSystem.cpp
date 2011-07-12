@@ -24,7 +24,7 @@ void ItemRespawnSystem::LevelInitPreEntity()
 	g_pSM->AddGameFrameHook(&GameFrame);
 }
 
-void ItemRespawnSystem::LevelShutdown()
+void ItemRespawnSystem::LevelShutdownPreEntity()
 {
 	g_pSM->RemoveGameFrameHook(&GameFrame);
 	m_Item.RemoveAll();

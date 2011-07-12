@@ -67,7 +67,8 @@ public:
 	bool RegisterConCommandBase(ConCommandBase *pCommand);
 	void ServerActivate(edict_t *pEdictList, int edictCount, int clientMax);
 	bool LevelInit(char const *pMapName, char const *pMapEntities, char const *pOldLevel, char const *pLandmarkName, bool loadGame, bool background);
-	void OnLevelShutdown();
+	void OnLevelShutdown_Pre();
+	void OnLevelShutdown_Post();
 	void SetCommandClient( int cmd );	
 	int GetCommandClient();
 	int GetMaxClients();

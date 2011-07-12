@@ -14,6 +14,8 @@ class CBasePlayer;
 #include "CPlayer.h"
 #include "ammodef.h"
 #include "eventqueue.h"
+#include "CAI_Hint.h"
+
 
 class CAI_SensedObjectsManager;
 struct TemplateEntityData_t;
@@ -39,6 +41,7 @@ extern ConVar *ammo_hegrenade_max;
 extern trace_t *g_TouchTrace;
 extern INetworkStringTable *g_pStringTableParticleEffectNames;
 
+
 void InitDefaultAIRelationships();
 
 SH_DECL_MANUALHOOK0(GameRules_FAllowNPCsHook, 0, 0, 0, bool);
@@ -60,9 +63,9 @@ public:
 	{
 		g_helpfunc.LevelInitPostEntity();
 	}
-	void LevelShutdown()
+	void LevelShutdownPreEntity()
 	{
-		g_helpfunc.LevelShutdown();
+		g_helpfunc.LevelShutdownPreEntity();
 	}
 	void SDKShutdown()
 	{
@@ -141,7 +144,7 @@ void HelperFunction::LevelInitPostEntity()
 
 }
 
-void HelperFunction::LevelShutdown()
+void HelperFunction::LevelShutdownPreEntity()
 {
 	UnHookGameRules();
 	CCombatCharacter::Shutdown();
@@ -151,7 +154,7 @@ void HelperFunction::LevelShutdown()
 
 void HelperFunction::Shutdown()
 {
-	LevelShutdown();
+	LevelShutdownPreEntity();
 	SH_REMOVE_MANUALHOOK_MEMFUNC(OnLadderHook, g_CGameMovement, &g_helpfunc, &HelperFunction::OnLadder, false);
 }
 
@@ -229,6 +232,10 @@ bool HelperFunction::Initialize()
 	GET_VARIABLE(EventQueuePrioritizedEvent_t_s_Allocator, CMemoryPool *);
 	EventQueuePrioritizedEvent_t::s_Allocator = EventQueuePrioritizedEvent_t_s_Allocator;
 	
+	CAIHintVector *gm_AllHints = NULL;
+	GET_VARIABLE(gm_AllHints, CAIHintVector *);
+	CAI_HintManager::gm_AllHints = gm_AllHints;
+
 	g_CGameMovement = (CGameMovement *)g_pGameMovement;
 
 	SH_ADD_MANUALHOOK_MEMFUNC(OnLadderHook, g_CGameMovement, &g_helpfunc, &HelperFunction::OnLadder, false);

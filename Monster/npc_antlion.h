@@ -7,7 +7,7 @@
 #include "CAI_Behavior.h"
 #include "CAI_Blended_Movement.h"
 #include "CAI_behavior_follow.h"
-
+#include "CInfoTarget_Fix.h"
 
 
 #define	ANTLION_FOLLOW_DISTANCE	350
@@ -91,6 +91,7 @@ public:
 	void		GatherConditions( void );
 	void		PrescheduleThink( void );
 	void		ZapThink( void );
+	void		ZapThink_CBE( void );
 	void		BurrowUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	bool		CreateVPhysics();
 				
@@ -126,12 +127,12 @@ public:
 
 	float		GetMaxJumpSpeed() const { return 1024.0f; }
 
-	void		SetFightTarget( CBaseEntity *pTarget );
+	void		SetFightTarget( CEntity *pTarget );
 	void		InputFightToPosition( inputdata_t &inputdata );
 	void		InputStopFightToPosition( inputdata_t &inputdata );
 	void		InputJumpAtTarget( inputdata_t &inputdata );
 
-	void		SetFollowTarget( CBaseEntity *pTarget );
+	void		SetFollowTarget( CEntity *pTarget );
 	int			TranslateSchedule( int scheduleType );
 
 	virtual		Activity NPC_TranslateActivity( Activity baseAct );
@@ -364,6 +365,32 @@ private:
 		TASK_ANTLION_GET_PATH_TO_RANDOM_NODE,
 		TASK_ANTLION_FIND_COVER_FROM_SAVEPOSITION,
 	};
+};
+
+
+class CAntlionRepellant : public CE_InfoTarget_Fix
+{
+public:
+	CE_DECLARE_CLASS( CAntlionRepellant, CE_InfoTarget_Fix );
+	DECLARE_DATADESC();
+	CAntlionRepellant();
+	~CAntlionRepellant();
+
+public:
+	void Spawn( void );
+	void InputEnable( inputdata_t &inputdata );
+	void InputDisable( inputdata_t &inputdata );
+	float GetRadius( void );
+	void SetRadius( float flRadius ) { m_flRepelRadius = flRadius; }
+
+	static bool IsPositionRepellantFree( Vector vDesiredPos );
+
+	void OnRestore( void );
+
+private:
+
+	float m_flRepelRadius;
+	bool  m_bEnabled;
 };
 
 extern bool IsAntlion( CEntity *pEntity );

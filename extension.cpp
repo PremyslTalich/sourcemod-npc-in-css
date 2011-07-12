@@ -298,7 +298,8 @@ bool Monster::SDK_OnMetamodLoad(ISmmAPI *ismm, char *error, size_t maxlen, bool 
 
 	SH_ADD_HOOK_MEMFUNC(IServerGameDLL, ServerActivate, gamedll, this, &Monster::ServerActivate, true);
 	SH_ADD_HOOK_MEMFUNC(IServerGameClients, SetCommandClient, serverclients, this, &Monster::SetCommandClient, true);
-	SH_ADD_HOOK_MEMFUNC(IServerGameDLL, LevelShutdown, gamedll, this, &Monster::OnLevelShutdown, false);
+	SH_ADD_HOOK_MEMFUNC(IServerGameDLL, LevelShutdown, gamedll, this, &Monster::OnLevelShutdown_Pre, false);
+	SH_ADD_HOOK_MEMFUNC(IServerGameDLL, LevelShutdown, gamedll, this, &Monster::OnLevelShutdown_Post, true);
 	SH_ADD_HOOK_MEMFUNC(IServerGameDLL, LevelInit, gamedll, this, &Monster::LevelInit, false);
 
 	IGameSystem::InitAllSystems();
@@ -317,7 +318,8 @@ bool Monster::SDK_OnMetamodUnload(char *error, size_t maxlength)
 {
 	SH_REMOVE_HOOK_MEMFUNC(IServerGameDLL, ServerActivate, gamedll, this, &Monster::ServerActivate, true);
 	SH_REMOVE_HOOK_MEMFUNC(IServerGameClients, SetCommandClient, serverclients, this, &Monster::SetCommandClient, true);
-	SH_REMOVE_HOOK_MEMFUNC(IServerGameDLL, LevelShutdown, gamedll, this, &Monster::OnLevelShutdown, false);
+	SH_REMOVE_HOOK_MEMFUNC(IServerGameDLL, LevelShutdown, gamedll, this, &Monster::OnLevelShutdown_Pre, false);
+	SH_REMOVE_HOOK_MEMFUNC(IServerGameDLL, LevelShutdown, gamedll, this, &Monster::OnLevelShutdown_Post, true);
 	SH_REMOVE_HOOK_MEMFUNC(IServerGameDLL, LevelInit, gamedll, this, &Monster::LevelInit, false);
 
 	IGameSystem::SDKShutdownAllSystem();
@@ -373,16 +375,25 @@ bool Monster::LevelInit(char const *pMapName, char const *pMapEntities, char con
 	RETURN_META_VALUE(MRES_IGNORED, true);
 }
 
-void Monster::OnLevelShutdown()
+void Monster::OnLevelShutdown_Pre()
+{
+	if(g_LevelEndBarrier)
+		RETURN_META(MRES_IGNORED);
+
+	IGameSystem::LevelShutdownPreEntityAllSystems();
+	RETURN_META(MRES_IGNORED);
+}
+
+void Monster::OnLevelShutdown_Post()
 {
 	if(g_LevelEndBarrier)
 		RETURN_META(MRES_IGNORED);
 
 	g_LevelEndBarrier = true;
-	IGameSystem::LevelShutdownAllSystems();
-
+	IGameSystem::LevelShutdownPostEntityAllSystems();
 	RETURN_META(MRES_IGNORED);
 }
+
 
 void Monster::SetCommandClient( int cmd )
 {

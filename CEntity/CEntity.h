@@ -178,7 +178,7 @@ struct inputdata_t
 class CEntity;
 class CECollisionProperty;
 class CAI_NPC;
-
+class CE_CSkyCamera;
 
 #define VPHYSICS_MAX_OBJECT_LIST_COUNT	1024
 
@@ -234,6 +234,16 @@ class AI_CriteriaSet;
 #define SetTouch( a ) ce_m_pfnTouch = static_cast <void (CEntity::*)(CEntity *)> (a)
 #define SetUse( a ) ce_m_pfnUse = static_cast <void (CEntity::*)(CBaseEntity *, CBaseEntity *, USE_TYPE , float)> (a)
 
+
+struct thinkfunc_t
+{
+	BASEPTR	m_pfnThink;
+	string_t		m_iszContext;
+	int				m_nNextThinkTick;
+	int				m_nLastThinkTick;
+
+	DECLARE_SIMPLE_DATADESC();
+};
 
 // handling entity/edict transforms
 inline CBaseEntity *GetContainingEntity( edict_t *pent )
@@ -405,6 +415,7 @@ public: // CBaseEntity virtuals
 	virtual void FireBullets( const FireBulletsInfo_t &info );
 	virtual const char *GetTracerType( void );
 	virtual int	UpdateTransmitState();
+	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
 
 public:
 	void SetLocalOrigin(const Vector& origin);
@@ -439,6 +450,7 @@ public: // CBaseEntity non virtual helpers
 	const char* GetClassname();
 	void SetClassname(const char *pClassName);
 	const char* GetEntityName();
+	string_t GetEntityName_String();
 	void SetName(const char *pTargetName);
 	CEntity *GetOwnerEntity();
 	void SetOwner(CEntity *pOwnerEntity);
@@ -675,6 +687,13 @@ public: // custom
 	
 	int			SetTransmitState( int nFlag);
 
+	bool			DetectInSkybox();
+	CE_CSkyCamera	*GetEntitySkybox();
+
+	int			GetIndexForThinkContext( const char *pszContext );
+	int			RegisterThinkContext( const char *szContext );
+	int			GetNextThinkTick( const char *szContext = NULL );
+
 private:
 	bool		NameMatchesComplex( const char *pszNameOrWildcard );
 	bool		ClassMatchesComplex( const char *pszClassOrWildcard );
@@ -752,6 +771,7 @@ public: // All the internal hook implementations for the above virtuals
 	DECLARE_DEFAULTHEADER(FireBullets, void, ( const FireBulletsInfo_t &info ));
 	DECLARE_DEFAULTHEADER(GetTracerType, const char	*,());
 	DECLARE_DEFAULTHEADER(UpdateTransmitState, int, ());
+	DECLARE_DEFAULTHEADER(SetTransmit, void, ( CCheckTransmitInfo *pInfo, bool bAlways ));
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetLocalOrigin, void, (const Vector& origin));
@@ -812,7 +832,6 @@ protected: //Datamaps
 	DECLARE_DATAMAP(int, m_spawnflags);
 	DECLARE_DATAMAP(int, m_fFlags);
 	DECLARE_DATAMAP(CServerNetworkProperty , m_Network);
-	DECLARE_DATAMAP(char, m_lifeState);
 	DECLARE_DATAMAP(unsigned char, m_nWaterLevel);
 	DECLARE_DATAMAP(CFakeHandle, m_hGroundEntity);
 	DECLARE_DATAMAP(QAngle, m_angAbsRotation);
@@ -827,9 +846,11 @@ protected: //Datamaps
 	DECLARE_DATAMAP(float, m_flFriction);
 	DECLARE_DATAMAP(float, m_flMoveDoneTime);
 	DECLARE_DATAMAP(float, m_flLocalTime);
+	DECLARE_DATAMAP(CUtlVector< thinkfunc_t >, m_aThinkFunctions);
 
 
 public:
+	DECLARE_DATAMAP(char, m_lifeState);
 	DECLARE_DATAMAP(int, m_iHealth);
 	DECLARE_DATAMAP(string_t, m_iClassname);
 	DECLARE_DATAMAP(char, m_takedamage);
