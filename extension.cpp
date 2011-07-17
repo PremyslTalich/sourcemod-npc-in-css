@@ -363,6 +363,7 @@ void Monster::ServerActivate(edict_t *pEdictList, int edictCount, int clientMax)
 	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_rollermine.txt");
 	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_antlion_episodic.txt");
 	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_combine_cannon.txt");
+	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_env_headcrabcanister.txt");
 
 	RETURN_META(MRES_IGNORED);
 }

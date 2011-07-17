@@ -13,10 +13,6 @@ DEFINE_PROP(m_vecSkyboxOrigin, CE_CSpriteTrail);
 DEFINE_PROP(m_flStartWidthVariance, CE_CSpriteTrail);
 
 
-DEFINE_PROP(flStartWidthVariance, CE_CSpriteTrail);
-
-
-
 
 CE_CSpriteTrail *CE_CSpriteTrail::SpriteTrailCreate( const char *pSpriteName, const Vector &origin, bool animate )
 {

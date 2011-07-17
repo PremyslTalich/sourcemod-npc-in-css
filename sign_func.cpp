@@ -657,6 +657,35 @@ CCombatWeapon *HelperFunction::GameRules_GetNextBestWeapon(CBaseEntity *pPlayer,
 	return (CCombatWeapon*)CEntity::Instance(ret);
 }
 
+bool HelperFunction::GameRules_FPlayerCanTakeDamage(CBaseEntity *pPlayer, CBaseEntity *pAttacker)
+{
+	static int offset = NULL;
+	if(!offset)
+	{
+		if(!g_pGameConf->GetOffset("GameRules_FPlayerCanTakeDamage", &offset))
+		{
+			assert(0);
+			return NULL;
+		}
+	}
+	
+	unsigned char *rules = NULL;
+	memcpy(&rules, reinterpret_cast<void*>(my_g_pGameRules), sizeof(char*));
+
+	void **this_ptr = *reinterpret_cast<void ***>(&rules);
+	void **vtable = *reinterpret_cast<void ***>(rules);
+	void *vfunc = vtable[offset];
+
+	union
+	{
+		bool (VEmptyClass::*mfpnew)(CBaseEntity *, CBaseEntity *);
+		void *addr;
+	} u;
+	u.addr = vfunc;
+
+	return (reinterpret_cast<VEmptyClass *>(this_ptr)->*u.mfpnew)(pPlayer, pAttacker);
+}
+
 
 Activity HelperFunction::ActivityList_RegisterPrivateActivity( const char *pszActivityName )
 {

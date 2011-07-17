@@ -58,7 +58,7 @@ DETOUR_DECL_STATIC0(CDetour_UTIL_GetLocalPlayer, CBaseEntity *)
 		return pPlayer->BaseEntity();
 	}
 
-	g_pSM->LogError(myself, "UTIL_GetLocalPlayer return NULL!\n");
+	g_pSM->LogError(myself, "UTIL_GetLocalPlayer return NULL!");
 	return NULL;
 }
 
@@ -88,17 +88,27 @@ public:
 	{
 		if(AllocateDefaultRelationships_CDetour != NULL)
 			AllocateDefaultRelationships_CDetour->DisableDetour();
+		AllocateDefaultRelationships_CDetour = NULL;
+
 		if(UTIL_BloodDrips_CDetour != NULL)
 			UTIL_BloodDrips_CDetour->DisableDetour();
+		UTIL_BloodDrips_CDetour = NULL;
+
 		if(ShouldRemoveThisRagdoll_CDetour != NULL)
 			ShouldRemoveThisRagdoll_CDetour->DisableDetour();
+		ShouldRemoveThisRagdoll_CDetour = NULL;
+
 		if(FindInList_CDetour != NULL)
 			FindInList_CDetour->DisableDetour();
+		FindInList_CDetour = NULL;
+
 		if(Pickup_ForcePlayerToDropThisObject_CDetour != NULL)
 			Pickup_ForcePlayerToDropThisObject_CDetour->DisableDetour();
+		Pickup_ForcePlayerToDropThisObject_CDetour = NULL;
+
 		if(UTIL_GetLocalPlayer_CDetour != NULL)
 			UTIL_GetLocalPlayer_CDetour->DisableDetour();
-
+		UTIL_GetLocalPlayer_CDetour = NULL;
 	}
 };
 

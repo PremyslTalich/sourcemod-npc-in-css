@@ -109,6 +109,7 @@ public:
 	virtual void Weapon_Equip( CBaseEntity *pWeapon );
 	virtual void PickupObject( CBaseEntity *pObject, bool bLimitMassAndSize = true );
 	virtual void ForceDropOfCarriedPhysObjects( CBaseEntity *pOnlyIfHoldingThis);
+	virtual void TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr);
 
 public: // input
 	void InputForceDropPhysObjects( inputdata_t &data );

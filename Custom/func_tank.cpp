@@ -2458,8 +2458,6 @@ void CFuncTankGun::Fire( int bulletCount, const Vector &barrelEnd, const Vector 
 	CFuncTank::Fire( bulletCount, barrelEnd, forward, pAttacker, bIgnoreSpread );
 }
 
-
-
 // #############################################################################
 //   CFuncTankPulseLaser
 // #############################################################################

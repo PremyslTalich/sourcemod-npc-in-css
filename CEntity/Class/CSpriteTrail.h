@@ -34,7 +34,6 @@ protected: //Sendprops
 	DECLARE_SENDPROP(float, m_flStartWidthVariance);
 
 protected: //Datamaps
-	DECLARE_DATAMAP(float, flStartWidthVariance);
 
 
 

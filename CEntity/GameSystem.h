@@ -11,11 +11,11 @@ abstract_class IGameSystem
 {
 public:
 	virtual bool SDKInit() =0;
+	virtual void SDKShutdown() =0;
 	virtual void LevelInitPreEntity() =0;
 	virtual void LevelInitPostEntity() =0;
 	virtual void LevelShutdownPreEntity() =0;
 	virtual void LevelShutdownPostEntity() =0;
-	virtual void SDKShutdown() =0;
 	virtual char *GetSystemName();
 
 public:
@@ -37,12 +37,12 @@ class CBaseGameSystem : public IGameSystem
 {
 public:
 	CBaseGameSystem(const char *name);
-	virtual bool SDKInit() { return true; };
-	virtual void LevelInitPreEntity() {};
-	virtual void LevelInitPostEntity() {};
-	virtual void LevelShutdownPreEntity() {};
-	virtual void LevelShutdownPostEntity() {};
-	virtual void SDKShutdown() {};
+	virtual bool SDKInit() { return true; }
+	virtual void SDKShutdown() {}
+	virtual void LevelInitPreEntity() {}
+	virtual void LevelInitPostEntity() {}
+	virtual void LevelShutdownPreEntity() {}
+	virtual void LevelShutdownPostEntity() {}
 
 public:
 	CBaseGameSystem		*m_pNext;

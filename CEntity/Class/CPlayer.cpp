@@ -156,6 +156,15 @@ void CPlayer::CacheVehicleView( void )
 	}
 }
 
+void CPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr)
+{
+	bool ret = g_helpfunc.GameRules_FPlayerCanTakeDamage(BaseEntity(), info.GetAttacker());
+	if(!ret)
+		return;
+
+	BaseClass::TraceAttack(info, vecDir,ptr);
+}
+
 int CPlayer::OnTakeDamage(const CTakeDamageInfo& info)
 {
 	CTakeDamageInfo newinfo = info;
