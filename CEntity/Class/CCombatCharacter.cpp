@@ -152,6 +152,22 @@ SH_DECL_MANUALHOOK2(Weapon_Switch, 0, 0, 0, bool, CBaseEntity *, int);
 DECLARE_HOOK(Weapon_Switch, CCombatCharacter);
 DECLARE_DEFAULTHANDLER(CCombatCharacter, Weapon_Switch, bool, (CBaseEntity *pWeapon, int viewmodelindex), (pWeapon, viewmodelindex));
 
+SH_DECL_MANUALHOOK2(GetAttackSpread, 0, 0, 0, Vector, CBaseEntity *, CBaseEntity *);
+DECLARE_HOOK(GetAttackSpread, CCombatCharacter);
+DECLARE_DEFAULTHANDLER_SPECIAL(CCombatCharacter, GetAttackSpread, Vector, (CBaseEntity *pWeapon, CBaseEntity *pTarget), (pWeapon, pTarget), vec3_origin);
+
+SH_DECL_MANUALHOOK1(ShouldShootMissTarget, 0, 0, 0, bool, CBaseEntity *);
+DECLARE_HOOK(ShouldShootMissTarget, CCombatCharacter);
+DECLARE_DEFAULTHANDLER(CCombatCharacter, ShouldShootMissTarget, bool, (CBaseEntity *pAttacker), (pAttacker));
+
+SH_DECL_MANUALHOOK0(FindMissTarget, 0, 0, 0, CBaseEntity *);
+DECLARE_HOOK(FindMissTarget, CCombatCharacter);
+DECLARE_DEFAULTHANDLER(CCombatCharacter, FindMissTarget, CBaseEntity *, (), ());
+
+SH_DECL_MANUALHOOK2(GetSpreadBias, 0, 0, 0, float, CBaseEntity *, CBaseEntity *);
+DECLARE_HOOK(GetSpreadBias, CCombatCharacter);
+DECLARE_DEFAULTHANDLER(CCombatCharacter, GetSpreadBias, float , (CBaseEntity *pWeapon, CBaseEntity *pTarget), (pWeapon, pTarget));
+
 
 
 // Sendprops

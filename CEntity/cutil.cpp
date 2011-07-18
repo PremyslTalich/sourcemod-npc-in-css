@@ -26,6 +26,8 @@
 #include "CAI_NPC.h"
 #include "effect_dispatch_data.h"
 #include "CE_recipientfilter.h"
+#include "GameSystem.h"
+
 
 
 int ENTINDEX( CBaseEntity *pEnt )
@@ -1966,4 +1968,185 @@ void EntityMatrix::InitFromEntity( CEntity *pEntity, int iAttachment )
 
 	((VMatrix *)this)->SetupMatrixOrgAngles( pEntity->GetAbsOrigin(), pEntity->GetAbsAngles() );
 	
+}
+
+
+
+class CCheckClient : public CValveAutoGameSystem
+{
+public:
+	CCheckClient( char const *name ) : CValveAutoGameSystem( name )
+	{
+	}
+
+	void LevelInitPreEntity()
+	{
+		m_checkCluster = -1;
+		m_lastcheck = 1;
+		m_lastchecktime = -1;
+		m_bClientPVSIsExpanded = false;
+	}
+
+	byte	m_checkPVS[MAX_MAP_LEAFS/8];
+	byte	m_checkVisibilityPVS[MAX_MAP_LEAFS/8];
+	int		m_checkCluster;
+	int		m_lastcheck;
+	float	m_lastchecktime;
+	bool	m_bClientPVSIsExpanded;
+};
+
+CCheckClient *g_CheckClient;
+
+static int UTIL_GetNewCheckClient( int check )
+{
+	int		i;
+	edict_t	*ent;
+	Vector	org;
+
+// cycle to the next one
+
+	if (check < 1)
+		check = 1;
+	if (check > gpGlobals->maxClients)
+		check = gpGlobals->maxClients;
+
+	if (check == gpGlobals->maxClients)
+		i = 1;
+	else
+		i = check + 1;
+
+	for ( ;  ; i++)
+	{
+		if ( i > gpGlobals->maxClients )
+		{
+			i = 1;
+		}
+
+		ent = engine->PEntityOfEntIndex( i );
+		if ( !ent )
+			continue;
+
+		// Looped but didn't find anything else
+		if ( i == check )
+			break;	
+
+		if ( !ent->GetUnknown() )
+			continue;
+
+		CEntity *entity = CEntity::Instance(GetContainingEntity( ent ));
+		if ( !entity )
+			continue;
+
+		if ( entity->GetFlags() & FL_NOTARGET )
+			continue;
+
+		// anything that is a client, or has a client as an enemy
+		break;
+	}
+
+	if ( i != check )
+	{
+		memset( g_CheckClient->m_checkVisibilityPVS, 0, sizeof(g_CheckClient->m_checkVisibilityPVS) );
+		g_CheckClient->m_bClientPVSIsExpanded = false;
+	}
+
+	if ( ent )
+	{
+		// get the PVS for the entity
+		CEntity *pce = CEntity::Instance(GetContainingEntity( ent ));
+		if ( !pce )
+			return i;
+
+		org = pce->EyePosition();
+
+		int clusterIndex = engine->GetClusterForOrigin( org );
+		if ( clusterIndex != g_CheckClient->m_checkCluster )
+		{
+			g_CheckClient->m_checkCluster = clusterIndex;
+			engine->GetPVSForCluster( clusterIndex, sizeof(g_CheckClient->m_checkPVS), g_CheckClient->m_checkPVS );
+		}
+	}
+	
+	return i;
+}
+
+
+
+static edict_t *UTIL_GetCurrentCheckClient()
+{
+	edict_t	*ent;
+
+	// find a new check if on a new frame
+	float delta = gpGlobals->curtime - g_CheckClient->m_lastchecktime;
+	if ( delta >= 0.1 || delta < 0 )
+	{
+		g_CheckClient->m_lastcheck = UTIL_GetNewCheckClient( g_CheckClient->m_lastcheck );
+		g_CheckClient->m_lastchecktime = gpGlobals->curtime;
+	}
+
+	// return check if it might be visible	
+	ent = engine->PEntityOfEntIndex( g_CheckClient->m_lastcheck );
+
+	// Allow dead clients -- JAY
+	// Our monsters know the difference, and this function gates alot of behavior
+	// It's annoying to die and see monsters stop thinking because you're no longer
+	// "in" their PVS
+	if ( !ent || ent->IsFree() || !ent->GetUnknown())
+	{
+		return NULL;
+	}
+
+	return ent;
+}
+
+
+extern ConVar *sv_strict_notarget;
+
+static edict_t *UTIL_FindClientInPVSGuts(edict_t *pEdict, unsigned char *pvs, unsigned pvssize )
+{
+	Vector	view;
+
+	edict_t	*ent = UTIL_GetCurrentCheckClient();
+	if ( !ent )
+	{
+		return NULL;
+	}
+
+	CEntity *pPlayerEntity = CEntity::Instance(GetContainingEntity( ent ));
+	if( (!pPlayerEntity || (pPlayerEntity->GetFlags() & FL_NOTARGET)) && sv_strict_notarget->GetBool() )
+	{
+		return NULL;
+	}
+	// if current entity can't possibly see the check entity, return 0
+	// UNDONE: Build a box for this and do it over that box
+	// UNDONE: Use CM_BoxLeafnums()
+	CEntity *pe = CEntity::Instance(GetContainingEntity( pEdict ));
+	if ( pe )
+	{
+		view = pe->EyePosition();
+		
+		if ( !engine->CheckOriginInPVS( view, pvs, pvssize ) )
+		{
+			return NULL;
+		}
+	}
+
+	// might be able to see it
+	return ent;
+}
+
+
+edict_t *UTIL_FindClientInPVS(edict_t *pEdict)
+{
+	return UTIL_FindClientInPVSGuts( pEdict, g_CheckClient->m_checkPVS, sizeof( g_CheckClient->m_checkPVS ) );
+}
+
+bool UTIL_ClientPVSIsExpanded()
+{
+	return g_CheckClient->m_bClientPVSIsExpanded;
+}
+
+edict_t *UTIL_FindClientInVisibilityPVS( edict_t *pEdict )
+{
+	return UTIL_FindClientInPVSGuts( pEdict, g_CheckClient->m_checkVisibilityPVS, sizeof( g_CheckClient->m_checkVisibilityPVS ) );
 }

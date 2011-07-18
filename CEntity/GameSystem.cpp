@@ -2,19 +2,21 @@
 #include "GameSystem.h"
 
 
-static CUtlVector<IGameSystem*> s_GameSystems( 0, 4 );
-static	CBaseGameSystem *s_pSystemList = NULL;
+static CUtlVector<IGameSystem*> s_my_GameSystems( 0, 4 );
+static	CBaseGameSystem *s_my_pSystemList = NULL;
 static bool s_bSystemsInitted = false; 
 
 typedef void (IGameSystem::*GameSystemFunc_t)();
 
+CUtlVector<IValveGameSystem*> *s_GameSystems;
+
 void InvokeMethod( GameSystemFunc_t f )
 {
 	int i;
-	int c = s_GameSystems.Count();
+	int c = s_my_GameSystems.Count();
 	for ( i = 0; i < c ; ++i )
 	{
-		IGameSystem *sys = s_GameSystems[i];
+		IGameSystem *sys = s_my_GameSystems[i];
 		(sys->*f)();
 	}
 }
@@ -23,32 +25,32 @@ void IGameSystem::InitAllSystems()
 {
 	{
 		// first add any auto systems to the end
-		CBaseGameSystem *pSystem = s_pSystemList;
+		CBaseGameSystem *pSystem = s_my_pSystemList;
 		while ( pSystem )
 		{
-			if ( s_GameSystems.Find( pSystem ) == s_GameSystems.InvalidIndex() )
+			if ( s_my_GameSystems.Find( pSystem ) == s_my_GameSystems.InvalidIndex() )
 			{
 				Add( pSystem );
 			}
 			pSystem = pSystem->m_pNext;
 		}
-		s_pSystemList = NULL;
+		s_my_pSystemList = NULL;
 	}
 	s_bSystemsInitted = true;
 }
 
 void IGameSystem::Add( IGameSystem* pSys )
 {
-	s_GameSystems.AddToTail( pSys );
+	s_my_GameSystems.AddToTail( pSys );
 }
 
 void IGameSystem::SDKInitAllSystems()
 {
 	int i;
-	int c = s_GameSystems.Count();
+	int c = s_my_GameSystems.Count();
 	for ( i = 0; i < c ; ++i )
 	{
-		IGameSystem *sys = s_GameSystems[i];
+		IGameSystem *sys = s_my_GameSystems[i];
 		if(!sys->SDKInit())
 		{
 			META_CONPRINTF("[*] %s SDKInit failed to Initialize.",sys->GetSystemName());
@@ -97,7 +99,7 @@ CBaseGameSystem::CBaseGameSystem(const char *name)
 	}
 	else
 	{
-		m_pNext = s_pSystemList;
-		s_pSystemList = this;
+		m_pNext = s_my_pSystemList;
+		s_my_pSystemList = this;
 	}
 }

@@ -26,6 +26,9 @@
 #include "npcevent.h"
 
 
+#define	BCF_NO_ANIMATION_SKIP	( 1 << 0 )	// Do not allow PVS animation skipping (mostly for attachments being critical to an entity)
+#define	BCF_IS_IN_SPAWN			( 1 << 1 )	// Is currently inside of spawn, always evaluate animations
+
 class CAnimating : public CEntity
 {
 public:
@@ -142,6 +145,10 @@ public:
 	bool ComputeHitboxSurroundingBox( Vector *pVecWorldMins, Vector *pVecWorldMaxs );
 
 	void DoMuzzleFlash();
+	
+	int		GetBoneCacheFlags( void ) { return m_fBoneCacheFlags; }
+	inline void	SetBoneCacheFlags( unsigned short fFlag ) { m_fBoneCacheFlags |= fFlag; }
+	inline void	ClearBoneCacheFlags( unsigned short fFlag ) { m_fBoneCacheFlags &= ~fFlag; }
 
 
 public:
@@ -191,8 +198,8 @@ protected: //Datamaps
 	DECLARE_DATAMAP(bool, m_bSequenceLoops);
 	DECLARE_DATAMAP(bool, m_bSequenceFinished);
 	DECLARE_DATAMAP(float, m_flLastEventCheck);
+	DECLARE_DATAMAP(unsigned short, m_fBoneCacheFlags);
 
-	
 public:
 	DECLARE_DATAMAP(float, m_flGroundSpeed);
 

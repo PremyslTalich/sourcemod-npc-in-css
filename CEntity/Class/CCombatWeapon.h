@@ -5,6 +5,7 @@
 #include "CEntity.h"
 #include "CAnimating.h"
 #include "CItem.h"
+#include "weapon_proficiency.h"
 
 class CPlayer;
 
@@ -72,6 +73,9 @@ public:
 	int			Clip1() const { return m_iClip1; }
 	int			Clip2() const { return m_iClip2; }
 	int			GetSubType( void ) { return m_iSubType; }
+
+public:
+	static const	WeaponProficiencyInfo_t *GetDefaultProficiencyValues();
 
 protected:
 	bool m_bRemoveOnDrop;

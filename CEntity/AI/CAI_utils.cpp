@@ -196,3 +196,36 @@ bool CTraceFilterSkipTwoEntities::ShouldHitEntity( IHandleEntity *pHandleEntity,
 
 	return BaseClass::ShouldHitEntity( pHandleEntity, contentsMask );
 }
+
+
+
+
+bool FBoxVisible( CEntity *pLooker, CEntity *pTarget, Vector &vecTargetOrigin, float flSize )
+{
+	// don't look through water
+	if ((pLooker->GetWaterLevel() != 3 && pTarget->GetWaterLevel() == 3) 
+		|| (pLooker->GetWaterLevel() == 3 && pTarget->GetWaterLevel() == 0))
+		return FALSE;
+
+	trace_t tr;
+	Vector	vecLookerOrigin = pLooker->EyePosition();//look through the NPC's 'eyes'
+	for (int i = 0; i < 5; i++)
+	{
+		Vector vecTarget = pTarget->GetAbsOrigin();
+		vecTarget.x += random->RandomFloat( pTarget->WorldAlignMins().x + flSize, pTarget->WorldAlignMaxs().x - flSize);
+		vecTarget.y += random->RandomFloat( pTarget->WorldAlignMins().y + flSize, pTarget->WorldAlignMaxs().y - flSize);
+		vecTarget.z += random->RandomFloat( pTarget->WorldAlignMins().z + flSize, pTarget->WorldAlignMaxs().z - flSize);
+
+		UTIL_TraceLine(vecLookerOrigin, vecTarget, MASK_BLOCKLOS, pLooker->BaseEntity(), COLLISION_GROUP_NONE, &tr);
+		
+		if (tr.fraction == 1.0)
+		{
+			vecTargetOrigin = vecTarget;
+			return TRUE;// line of sight is valid.
+		}
+	}
+	return FALSE;// Line of sight is not established
+}
+
+
+

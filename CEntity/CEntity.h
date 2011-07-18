@@ -416,6 +416,7 @@ public: // CBaseEntity virtuals
 	virtual const char *GetTracerType( void );
 	virtual int	UpdateTransmitState();
 	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
+	virtual bool CanBeSeenBy( CBaseEntity *pNPC );
 
 public:
 	void SetLocalOrigin(const Vector& origin);
@@ -772,6 +773,7 @@ public: // All the internal hook implementations for the above virtuals
 	DECLARE_DEFAULTHEADER(GetTracerType, const char	*,());
 	DECLARE_DEFAULTHEADER(UpdateTransmitState, int, ());
 	DECLARE_DEFAULTHEADER(SetTransmit, void, ( CCheckTransmitInfo *pInfo, bool bAlways ));
+	DECLARE_DEFAULTHEADER(CanBeSeenBy, bool, ( CBaseEntity *pNPC ));
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetLocalOrigin, void, (const Vector& origin));
@@ -829,7 +831,6 @@ protected: //Datamaps
 	
 	DECLARE_DATAMAP(CCollisionProperty, m_Collision);
 	DECLARE_DATAMAP(Vector, m_vecViewOffset);
-	DECLARE_DATAMAP(int, m_spawnflags);
 	DECLARE_DATAMAP(int, m_fFlags);
 	DECLARE_DATAMAP(CServerNetworkProperty , m_Network);
 	DECLARE_DATAMAP(unsigned char, m_nWaterLevel);
@@ -863,6 +864,9 @@ public:
 	DECLARE_DATAMAP_OFFSET(float, m_flRadius);
 	DECLARE_DATAMAP(VALVE_BASEPTR, m_pfnThink);
 	DECLARE_DATAMAP(unsigned char, m_triggerBloat);
+	DECLARE_DATAMAP_OFFSET(CBaseEntity *, m_pLink);
+	DECLARE_DATAMAP(int, m_spawnflags);
+
 
 
 	/* Thinking Stuff */

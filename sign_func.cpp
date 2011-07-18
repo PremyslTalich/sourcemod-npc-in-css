@@ -22,6 +22,8 @@ struct TemplateEntityData_t;
 class CGameStringPool;
 class CMemoryPool;
 class CCallQueue;
+class CCheckClient;
+
 
 HelperFunction g_helpfunc;
 
@@ -40,7 +42,8 @@ extern CMemoryPool *g_EntityListPool;
 extern ConVar *ammo_hegrenade_max;
 extern trace_t *g_TouchTrace;
 extern INetworkStringTable *g_pStringTableParticleEffectNames;
-
+extern CUtlVector<IValveGameSystem*> *s_GameSystems;
+extern CCheckClient *g_CheckClient;
 
 void InitDefaultAIRelationships();
 
@@ -158,6 +161,35 @@ void HelperFunction::Shutdown()
 	SH_REMOVE_MANUALHOOK_MEMFUNC(OnLadderHook, g_CGameMovement, &g_helpfunc, &HelperFunction::OnLadder, false);
 }
 
+#define FindValveGameSystem(ptr, bclass, systemname) \
+	META_CONPRINTF("[%s] Getting %s - ",g_Monster.GetLogTag(),#ptr);\
+	ptr = NULL;\
+	for(int i=0;i<s_GameSystems->Count();i++)\
+	{\
+		IValveGameSystem *vsystem = s_GameSystems->Element(i);\
+		if(vsystem)\
+		{\
+			char const *name = vsystem->Name();\
+			if(strcmp(name, systemname) == 0)\
+			{\
+				ptr = (bclass)vsystem;\
+			}\
+		}\
+	}\
+	if(ptr == NULL) {\
+		META_CONPRINT("Fail\n");\
+		g_pSM->LogError(myself,"Unable getting Valve System %s", systemname);\
+		return false;\
+	}\
+	META_CONPRINT("Success\n");\
+
+
+bool HelperFunction::FindAllValveGameSystem()
+{
+	FindValveGameSystem(g_CheckClient, CCheckClient *, "CCheckClient");
+
+	return true;
+}
 
 bool HelperFunction::Initialize()
 {
@@ -236,6 +268,8 @@ bool HelperFunction::Initialize()
 	GET_VARIABLE(gm_AllHints, CAIHintVector *);
 	CAI_HintManager::gm_AllHints = gm_AllHints;
 
+	GET_VARIABLE(s_GameSystems, CUtlVector<IValveGameSystem*> *);
+
 	g_CGameMovement = (CGameMovement *)g_pGameMovement;
 
 	SH_ADD_MANUALHOOK_MEMFUNC(OnLadderHook, g_CGameMovement, &g_helpfunc, &HelperFunction::OnLadder, false);
@@ -251,6 +285,10 @@ bool HelperFunction::Initialize()
 			ammo->pMaxCarryCVar = ammo_hegrenade_max;
 		}
 	}
+
+	if(!FindAllValveGameSystem())
+		return false;
+
 	return true;
 }
 

@@ -113,6 +113,7 @@ SH_DECL_MANUALHOOK1_void(FireBullets, 0, 0, 0, const FireBulletsInfo_t &);
 SH_DECL_MANUALHOOK0(GetTracerType, 0, 0, 0, const char	*);
 SH_DECL_MANUALHOOK0(UpdateTransmitState, 0, 0, 0, int);
 SH_DECL_MANUALHOOK2_void(SetTransmit, 0, 0, 0, CCheckTransmitInfo *, bool);
+SH_DECL_MANUALHOOK1(CanBeSeenBy, 0, 0, 0, bool, CBaseEntity *);
 
 
 
@@ -190,6 +191,7 @@ DECLARE_HOOK(FireBullets, CEntity);
 DECLARE_HOOK(GetTracerType, CEntity);
 DECLARE_HOOK(UpdateTransmitState, CEntity);
 DECLARE_HOOK(SetTransmit, CEntity);
+DECLARE_HOOK(CanBeSeenBy, CEntity);
 
 
 DECLARE_DEFAULTHANDLER_void(CEntity, Teleport, (const Vector *origin, const QAngle* angles, const Vector *velocity), (origin, angles, velocity));
@@ -256,6 +258,7 @@ DECLARE_DEFAULTHANDLER_void(CEntity,FireBullets, ( const FireBulletsInfo_t &info
 DECLARE_DEFAULTHANDLER(CEntity,GetTracerType, const char *, (), ());
 DECLARE_DEFAULTHANDLER(CEntity,UpdateTransmitState, int, (), ());
 DECLARE_DEFAULTHANDLER_void(CEntity,SetTransmit, (CCheckTransmitInfo *pInfo, bool bAlways), (pInfo, bAlways));
+DECLARE_DEFAULTHANDLER(CEntity,CanBeSeenBy, bool, (CBaseEntity *pNPC), (pNPC));
 
 
 //Sendprops
@@ -327,6 +330,7 @@ DEFINE_PROP(m_flFriction, CEntity);
 DEFINE_PROP(m_flMoveDoneTime, CEntity);
 DEFINE_PROP(m_flLocalTime, CEntity);
 DEFINE_PROP(m_aThinkFunctions, CEntity);
+DEFINE_PROP(m_pLink, CEntity);
 
 
 

@@ -61,6 +61,7 @@ public:
 	void SetEndEntity( CEntity *pEntity );
 	void SetStartAttachment( int attachment );
 	void SetEndAttachment( int attachment );
+	void SetBeamFlags( int flags );
 
 	void RelinkBeam( void );
 
@@ -210,6 +211,11 @@ inline void	CE_CBeam::SetFireTime( float flFireTime )
 	m_flFireTime = flFireTime; 
 }
 
+inline void CE_CBeam::SetBeamFlags( int flags )	
+{ 
+	Assert( flags < (1 << NUM_BEAM_FLAGS) );
+	m_nBeamFlags = flags;
+}
 
 // Start/End Entity is encoded as 12 bits of entity index, and 4 bits of attachment (4:12)
 #define BEAMENT_ENTITY(x)		((x)&0xFFF)

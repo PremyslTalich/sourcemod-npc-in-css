@@ -116,6 +116,8 @@ public:
 
 	int					LastHitGroup() const { return m_LastHitGroup; }
 	void				SetLastHitGroup( int nHitGroup ) { m_LastHitGroup = nHitGroup; }
+	
+	bool				DispatchInteraction( int interactionType, void *data, CBaseEntity* sourceEnt )	{ return ( interactionType > 0 ) ? HandleInteraction( interactionType, data, sourceEnt ) : false; }
 
 private:
 	void ThrowDirForWeaponStrip( CCombatWeapon *pWeapon, const Vector &vecForward, Vector *pVecThrowDir );
@@ -160,6 +162,10 @@ public:
 	virtual bool BecomeRagdollBoogie( CBaseEntity *pKiller, const Vector &forceVector, float duration, int flags );
 	virtual void NotifyFriendsOfDamage( CBaseEntity *pAttackerEntity );
 	virtual	bool Weapon_Switch( CBaseEntity *pWeapon, int viewmodelindex = 0 );
+	virtual Vector GetAttackSpread( CBaseEntity *pWeapon, CBaseEntity *pTarget );
+	virtual bool ShouldShootMissTarget( CBaseEntity *pAttacker );
+	virtual CBaseEntity *FindMissTarget( void );
+	virtual	float GetSpreadBias( CBaseEntity *pWeapon, CBaseEntity *pTarget );
 
 public:
 	DECLARE_DEFAULTHEADER(IRelationType, Disposition_t, (CBaseEntity *pTarget));
@@ -197,6 +203,10 @@ public:
 	DECLARE_DEFAULTHEADER(BecomeRagdollBoogie, bool, ( CBaseEntity *pKiller, const Vector &forceVector, float duration, int flags ));
 	DECLARE_DEFAULTHEADER(NotifyFriendsOfDamage, void, ( CBaseEntity *pAttackerEntity ));
 	DECLARE_DEFAULTHEADER(Weapon_Switch, bool,( CBaseEntity *pWeapon, int viewmodelindex ));
+	DECLARE_DEFAULTHEADER(GetAttackSpread, Vector, ( CBaseEntity *pWeapon, CBaseEntity *pTarget ));
+	DECLARE_DEFAULTHEADER(ShouldShootMissTarget, bool, ( CBaseEntity *pAttacker ));
+	DECLARE_DEFAULTHEADER(FindMissTarget, CBaseEntity*, ( void ));
+	DECLARE_DEFAULTHEADER(GetSpreadBias, float, ( CBaseEntity *pWeapon, CBaseEntity *pTarget ));
 
 public:
 	static void Shutdown();

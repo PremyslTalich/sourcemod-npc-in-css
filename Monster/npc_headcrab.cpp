@@ -1520,7 +1520,7 @@ int CBaseHeadcrab::RangeAttack1Conditions( float flDot, float flDist )
 	CEntity *pEnemy = GetEnemy();
 	if( pEnemy )
 	{
-		bool bEnemyIsBullseye = ( dynamic_cast<CE_NPC_Bullseye *>(pEnemy) != NULL );
+		bool bEnemyIsBullseye = ( dynamic_cast<CNPC_Bullseye *>(pEnemy) != NULL );
 
 		trace_t tr;
 		UTIL_TraceLine( EyePosition(), pEnemy->EyePosition(), MASK_SOLID, BaseEntity(), COLLISION_GROUP_NONE, &tr );

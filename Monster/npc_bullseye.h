@@ -6,13 +6,13 @@
 #include "CCycler_Fix.h"
 #include "CAI_NPC.h"
 
-class CE_NPC_Bullseye : public CE_Cycler_Fix
+class CNPC_Bullseye : public CE_Cycler_Fix
 {
 public:
-	CE_DECLARE_CLASS( CE_NPC_Bullseye, CE_Cycler_Fix );
+	CE_DECLARE_CLASS( CNPC_Bullseye, CE_Cycler_Fix );
 
-	CE_NPC_Bullseye();
-	~CE_NPC_Bullseye();
+	CNPC_Bullseye();
+	~CNPC_Bullseye();
 
 	virtual void Precache( void );
 	virtual void Spawn( void );

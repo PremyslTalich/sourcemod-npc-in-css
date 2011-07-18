@@ -153,3 +153,19 @@ bool CCombatWeapon::UsesPrimaryAmmo( void )
 	return true;
 }
 
+const WeaponProficiencyInfo_t *CCombatWeapon::GetDefaultProficiencyValues()
+{
+	// Weapon proficiency table. Keep this in sync with WeaponProficiency_t enum in the header!!
+	static WeaponProficiencyInfo_t g_BaseWeaponProficiencyTable[] =
+	{
+		{ 2.50, 1.0	},
+		{ 2.00, 1.0	},
+		{ 1.50, 1.0	},
+		{ 1.25, 1.0 },
+		{ 1.00, 1.0	},
+	};
+
+	COMPILE_TIME_ASSERT( ARRAYSIZE(g_BaseWeaponProficiencyTable) == WEAPON_PROFICIENCY_PERFECT + 1);
+
+	return g_BaseWeaponProficiencyTable;
+}

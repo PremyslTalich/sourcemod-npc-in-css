@@ -43,6 +43,7 @@ public:
 	HelperFunction();
 
 	bool Initialize();
+	bool FindAllValveGameSystem();
 	void Shutdown();
 
 	void LevelInitPreEntity();

@@ -103,3 +103,29 @@ void PhysComputeSlideDirection( IPhysicsObject *pPhysics, const Vector &inputVel
 	}
 }
 
+
+
+AngularImpulse ComputeRotSpeedToAlignAxes( const Vector &testAxis, const Vector &alignAxis, const AngularImpulse &currentSpeed, float damping, float scale, float maxSpeed )
+{
+	Vector rotationAxis = CrossProduct( testAxis, alignAxis );
+
+	// atan2() is well defined, so do a Dot & Cross instead of asin(Cross)
+	float cosine = DotProduct( testAxis, alignAxis );
+	float sine = VectorNormalize( rotationAxis );
+	float angle = atan2( sine, cosine );
+
+	angle = RAD2DEG(angle);
+	AngularImpulse angular = rotationAxis * scale * angle;
+	angular -= rotationAxis * damping * DotProduct( currentSpeed, rotationAxis );
+
+	float len = VectorNormalize( angular );
+
+	if ( len > maxSpeed )
+	{
+		len = maxSpeed;
+	}
+
+	return angular * len;
+}
+
+

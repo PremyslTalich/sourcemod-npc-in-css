@@ -1,5 +1,7 @@
 
 #include "CAI_Memory.h"
+#include "CAI_NPC.h"
+
 
 #define	EMEMORY_POOL_SIZE		  64
 #define AI_FREE_KNOWLEDGE_DURATION 1.75
@@ -187,4 +189,74 @@ void CEAI_Enemies::OnTookDamageFrom( CBaseEntity *pEnemy )
 	if ( pMemory )
 		pMemory->timeLastReceivedDamageFrom = gpGlobals->curtime;
 }
+
+void CEAI_Enemies::RefreshMemories(void)
+{
+	if ( m_flFreeKnowledgeDuration >= m_flEnemyDiscardTime )
+	{
+		m_flFreeKnowledgeDuration = m_flEnemyDiscardTime - .1;
+	}
+
+	// -------------------
+	// Check each record
+	// -------------------
+	
+	CMemMap::IndexType_t i = m_Map.FirstInorder();
+	while ( i != m_Map.InvalidIndex() )
+	{	
+		AI_EnemyInfo_t *pMemory = m_Map[i];
+		
+		CMemMap::IndexType_t iNext = m_Map.NextInorder( i ); // save so can remove
+		if ( ShouldDiscardMemory( pMemory ) )
+		{
+			delete pMemory;
+			m_Map.RemoveAt(i);
+		}
+		else if ( pMemory->hEnemy )
+		{
+			CEntity *enemy = CEntity::Instance(pMemory->hEnemy);
+
+			if ( gpGlobals->curtime <= pMemory->timeLastSeen + m_flFreeKnowledgeDuration )
+			{
+				// Free knowledge is ignored if the target has notarget on
+				if ( !(enemy->GetFlags() & FL_NOTARGET) )
+				{
+					pMemory->vLastKnownLocation = enemy->GetAbsOrigin();
+				}
+			}
+
+			if ( gpGlobals->curtime <= pMemory->timeLastSeen )
+			{
+				pMemory->vLastSeenLocation = enemy->GetAbsOrigin();
+			}
+		}
+		i = iNext;
+	}
+}
+
+bool CEAI_Enemies::ShouldDiscardMemory( AI_EnemyInfo_t *pMemory )
+{
+	CEntity *pEnemy = CEntity::Instance(pMemory->hEnemy);
+
+	if ( pEnemy )
+	{
+		CAI_NPC *pEnemyNPC = pEnemy->MyNPCPointer();
+		if ( pEnemyNPC && pEnemyNPC->GetState() == NPC_STATE_DEAD )
+			return true;
+	}
+	else
+	{
+		if ( !pMemory->bDangerMemory )
+			return true;
+	}
+
+	if ( !pMemory->bUnforgettable &&
+		 gpGlobals->curtime > pMemory->timeLastSeen + m_flEnemyDiscardTime )
+	{
+		return true;
+	}
+
+	return false;
+}
+
 

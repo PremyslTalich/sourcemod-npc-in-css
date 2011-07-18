@@ -60,4 +60,7 @@ struct breakablepropparams_t
 
 float PhysGetEntityMass( CEntity *pEntity );
 
+AngularImpulse ComputeRotSpeedToAlignAxes( const Vector &testAxis, const Vector &alignAxis, const AngularImpulse &currentSpeed, 
+										  float damping, float scale, float maxSpeed );
+
 #endif

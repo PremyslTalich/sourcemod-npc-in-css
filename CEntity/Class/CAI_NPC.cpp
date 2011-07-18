@@ -5,6 +5,11 @@
 #include "CPlayer.h"
 #include "in_buttons.h"
 #include "CESoundEnt.h"
+#include "shot_manipulator.h"
+#include "npc_bullseye.h"
+#include "CCombatWeapon.h"
+
+
 
 CAI_Manager g_AI_Manager;
 
@@ -726,7 +731,21 @@ SH_DECL_MANUALHOOK5(PlayerInSpread, 0, 0, 0, bool, const Vector &, const Vector 
 DECLARE_HOOK(PlayerInSpread, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, PlayerInSpread, bool, (const Vector &sourcePos, const Vector &targetPos, float flSpread, float maxDistOffCenter, bool ignoreHatedPlayers), (sourcePos, targetPos, flSpread, maxDistOffCenter, ignoreHatedPlayers));
 
+SH_DECL_MANUALHOOK1(EyeOffset, 0, 0, 0, Vector, Activity);
+DECLARE_HOOK(EyeOffset, CAI_NPC);
+DECLARE_DEFAULTHANDLER_SPECIAL(CAI_NPC, EyeOffset, Vector, (Activity nActivity), (nActivity), vec3_origin);
 
+SH_DECL_MANUALHOOK2_void(CollectShotStats, 0, 0, 0, const Vector &, const Vector &);
+DECLARE_HOOK(CollectShotStats, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, CollectShotStats, (const Vector &vecShootOrigin, const Vector &vecShootDir), (vecShootOrigin, vecShootDir));
+
+SH_DECL_MANUALHOOK1_void(OnLooked, 0, 0, 0, int);
+DECLARE_HOOK(OnLooked, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnLooked, (int iDistance), (iDistance));
+
+SH_DECL_MANUALHOOK0(ShouldNotDistanceCull, 0, 0, 0, bool);
+DECLARE_HOOK(ShouldNotDistanceCull, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ShouldNotDistanceCull, bool, (), ());
 
 
 
@@ -799,6 +818,8 @@ DEFINE_PROP(m_OnHalfHealth, CAI_NPC);
 DEFINE_PROP(m_bForceConditionsGather, CAI_NPC);
 DEFINE_PROP(m_flSumDamage, CAI_NPC);
 DEFINE_PROP(m_flLastPlayerDamageTime, CAI_NPC);
+DEFINE_PROP(m_poseAim_Pitch, CAI_NPC);
+DEFINE_PROP(m_poseAim_Yaw, CAI_NPC);
 
 
 
@@ -2099,6 +2120,187 @@ bool CAI_NPC::PointInSpread( CCombatCharacter *pCheckEntity, const Vector &sourc
 	return false;
 }
 
+Vector CAI_NPC::GetActualShootTrajectory( const Vector &shootOrigin )
+{
+	if( !GetEnemy() )
+		return GetShootEnemyDir( shootOrigin );
+
+	// If we're above water shooting at a player underwater, bias some of the shots forward of
+	// the player so that they see the cool bubble trails in the water ahead of them.
+	if (GetEnemy()->IsPlayer() && (GetWaterLevel() != 3) && (GetEnemy()->GetWaterLevel() == 3))
+	{
+#if 1
+		if (random->RandomInt(0, 4) < 3)
+		{
+			Vector vecEnemyForward;
+			GetEnemy()->GetVectors( &vecEnemyForward, NULL, NULL );
+			vecEnemyForward.z = 0;
+
+			// Lead up to a second ahead of them unless they are moving backwards.
+			Vector vecEnemyVelocity = GetEnemy()->GetSmoothedVelocity();
+			VectorNormalize( vecEnemyVelocity );
+			float flVelocityScale = vecEnemyForward.Dot( vecEnemyVelocity );
+			if ( flVelocityScale < 0.0f )
+			{
+				flVelocityScale = 0.0f;
+			}
+
+			Vector vecAimPos = GetEnemy()->EyePosition() + ( 48.0f * vecEnemyForward ) + (flVelocityScale * GetEnemy()->GetSmoothedVelocity() );
+			//NDebugOverlay::Cross3D(vecAimPos, Vector(-16,-16,-16), Vector(16,16,16), 255, 255, 0, true, 1.0f );
+			
+			//vecAimPos.z = UTIL_WaterLevel( vecAimPos, vecAimPos.z, vecAimPos.z + 400.0f );
+			//NDebugOverlay::Cross3D(vecAimPos, Vector(-32,-32,-32), Vector(32,32,32), 255, 0, 0, true, 1.0f );
+
+			Vector vecShotDir = vecAimPos - shootOrigin;
+			VectorNormalize( vecShotDir );
+			return vecShotDir;
+		}
+#else
+		if (random->RandomInt(0, 4) < 3)
+		{
+			// Aim at a point a few feet in front of the player's eyes
+			Vector vecEnemyForward;
+			GetEnemy()->GetVectors( &vecEnemyForward, NULL, NULL );
+
+			Vector vecAimPos = GetEnemy()->EyePosition() + (120.0f * vecEnemyForward );
+
+			Vector vecShotDir = vecAimPos - shootOrigin;
+			VectorNormalize( vecShotDir );
+
+			CShotManipulator manipulator( vecShotDir );
+			manipulator.ApplySpread( VECTOR_CONE_10DEGREES, 1 );
+			vecShotDir = manipulator.GetResult();
+
+			return vecShotDir;
+		}
+#endif
+	}
+
+	Vector vecProjectedPosition = GetActualShootPosition( shootOrigin );
+
+	Vector shotDir = vecProjectedPosition - shootOrigin;
+	VectorNormalize( shotDir );
+
+	CollectShotStats( shootOrigin, shotDir );
+
+	// NOW we have a shoot direction. Where a 100% accurate bullet should go.
+	// Modify it by weapon proficiency.
+	// construct a manipulator 
+	CShotManipulator manipulator( shotDir );
+
+	// Apply appropriate accuracy.
+	bool bUsePerfectAccuracy = false;
+	if ( GetEnemy() && GetEnemy()->Classify() == CLASS_BULLSEYE )
+	{
+		CNPC_Bullseye *pBullseye = dynamic_cast<CNPC_Bullseye*>(GetEnemy()); 
+		if ( pBullseye && pBullseye->UsePerfectAccuracy() )
+		{
+			bUsePerfectAccuracy = true;
+		}
+	}
+
+	if ( !bUsePerfectAccuracy )
+	{
+		CCombatWeapon *weapon = GetActiveWeapon();
+
+		manipulator.ApplySpread( GetAttackSpread( (weapon)?weapon->BaseEntity():NULL, GetEnemy_CBase() ), GetSpreadBias( (weapon)?weapon->BaseEntity():NULL, GetEnemy_CBase() ) );
+		shotDir = manipulator.GetResult();
+	}
+
+	// Look for an opportunity to make misses hit interesting things.
+	CCombatCharacter *pEnemy;
+
+	pEnemy = GetEnemy()->MyCombatCharacterPointer();
+
+	if( pEnemy && pEnemy->ShouldShootMissTarget( BaseEntity() ) )
+	{
+		Vector vecEnd = shootOrigin + shotDir * 8192;
+		trace_t tr;
+
+		UTIL_TraceLine(shootOrigin, vecEnd, MASK_SHOT, BaseEntity(), COLLISION_GROUP_NONE, &tr);
+
+		CEntity *cent = CEntity::Instance(tr.m_pEnt);
+		if( tr.fraction != 1.0 && cent && cent->m_takedamage != DAMAGE_NO )
+		{
+			// Hit something we can harm. Just shoot it.
+			return manipulator.GetResult();
+		}
+
+		// Find something interesting around the enemy to shoot instead of just missing.
+		CEntity *pMissTarget = CEntity::Instance(pEnemy->FindMissTarget());
+		
+		if( pMissTarget )
+		{
+			shotDir = pMissTarget->WorldSpaceCenter() - shootOrigin;
+			VectorNormalize( shotDir );
+		}
+	}
+
+	return shotDir;
+
+}
+
+bool CAI_NPC::CheckPVSCondition()
+{
+	bool bInPVS = ( UTIL_FindClientInPVS( edict() ) != NULL ) || (UTIL_ClientPVSIsExpanded() && UTIL_FindClientInVisibilityPVS( edict() ));
+
+	if ( bInPVS )
+		SetCondition( COND_IN_PVS );
+	else
+		ClearCondition( COND_IN_PVS );
+
+	return bInPVS;
+}
+
+extern ConVar *ai_lead_time;
+Vector CAI_NPC::GetActualShootPosition( const Vector &shootOrigin )
+{
+	// Project the target's location into the future.
+	Vector vecEnemyLKP = GetEnemyLKP();
+	Vector vecEnemyOffset = GetEnemy()->BodyTarget( shootOrigin ) - GetEnemy()->GetAbsOrigin();
+	Vector vecTargetPosition = vecEnemyOffset + vecEnemyLKP;
+
+	// lead for some fraction of a second.
+	return (vecTargetPosition + ( GetEnemy()->GetSmoothedVelocity() * ai_lead_time->GetFloat() ));
+}
+
+extern ConVar *ai_shot_bias;
+extern ConVar *ai_spread_pattern_focus_time;
+
+float CAI_NPC::GetSpreadBias( CBaseEntity *pWeapon, CBaseEntity *pTarget )
+{
+	float bias = BaseClass::GetSpreadBias( pWeapon, pTarget );
+	AI_EnemyInfo_t *pEnemyInfo = GetEnemies()->Find( pTarget );
+	if ( ai_shot_bias->GetFloat() != 1.0 )
+		bias = ai_shot_bias->GetFloat();
+	if ( pEnemyInfo )
+	{
+		float timeToFocus = ai_spread_pattern_focus_time->GetFloat();
+		if ( timeToFocus > 0.0 )
+		{
+			float timeSinceValidEnemy = gpGlobals->curtime - pEnemyInfo->timeValidEnemy;
+			if ( timeSinceValidEnemy < 0.0f )
+			{
+				timeSinceValidEnemy = 0.0f;
+			}
+			float timeSinceReacquire = gpGlobals->curtime - pEnemyInfo->timeLastReacquired;
+			if ( timeSinceValidEnemy < timeToFocus )
+			{
+				float scale = timeSinceValidEnemy / timeToFocus;
+				Assert( scale >= 0.0 && scale <= 1.0 );
+				bias *= scale;
+			}
+			else if ( timeSinceReacquire < timeToFocus ) // handled seperately as might be tuning seperately
+			{
+				float scale = timeSinceReacquire / timeToFocus;
+				Assert( scale >= 0.0 && scale <= 1.0 );
+				bias *= scale;
+			}
+
+		}
+	}
+	return bias;
+}
 
 
 

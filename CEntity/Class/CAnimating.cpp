@@ -115,6 +115,7 @@ DEFINE_PROP(m_bSequenceLoops,CAnimating);
 DEFINE_PROP(m_flGroundSpeed,CAnimating);
 DEFINE_PROP(m_bSequenceFinished,CAnimating);
 DEFINE_PROP(m_flLastEventCheck,CAnimating);
+DEFINE_PROP(m_fBoneCacheFlags,CAnimating);
 
 
 

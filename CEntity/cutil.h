@@ -459,7 +459,11 @@ void DispatchParticleEffect( int iEffectIndex, Vector vecOrigin, Vector vecStart
 
 void PrecacheParticleSystem( const char *pParticleSystemName );
 
-
 bool UTIL_IsMasterTriggered(string_t sMaster, CEntity *pActivator);
+
+edict_t		*UTIL_FindClientInPVS( edict_t *pEdict );
+edict_t		*UTIL_FindClientInVisibilityPVS( edict_t *pEdict );
+
+bool		UTIL_ClientPVSIsExpanded();
 
 #endif // _INCLUDE_UTIL_H_

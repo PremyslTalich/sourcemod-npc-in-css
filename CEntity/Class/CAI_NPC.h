@@ -390,6 +390,9 @@ Vector VecCheckThrow( CEntity *pEdict, const Vector &vecSpot1, Vector vecSpot2, 
 extern bool AIStrongOpt( void );
 
 
+bool FBoxVisible ( CEntity *pLooker, CEntity *pTarget );
+bool FBoxVisible ( CEntity *pLooker, CEntity *pTarget, Vector &vecTargetOrigin, float flSize = 0.0 );
+
 
 /*
 extern CAI_SchedulesManager *my_g_AI_SchedulesManager;
@@ -650,6 +653,8 @@ public:
 	bool				IsSquadmateInSpread( const Vector &sourcePos, const Vector &targetPos, float flSpread, float maxDistOffCenter );
 	bool				PointInSpread( CCombatCharacter *pCheckEntity, const Vector &sourcePos, const Vector &targetPos, const Vector &testPoint, float flSpread, float maxDistOffCenter );
 
+	bool				CheckPVSCondition();
+
 protected:
 	void				ChainStartTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; StartTask( (const Task_t *)&tempTask ); }
 	void				ChainRunTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; RunTask( (const Task_t *)	&tempTask );	}
@@ -823,6 +828,10 @@ public:
 	virtual float GetReactionDelay( CBaseEntity *pEnemy );
 	virtual const char*	SquadSlotName(int slotID);
 	virtual	bool PlayerInSpread( const Vector &sourcePos, const Vector &targetPos, float flSpread, float maxDistOffCenter, bool ignoreHatedPlayers = true );
+	virtual Vector EyeOffset( Activity nActivity );
+	virtual void CollectShotStats( const Vector &vecShootOrigin, const Vector &vecShootDir );
+	virtual void OnLooked( int iDistance );
+	virtual bool ShouldNotDistanceCull();
 
 public: // sign
 	void CallNPCThink();
@@ -830,6 +839,12 @@ public: // sign
 	void SetupVPhysicsHull();
 	bool CineCleanup();
 	void TestPlayerPushing( CBaseEntity *pPlayer );
+
+public: // Custom
+	virtual Vector GetActualShootPosition( const Vector &shootOrigin );
+	virtual Vector GetActualShootTrajectory( const Vector &shootOrigin );
+
+	virtual	float GetSpreadBias( CBaseEntity *pWeapon, CBaseEntity *pTarget );
 
 protected:
 	static bool			LoadSchedules(void);
@@ -1036,6 +1051,10 @@ public:
 	DECLARE_DEFAULTHEADER(GetReactionDelay, float, ( CBaseEntity *pEnemy ));
 	DECLARE_DEFAULTHEADER(SquadSlotName, const char*, (int slotID));
 	DECLARE_DEFAULTHEADER(PlayerInSpread, bool, ( const Vector &sourcePos, const Vector &targetPos, float flSpread, float maxDistOffCenter, bool ignoreHatedPlayers));
+	DECLARE_DEFAULTHEADER(EyeOffset, Vector, ( Activity nActivity ));
+	DECLARE_DEFAULTHEADER(CollectShotStats, void, ( const Vector &vecShootOrigin, const Vector &vecShootDir ));
+	DECLARE_DEFAULTHEADER(OnLooked, void, ( int iDistance ));
+	DECLARE_DEFAULTHEADER(ShouldNotDistanceCull, bool, ());
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetSchedule_Int, bool, (int localScheduleID));
@@ -1125,7 +1144,8 @@ protected:
 	DECLARE_DATAMAP(bool, m_bForceConditionsGather);
 	DECLARE_DATAMAP(float, m_flSumDamage);
 	DECLARE_DATAMAP(float, m_flLastPlayerDamageTime);
-
+	DECLARE_DATAMAP_OFFSET(int, m_poseAim_Pitch);
+	DECLARE_DATAMAP_OFFSET(int, m_poseAim_Yaw);
 
 
 	friend class CAI_SchedulesManager;
