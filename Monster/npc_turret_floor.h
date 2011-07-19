@@ -10,6 +10,8 @@
 #include "CCycler_Fix.h"
 #include "CInfoTarget_Fix.h"
 #include "CPlayer.h"
+#include "player_pickup.h"
+
 
 //Turret states
 enum turretState_e
@@ -55,7 +57,7 @@ class CE_CSprite;
 //-----------------------------------------------------------------------------
 // Purpose: Floor turret
 //-----------------------------------------------------------------------------
-class CNPC_FloorTurret : public CNPCBaseInteractive<CE_Cycler_Fix>/*, public CDefaultPlayerPickupVPhysics*/
+class CNPC_FloorTurret : public CNPCBaseInteractive<CE_Cycler_Fix>, public CDefaultPlayerPickupVPhysics
 {
 public:
 	CE_DECLARE_CLASS( CNPC_FloorTurret, CNPCBaseInteractive<CE_Cycler_Fix> );
@@ -78,12 +80,12 @@ public:
 #endif	// HL2_EPISODIC
 
 	// Player pickup
-/*	virtual void	OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason );
-	virtual void	OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t Reason );
-	virtual bool	HasPreferredCarryAnglesForPlayer( CBasePlayer *pPlayer );
+	virtual void	OnPhysGunPickup( CPlayer *pPhysGunUser, PhysGunPickup_t reason );
+	virtual void	OnPhysGunDrop( CPlayer *pPhysGunUser, PhysGunDrop_t Reason );
+	virtual bool	HasPreferredCarryAnglesForPlayer( CPlayer *pPlayer );
 	virtual QAngle	PreferredCarryAngles( void );
-	virtual bool	OnAttemptPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason );
-*/
+	virtual bool	OnAttemptPhysGunPickup( CPlayer *pPhysGunUser, PhysGunPickup_t reason );
+
 	const char *GetTracerType( void ) { return "Tracer"; }
 
 	bool	ShouldSavePhysics() { return true; }

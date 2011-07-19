@@ -6,9 +6,10 @@
 #include "CCombatWeapon.h"
 #include "CE_recipientfilter.h"
 
-const char *GetMassEquivalent(float flMass);
+ConVar sk_npc_turret_floor_bullet_damage("sk_npc_turret_floor_bullet_damage", "5");
 
-#define	DISABLE_SHOT	0
+
+const char *GetMassEquivalent(float flMass);
 
 
 extern ConVar physcannon_tracelength;
@@ -43,7 +44,13 @@ int ACT_FLOOR_TURRET_OPEN;
 int ACT_FLOOR_TURRET_CLOSE;
 int ACT_FLOOR_TURRET_OPEN_IDLE;
 int ACT_FLOOR_TURRET_CLOSED_IDLE;
-int ACT_FLOOR_TURRET_FIRE;
+
+/*
+The "fire" Sequence in CS:S make client crash
+AE_NPC_MUZZLEFLASH
+fuck valve in here!
+*/
+//int ACT_FLOOR_TURRET_FIRE;
 
 
 //Datatable
@@ -86,7 +93,7 @@ BEGIN_DATADESC( CNPC_FloorTurret )
 
 	DEFINE_KEYFIELD( m_iKeySkin, FIELD_INTEGER, "SkinNumber" ),
 	
-	DEFINE_THINKFUNC( Retire ),
+	/*DEFINE_THINKFUNC( Retire ),
 	DEFINE_THINKFUNC( Deploy ),
 	DEFINE_THINKFUNC( ActiveThink ),
 	DEFINE_THINKFUNC( SearchThink ),
@@ -98,7 +105,7 @@ BEGIN_DATADESC( CNPC_FloorTurret )
 	DEFINE_THINKFUNC( SelfDestructThink ),
 	DEFINE_THINKFUNC( BreakThink ),
 
-	DEFINE_USEFUNC( ToggleUse ),
+	DEFINE_USEFUNC( ToggleUse ),*/
 
 	// Inputs
 	DEFINE_INPUTFUNC( FIELD_VOID, "Toggle", InputToggle ),
@@ -222,7 +229,7 @@ void CNPC_FloorTurret::Precache( void )
 	ADD_CUSTOM_ACTIVITY( CNPC_FloorTurret, ACT_FLOOR_TURRET_CLOSE );
 	ADD_CUSTOM_ACTIVITY( CNPC_FloorTurret, ACT_FLOOR_TURRET_CLOSED_IDLE );
 	ADD_CUSTOM_ACTIVITY( CNPC_FloorTurret, ACT_FLOOR_TURRET_OPEN_IDLE );
-	ADD_CUSTOM_ACTIVITY( CNPC_FloorTurret, ACT_FLOOR_TURRET_FIRE );
+	//ADD_CUSTOM_ACTIVITY( CNPC_FloorTurret, ACT_FLOOR_TURRET_FIRE );
 	
 	PrecacheScriptSound( "NPC_FloorTurret.Retire" );
 	PrecacheScriptSound( "NPC_FloorTurret.Deploy" );
@@ -288,7 +295,6 @@ void CNPC_FloorTurret::Spawn( void )
 
 	AddEFlags( EFL_NO_DISSOLVE );
 
-	//CE_TODO
 	SetPoseParameter( m_poseAim_Yaw, 0 );
 	SetPoseParameter( m_poseAim_Pitch, 0 );
 
@@ -468,14 +474,13 @@ void CNPC_FloorTurret::Deploy( void )
 }
 
 
-//CE_TODO
-#if 0
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-/void CNPC_FloorTurret::OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason )
+void CNPC_FloorTurret::OnPhysGunPickup( CPlayer *pPhysGunUser, PhysGunPickup_t reason )
 {
-	m_hPhysicsAttacker = pPhysGunUser;
+	m_hPhysicsAttacker.Set(pPhysGunUser->BaseEntity());
 	m_flLastPhysicsInfluenceTime = gpGlobals->curtime;
 
 	// Drop our mass a lot so that we can be moved easily with +USE
@@ -499,7 +504,7 @@ void CNPC_FloorTurret::Deploy( void )
 		bool bBehind = DotProduct( vecToTurret, forward ) < 0.85f;
 
 		// Correct our angles only if we're not upright or we're mostly behind the turret
-		if ( hl2_episodic.GetBool() )
+		if ( hl2_episodic->GetBool() )
 		{
 			m_bUseCarryAngles = ( bUpright == false || bBehind );
 		}
@@ -510,15 +515,15 @@ void CNPC_FloorTurret::Deploy( void )
 	}
 
 	// Clear out our last NPC to kick me, because it makes no sense now
-	m_hLastNPCToKickMe = NULL;
+	m_hLastNPCToKickMe.Set(NULL);
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CNPC_FloorTurret::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t Reason )
+void CNPC_FloorTurret::OnPhysGunDrop( CPlayer *pPhysGunUser, PhysGunDrop_t Reason )
 {
-	m_hPhysicsAttacker = pPhysGunUser;
+	m_hPhysicsAttacker.Set(pPhysGunUser->BaseEntity());
 	m_flLastPhysicsInfluenceTime = gpGlobals->curtime;
 	
 	m_bCarriedByPlayer = false;
@@ -526,7 +531,7 @@ void CNPC_FloorTurret::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t R
 	m_OnPhysGunDrop.FireOutput( this, this );
 
 	// If this is a friendly turret, remember that it was just dropped
-	if ( IRelationType( pPhysGunUser ) != D_HT )
+	if ( IRelationType( pPhysGunUser->BaseEntity() ) != D_HT )
 	{
 		m_flPlayerDropTime = gpGlobals->curtime + 2.0;
 	}
@@ -539,10 +544,10 @@ void CNPC_FloorTurret::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t R
 // Purpose: Whether this should return carry angles
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CNPC_FloorTurret::HasPreferredCarryAnglesForPlayer( CBasePlayer *pPlayer )
+bool CNPC_FloorTurret::HasPreferredCarryAnglesForPlayer( CPlayer *pPlayer )
 {
 	// Don't use preferred angles on enemy turrets
-	if ( IRelationType( pPlayer ) == D_HT )
+	if ( IRelationType(pPlayer->BaseEntity() ) == D_HT )
 		return false;
 
 	return m_bUseCarryAngles;
@@ -551,10 +556,10 @@ bool CNPC_FloorTurret::HasPreferredCarryAnglesForPlayer( CBasePlayer *pPlayer )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CNPC_FloorTurret::OnAttemptPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason )
+bool CNPC_FloorTurret::OnAttemptPhysGunPickup( CPlayer *pPhysGunUser, PhysGunPickup_t reason )
 {
 	// Prevent players pulling enemy turrets from afar if they're in front of the turret
-	if ( reason == PICKED_UP_BY_CANNON && IRelationType( pPhysGunUser ) == D_HT )
+	if ( reason == PICKED_UP_BY_CANNON && IRelationType(pPhysGunUser->BaseEntity() ) == D_HT )
 	{
 		Vector vecForward;
 		GetVectors( &vecForward, NULL, NULL );
@@ -572,7 +577,6 @@ bool CNPC_FloorTurret::OnAttemptPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGu
 
 	return true;
 }
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -762,12 +766,10 @@ void CNPC_FloorTurret::SuppressThink( void )
 			else
 			{
 				ResetActivity();
-				SetActivity( (Activity) ACT_FLOOR_TURRET_FIRE );
+				//SetActivity( (Activity) ACT_FLOOR_TURRET_FIRE );
 
 				//Fire the weapon
-#if !DISABLE_SHOT
 				Shoot( vecMuzzle, vecMuzzleDir );
-#endif
 			}
 		} 
 	}
@@ -916,12 +918,10 @@ void CNPC_FloorTurret::ActiveThink( void )
 				if ( dot3d >= minCos3d ) 
 				{
 					ResetActivity();
-					SetActivity( (Activity) ACT_FLOOR_TURRET_FIRE );
+					//SetActivity( (Activity) ACT_FLOOR_TURRET_FIRE );
 
 					//Fire the weapon
-#if !DISABLE_SHOT
 					Shoot( vecMuzzle, vecMuzzleDir, (dot3d < DOT_10DEGREE) );
-#endif
 				}
 			}
 		} 
@@ -1086,9 +1086,16 @@ void CNPC_FloorTurret::Shoot( const Vector &vecSrc, const Vector &vecDirToEnemy,
 		info.m_iAmmoType = m_iAmmoType;
 	}
 
+	info.m_iDamage = sk_npc_turret_floor_bullet_damage.GetFloat();
+
 	FireBullets( info );
 	EmitSound( "NPC_FloorTurret.ShotSounds", m_ShotSounds );
 	DoMuzzleFlash();
+
+	// client crash fix!
+	QAngle ang;
+	VectorAngles(info.m_vecDirShooting, ang);
+	g_pEffects->MuzzleFlash(info.m_vecSrc ,ang, 1.0, 1);
 }
 
 //-----------------------------------------------------------------------------
@@ -1185,11 +1192,9 @@ void CNPC_FloorTurret::TippedThink( void )
 				MatrixGetColumn( m_muzzleToWorld, 3, vecMuzzle );
 
 				ResetActivity();
-				SetActivity( (Activity) ACT_FLOOR_TURRET_FIRE );
+				//SetActivity( (Activity) ACT_FLOOR_TURRET_FIRE );
 
-#if !DISABLE_SHOT
 				Shoot( vecMuzzle, vecMuzzleDir );
-#endif
 			}
 
 			m_flShotTime = gpGlobals->curtime + 0.05f;
@@ -1769,8 +1774,7 @@ void CNPC_FloorTurret::SpinUp( void )
 
 #define	FLOOR_TURRET_MIN_SPIN_DOWN	1.0f
 
-//CE_TODO
-#if 0
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Output : const QAngle
@@ -1781,7 +1785,7 @@ QAngle CNPC_FloorTurret::PreferredCarryAngles( void )
 	static QAngle g_prefAngles;
 
 	Vector vecUserForward;
-	CBasePlayer *pPlayer = AI_GetSinglePlayer();
+	CPlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin());
 	pPlayer->EyeVectors( &vecUserForward );
 
 	// If we're looking up, then face directly forward
@@ -1794,7 +1798,6 @@ QAngle CNPC_FloorTurret::PreferredCarryAngles( void )
 	
 	return g_prefAngles;
 }
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -1925,9 +1928,8 @@ void CNPC_FloorTurret::BreakThink( void )
 	for ( int i = 0; i < 4; i++ )
 	{
 		Vector gibVelocity = RandomVector(-100,100);
-		//CE_TODO
-		//int iModelIndex = modelinfo->GetModelIndex( g_PropDataSystem.GetRandomChunkModel( "MetalChunks" ) );	
-		//te->BreakModel( filter, 0.0, vecOrigin, GetAbsAngles(), Vector(40,40,40), gibVelocity, iModelIndex, 150, 4, 2.5, BREAK_METAL );
+		int iModelIndex = modelinfo->GetModelIndex( g_PropDataSystem->GetRandomChunkModel( "MetalChunks" ) );	
+		te->BreakModel( filter, 0.0, vecOrigin, GetAbsAngles(), Vector(40,40,40), gibVelocity, iModelIndex, 150, 4, 2.5, BREAK_METAL );
 	}
 
 	// We're done!

@@ -11,7 +11,6 @@ void CE_CWorld::Precache()
 
 	physenv = iphysics->GetActiveEnvironmentByIndex(0);
 
-	IGameSystem::LevelInitPreEntityAllSystems();
 	CE_CSoundEnt::InitSoundEnt();
 }
 

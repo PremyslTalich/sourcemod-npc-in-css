@@ -66,3 +66,24 @@ void Pickup_OnPhysGunPickup( CEntity *pPickedUpObject, CPlayer *pPlayer, PhysGun
 	}
 }
 
+extern ConVar physcannon_maxforce;
+extern ConVar physcannon_minforce;
+
+
+Vector Pickup_DefaultPhysGunLaunchVelocity( const Vector &vecForward, float flMass )
+{
+	// Calculate the velocity based on physcannon rules
+	float flForceMax = physcannon_maxforce.GetFloat();
+	float flForce = flForceMax;
+
+	float mass = flMass;
+	if ( mass > 100 )
+	{
+		mass = MIN( mass, 1000 );
+		float flForceMin = physcannon_minforce.GetFloat();
+		flForce = SimpleSplineRemapValClamped( mass, 100, 600, flForceMax, flForceMin );
+	}
+
+	return ( vecForward * flForce );
+}
+

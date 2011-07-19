@@ -747,6 +747,18 @@ SH_DECL_MANUALHOOK0(ShouldNotDistanceCull, 0, 0, 0, bool);
 DECLARE_HOOK(ShouldNotDistanceCull, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, ShouldNotDistanceCull, bool, (), ());
 
+SH_DECL_MANUALHOOK0(HolsterWeapon, 0, 0, 0, int);
+DECLARE_HOOK(HolsterWeapon, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, HolsterWeapon, int, (), ());
+
+SH_DECL_MANUALHOOK0(UnholsterWeapon, 0, 0, 0, int);
+DECLARE_HOOK(UnholsterWeapon, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, UnholsterWeapon, int, (), ());
+
+SH_DECL_MANUALHOOK2(FindNamedEntity, 0, 0, 0, CBaseEntity *, const char *, IEntityFindFilter *);
+DECLARE_HOOK(FindNamedEntity, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, FindNamedEntity, CBaseEntity *, (const char *pszName, IEntityFindFilter *pFilter), (pszName, pFilter));
+
 
 
 //Datamaps
@@ -820,6 +832,7 @@ DEFINE_PROP(m_flSumDamage, CAI_NPC);
 DEFINE_PROP(m_flLastPlayerDamageTime, CAI_NPC);
 DEFINE_PROP(m_poseAim_Pitch, CAI_NPC);
 DEFINE_PROP(m_poseAim_Yaw, CAI_NPC);
+DEFINE_PROP(m_flSceneTime, CAI_NPC);
 
 
 
@@ -2301,6 +2314,28 @@ float CAI_NPC::GetSpreadBias( CBaseEntity *pWeapon, CBaseEntity *pTarget )
 	}
 	return bias;
 }
+
+
+bool CAI_NPC::ExitScriptedSequence()
+{
+	if ( m_lifeState == LIFE_DYING )
+	{
+		// is this legal?
+		// BUGBUG -- This doesn't call Killed()
+		SetIdealState( NPC_STATE_DEAD );
+		return false;
+	}
+
+	CEAI_ScriptedSequence *cine = Get_m_hCine();
+	if (cine)
+	{
+		cine->CancelScript( );
+	}
+
+	return true;
+}
+
+
 
 
 

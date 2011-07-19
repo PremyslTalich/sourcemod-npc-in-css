@@ -863,3 +863,25 @@ void CAnimating::ResetSequenceInfo()
 		SetEventIndexForSequence( pStudioHdr->pSeqdesc( GetSequence() ) );
 	}
 }
+
+
+LocalFlexController_t CAnimating::GetNumFlexControllers( void )
+{
+	CStudioHdr *pstudiohdr = GetModelPtr( );
+	if (! pstudiohdr)
+		return LocalFlexController_t(0);
+
+	return pstudiohdr->numflexcontrollers();
+}
+
+const char *CAnimating::GetFlexControllerName( LocalFlexController_t iFlexController )
+{
+	CStudioHdr *pstudiohdr = GetModelPtr( );
+	if (! pstudiohdr)
+		return 0;
+
+	mstudioflexcontroller_t *pflexcontroller = pstudiohdr->pFlexcontroller( iFlexController );
+
+	return pflexcontroller->pszName( );
+}
+

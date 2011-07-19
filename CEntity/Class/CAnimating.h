@@ -150,6 +150,9 @@ public:
 	inline void	SetBoneCacheFlags( unsigned short fFlag ) { m_fBoneCacheFlags |= fFlag; }
 	inline void	ClearBoneCacheFlags( unsigned short fFlag ) { m_fBoneCacheFlags &= ~fFlag; }
 
+	LocalFlexController_t GetNumFlexControllers( void );
+	const char *GetFlexControllerName( LocalFlexController_t iFlexController );
+
 
 public:
 	CStudioHdr *		GetModelPtr();

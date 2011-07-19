@@ -31,6 +31,7 @@ enum PhysGunForce_t
 	PHYSGUN_FORCE_LAUNCHED,	// Launched by cannon
 };
 
+Vector Pickup_DefaultPhysGunLaunchVelocity( const Vector &vecForward, float flMass );
 
 
 abstract_class IPlayerPickupVPhysics
@@ -48,6 +49,25 @@ public:
 	virtual bool			ShouldPuntUseLaunchForces( PhysGunForce_t reason ) = 0;
 	virtual Vector			PhysGunLaunchVelocity( const Vector &vecForward, float flMass ) = 0;
 };
+
+class CDefaultPlayerPickupVPhysics : public IPlayerPickupVPhysics
+{
+public:
+	virtual bool			OnAttemptPhysGunPickup( CPlayer *pPhysGunUser, PhysGunPickup_t reason = PICKED_UP_BY_CANNON ) { return true; }
+	virtual CEntity			*OnFailedPhysGunPickup( Vector vPhysgunPos ) { return NULL; }
+	virtual void			OnPhysGunPickup( CPlayer *pPhysGunUser, PhysGunPickup_t reason = PICKED_UP_BY_CANNON ) {}
+	virtual void			OnPhysGunDrop( CPlayer *pPhysGunUser, PhysGunDrop_t reason ) {}
+	virtual bool			HasPreferredCarryAnglesForPlayer( CPlayer *pPlayer ) { return false; }
+	virtual QAngle			PreferredCarryAngles( void ) { return vec3_angle; }
+	virtual bool			ForcePhysgunOpen( CPlayer *pPlayer ) { return false; }
+	virtual AngularImpulse	PhysGunLaunchAngularImpulse() { return RandomAngularImpulse( -600, 600 ); }
+	virtual bool			ShouldPuntUseLaunchForces( PhysGunForce_t reason ) { return false; }
+	virtual Vector			PhysGunLaunchVelocity( const Vector &vecForward, float flMass )
+	{
+		return Pickup_DefaultPhysGunLaunchVelocity( vecForward, flMass );
+	}
+};
+
 
 
 

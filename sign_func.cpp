@@ -15,6 +15,7 @@ class CBasePlayer;
 #include "ammodef.h"
 #include "eventqueue.h"
 #include "CAI_Hint.h"
+#include "ai_waypoint.h"
 
 
 class CAI_SensedObjectsManager;
@@ -162,7 +163,7 @@ void HelperFunction::Shutdown()
 }
 
 #define FindValveGameSystem(ptr, bclass, systemname) \
-	META_CONPRINTF("[%s] Getting %s - ",g_Monster.GetLogTag(),#ptr);\
+	META_CONPRINTF("[%s] Getting Valve System %s - ",g_Monster.GetLogTag(),#ptr);\
 	ptr = NULL;\
 	for(int i=0;i<s_GameSystems->Count();i++)\
 	{\
@@ -172,7 +173,7 @@ void HelperFunction::Shutdown()
 			char const *name = vsystem->Name();\
 			if(strcmp(name, systemname) == 0)\
 			{\
-				ptr = (bclass)vsystem;\
+				ptr = (bclass)(vsystem);\
 			}\
 		}\
 	}\
@@ -187,6 +188,10 @@ void HelperFunction::Shutdown()
 bool HelperFunction::FindAllValveGameSystem()
 {
 	FindValveGameSystem(g_CheckClient, CCheckClient *, "CCheckClient");
+	
+	FindValveGameSystem(g_PropDataSystem, CPropData *, "CPropData");
+
+	FindValveGameSystem(g_SoundEmitterSystem, CValveBaseGameSystem *, "CSoundEmitterSystem");
 
 	return true;
 }
@@ -208,13 +213,6 @@ bool HelperFunction::Initialize()
 
 	my_g_pGameRules = *reinterpret_cast<void ***>(addr + offset);
 	
-
-	/*
-	"UTIL_EmitAmbientSound:  Sentence emitte"
-	  push    offset off_1051F2F0 ; int
-	*/
-	GET_VARIABLE(g_SoundEmitterSystem, void *);
-
 	/*
 	Script failed for %s\n
 	unnamed
@@ -260,6 +258,7 @@ bool HelperFunction::Initialize()
 	GET_VARIABLE(g_TouchTrace, trace_t *);
 
 	GET_VARIABLE(g_PostSimulationQueue, CCallQueue *);
+
 	CMemoryPool *EventQueuePrioritizedEvent_t_s_Allocator;
 	GET_VARIABLE(EventQueuePrioritizedEvent_t_s_Allocator, CMemoryPool *);
 	EventQueuePrioritizedEvent_t::s_Allocator = EventQueuePrioritizedEvent_t_s_Allocator;
@@ -269,6 +268,10 @@ bool HelperFunction::Initialize()
 	CAI_HintManager::gm_AllHints = gm_AllHints;
 
 	GET_VARIABLE(s_GameSystems, CUtlVector<IValveGameSystem*> *);
+
+	CMemoryPool *AI_Waypoint_t_s_Allocator;
+	GET_VARIABLE(AI_Waypoint_t_s_Allocator, CMemoryPool *);
+	AI_Waypoint_t::s_Allocator = AI_Waypoint_t_s_Allocator;
 
 	g_CGameMovement = (CGameMovement *)g_pGameMovement;
 
@@ -288,6 +291,8 @@ bool HelperFunction::Initialize()
 
 	if(!FindAllValveGameSystem())
 		return false;
+
+	IGameSystem::HookValveSystem();
 
 	return true;
 }

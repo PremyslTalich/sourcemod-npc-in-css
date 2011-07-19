@@ -334,7 +334,7 @@ inline int CAI_ExpresserHost<BASE_NPC>::PlaySentence( const char *pszSentence, f
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-extern void CAI_ExpresserHost_NPC_DoModifyOrAppendCriteria( CAI_BaseNPC *pSpeaker, AI_CriteriaSet& criteriaSet );
+extern void CAI_ExpresserHost_NPC_DoModifyOrAppendCriteria( CAI_NPC *pSpeaker, AI_CriteriaSet& criteriaSet );
 
 template <class BASE_NPC>
 inline void CAI_ExpresserHost<BASE_NPC>::ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet )

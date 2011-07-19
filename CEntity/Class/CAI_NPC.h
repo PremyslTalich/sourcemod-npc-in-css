@@ -655,6 +655,12 @@ public:
 
 	bool				CheckPVSCondition();
 
+	void				AddSceneLock( float flDuration = 0.2f ) { m_flSceneTime = MAX( gpGlobals->curtime + flDuration, m_flSceneTime ); };
+	void				ClearSceneLock( float flDuration = 0.2f ) { m_flSceneTime = gpGlobals->curtime + flDuration; };
+	bool				IsInLockedScene( void ) { return m_flSceneTime > gpGlobals->curtime; };
+
+	bool				ExitScriptedSequence();
+
 protected:
 	void				ChainStartTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; StartTask( (const Task_t *)&tempTask ); }
 	void				ChainRunTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; RunTask( (const Task_t *)	&tempTask );	}
@@ -832,6 +838,9 @@ public:
 	virtual void CollectShotStats( const Vector &vecShootOrigin, const Vector &vecShootDir );
 	virtual void OnLooked( int iDistance );
 	virtual bool ShouldNotDistanceCull();
+	virtual int	HolsterWeapon( void );
+	virtual int	UnholsterWeapon( void );
+	virtual	CBaseEntity *FindNamedEntity( const char *pszName, IEntityFindFilter *pFilter = NULL );
 
 public: // sign
 	void CallNPCThink();
@@ -1055,6 +1064,9 @@ public:
 	DECLARE_DEFAULTHEADER(CollectShotStats, void, ( const Vector &vecShootOrigin, const Vector &vecShootDir ));
 	DECLARE_DEFAULTHEADER(OnLooked, void, ( int iDistance ));
 	DECLARE_DEFAULTHEADER(ShouldNotDistanceCull, bool, ());
+	DECLARE_DEFAULTHEADER(HolsterWeapon, int, ( void ));
+	DECLARE_DEFAULTHEADER(UnholsterWeapon, int,( void ));
+	DECLARE_DEFAULTHEADER(FindNamedEntity, CBaseEntity *, ( const char *pszName, IEntityFindFilter *pFilter ));
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetSchedule_Int, bool, (int localScheduleID));
@@ -1146,6 +1158,7 @@ protected:
 	DECLARE_DATAMAP(float, m_flLastPlayerDamageTime);
 	DECLARE_DATAMAP_OFFSET(int, m_poseAim_Pitch);
 	DECLARE_DATAMAP_OFFSET(int, m_poseAim_Yaw);
+	DECLARE_DATAMAP(float, m_flSceneTime);
 
 
 	friend class CAI_SchedulesManager;

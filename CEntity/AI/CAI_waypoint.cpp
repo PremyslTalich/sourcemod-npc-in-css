@@ -6,7 +6,9 @@
 
 #define	WAYPOINT_POOL_SIZE 512
 
-DEFINE_FIXEDSIZE_ALLOCATOR( AI_Waypoint_t, WAYPOINT_POOL_SIZE, CMemoryPool::GROW_FAST );
+
+CMemoryPool *AI_Waypoint_t::s_Allocator = NULL;
+
 
 AI_Waypoint_t::AI_Waypoint_t()
 {

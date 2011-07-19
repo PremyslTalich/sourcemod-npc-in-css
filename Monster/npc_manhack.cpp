@@ -2959,6 +2959,82 @@ void CNPC_Manhack::InputUnpack( inputdata_t &inputdata )
 	SetCondition( COND_LIGHT_DAMAGE );
 }
 
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *pPhysGunUser - 
+//			reason - 
+//-----------------------------------------------------------------------------
+void CNPC_Manhack::OnPhysGunPickup( CPlayer *pPhysGunUser, PhysGunPickup_t reason )
+{
+	m_hPhysicsAttacker.Set(pPhysGunUser->BaseEntity());
+	m_flLastPhysicsInfluenceTime = gpGlobals->curtime;
+
+	if ( reason == PUNTED_BY_CANNON )
+	{
+		StopLoitering();
+
+		m_bHeld = false;
+
+		// There's about to be a massive change in velocity. 
+		// Think immediately so we can do our slice traces, etc.
+		SetNextThink( gpGlobals->curtime + 0.01f );
+
+		// Stall our engine for awhile
+		m_flEngineStallTime = gpGlobals->curtime + 2.0f;
+		SetEyeState( MANHACK_EYE_STATE_STUNNED );
+	}
+	else
+	{
+		// Suppress collisions between the manhack and the player; we're currently bumping
+		// almost certainly because it's not purely a physics object.
+		SetOwnerEntity( pPhysGunUser->BaseEntity() );
+		m_bHeld = true;
+	}
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *pPhysGunUser - 
+//			Reason - 
+//-----------------------------------------------------------------------------
+void CNPC_Manhack::OnPhysGunDrop( CPlayer *pPhysGunUser, PhysGunDrop_t Reason )
+{
+	// Stop suppressing collisions between the manhack and the player
+	SetOwnerEntity( NULL );
+
+	m_bHeld = false;
+
+	if ( Reason == LAUNCHED_BY_CANNON )
+	{
+		m_hPhysicsAttacker.Set(pPhysGunUser->BaseEntity());
+		m_flLastPhysicsInfluenceTime = gpGlobals->curtime;
+
+		// There's about to be a massive change in velocity. 
+		// Think immediately so we can do our slice traces, etc.
+		SetNextThink( gpGlobals->curtime + 0.01f );
+
+		// Stall our engine for awhile
+		m_flEngineStallTime = gpGlobals->curtime + 2.0f;
+		SetEyeState( MANHACK_EYE_STATE_STUNNED );
+	}
+	else
+	{
+		if( m_bHackedByAlyx && !GetEnemy() )
+		{
+			// If a hacked manhack is released in peaceable conditions, 
+			// just loiter, don't zip off.
+			StartLoitering( GetAbsOrigin() );
+		}
+
+		m_hPhysicsAttacker.Set(NULL);
+		m_flLastPhysicsInfluenceTime = 0;
+	}
+}
+
+
 void CNPC_Manhack::StartLoitering( const Vector &vecLoiterPosition )
 {
 	//Msg("Start Loitering\n");

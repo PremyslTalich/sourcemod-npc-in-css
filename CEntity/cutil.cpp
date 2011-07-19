@@ -2150,3 +2150,4 @@ edict_t *UTIL_FindClientInVisibilityPVS( edict_t *pEdict )
 {
 	return UTIL_FindClientInPVSGuts( pEdict, g_CheckClient->m_checkVisibilityPVS, sizeof( g_CheckClient->m_checkVisibilityPVS ) );
 }
+

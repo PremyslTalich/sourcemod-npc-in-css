@@ -234,8 +234,6 @@ bool Monster::SDK_OnLoad(char *error, size_t maxlength, bool late)
 		return false;
 	}
 
-	IGameSystem::SDKInitAllSystems();
-
 	//sharesys->AddNatives(myself, g_MonsterNatives);
 
  	return true;
@@ -336,8 +334,6 @@ void Monster::ServerActivate(edict_t *pEdictList, int edictCount, int clientMax)
 {
 	gMaxClients = clientMax;
 
-	IGameSystem::LevelInitPostEntityAllSystems();
-
 	CEAI_NetworkManager::InitializeAINetworks();
 
 	g_sModelIndexSmoke = engine->PrecacheModel("sprites/steam1.vmt",true);
@@ -364,6 +360,8 @@ void Monster::ServerActivate(edict_t *pEdictList, int edictCount, int clientMax)
 	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_antlion_episodic.txt");
 	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_combine_cannon.txt");
 	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_env_headcrabcanister.txt");
+	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_turret.txt");
+
 
 	RETURN_META(MRES_IGNORED);
 }
@@ -378,20 +376,11 @@ bool Monster::LevelInit(char const *pMapName, char const *pMapEntities, char con
 
 void Monster::OnLevelShutdown_Pre()
 {
-	if(g_LevelEndBarrier)
-		RETURN_META(MRES_IGNORED);
-
-	IGameSystem::LevelShutdownPreEntityAllSystems();
 	RETURN_META(MRES_IGNORED);
 }
 
 void Monster::OnLevelShutdown_Post()
 {
-	if(g_LevelEndBarrier)
-		RETURN_META(MRES_IGNORED);
-
-	g_LevelEndBarrier = true;
-	IGameSystem::LevelShutdownPostEntityAllSystems();
 	RETURN_META(MRES_IGNORED);
 }
 

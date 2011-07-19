@@ -27,6 +27,7 @@ public:
 	static void LevelShutdownPostEntityAllSystems();
 	static void SDKShutdownAllSystem();
 	static void InitAllSystems();
+	static void HookValveSystem();
 
 protected:
 	char system_name[65];
@@ -96,8 +97,8 @@ public:
 	// These methods are used to add and remove server systems from the
 	// main server loop. The systems are invoked in the order in which
 	// they are added.
-	static void Add ( IGameSystem* pSys );
-	static void Remove ( IGameSystem* pSys );
+	static void Add ( IValveGameSystem* pSys );
+	static void Remove ( IValveGameSystem* pSys );
 	static void RemoveAll (  );
 
 	// These methods are used to initialize, shutdown, etc all systems
@@ -173,6 +174,43 @@ private:
 	char const *m_pszName;
 };
 
+
+
+
+class CPropData : public CValveBaseGameSystem
+{
+public:
+	CPropData( void );
+
+	// Inherited from IAutoServerSystem
+	virtual void LevelInitPreEntity( void );
+	virtual void LevelShutdownPostEntity( void );
+
+	// Read in the data from the prop data file
+	void ParsePropDataFile( void );
+
+	// Parse a keyvalues section into the prop
+	int ParsePropFromKV( CBaseEntity *pProp, KeyValues *pSection, KeyValues *pInteractionSection );
+
+	// Fill out a prop's with base data parsed from the propdata file
+	int ParsePropFromBase( CBaseEntity *pProp, const char *pszPropData );
+
+	// Get a random chunk in the specified breakable section
+	const char *GetRandomChunkModel( const char *pszBreakableSection, int iMaxSize = -1 );
+
+protected:
+	KeyValues	*m_pKVPropData;
+	bool		m_bPropDataLoaded;
+
+	struct propdata_breakablechunk_t
+	{
+		string_t				iszChunkType;
+		CUtlVector<string_t>	iszChunkModels;
+	};
+	CUtlVector<propdata_breakablechunk_t>	m_BreakableChunks;
+};
+
+extern CPropData *g_PropDataSystem;
 
 
 #endif

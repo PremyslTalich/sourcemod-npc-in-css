@@ -9,7 +9,7 @@
 #include "CSprite.h"
 #include "CSmoke_trail.h"
 #include "physics.h"
-
+#include "player_pickup.h"
 
 
 // Start with the engine off and folded up.
@@ -48,7 +48,7 @@ class CSoundPatch;
 //-----------------------------------------------------------------------------
 // Manhack 
 //-----------------------------------------------------------------------------
-class CNPC_Manhack : public CNPCBaseInteractive<CAI_BasePhysicsFlyingBot>
+class CNPC_Manhack : public CNPCBaseInteractive<CAI_BasePhysicsFlyingBot>, public CDefaultPlayerPickupVPhysics
 {
 public:
 	CE_DECLARE_CLASS( CNPC_Manhack, CNPCBaseInteractive<CAI_BasePhysicsFlyingBot> );
@@ -144,10 +144,9 @@ public:
 	void			InputDisableSwarm( inputdata_t &inputdata );
 	void			InputUnpack( inputdata_t &inputdata );
 
-	// 	CDefaultPlayerPickupVPhysics
-	//CE_TODO
-	//virtual void	OnPhysGunPickup( CPlayer *pPhysGunUser, PhysGunPickup_t reason );
-	//virtual void	OnPhysGunDrop( CPlayer *pPhysGunUser, PhysGunDrop_t Reason );
+
+	virtual void	OnPhysGunPickup( CPlayer *pPhysGunUser, PhysGunPickup_t reason );
+	virtual void	OnPhysGunDrop( CPlayer *pPhysGunUser, PhysGunDrop_t Reason );
 
 
 	CBaseEntity *HasPhysicsAttacker( float dt );

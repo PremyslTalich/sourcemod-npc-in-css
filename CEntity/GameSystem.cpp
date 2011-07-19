@@ -8,7 +8,34 @@ static bool s_bSystemsInitted = false;
 
 typedef void (IGameSystem::*GameSystemFunc_t)();
 
-CUtlVector<IValveGameSystem*> *s_GameSystems;
+CUtlVector<IValveGameSystem*> *s_GameSystems = NULL;
+CPropData *g_PropDataSystem = NULL;
+
+
+class CHookedValveAutoSystem : public CValveBaseGameSystem
+{
+public:
+	char const *Name() { return "HookedValveAutoSystem"; }
+
+	void LevelInitPreEntity()
+	{
+		IGameSystem::LevelInitPreEntityAllSystems();
+	}
+	void LevelInitPostEntity()
+	{
+		IGameSystem::LevelInitPostEntityAllSystems();
+	}
+	void LevelShutdownPreEntity()
+	{
+		IGameSystem::LevelShutdownPreEntityAllSystems();
+	}
+	void LevelShutdownPostEntity()
+	{
+		IGameSystem::LevelShutdownPostEntityAllSystems();
+	}
+};
+
+static CHookedValveAutoSystem g_CHookedValveAutoSystem;
 
 void InvokeMethod( GameSystemFunc_t f )
 {
@@ -37,6 +64,11 @@ void IGameSystem::InitAllSystems()
 		s_my_pSystemList = NULL;
 	}
 	s_bSystemsInitted = true;
+}
+
+void IGameSystem::HookValveSystem()
+{
+	s_GameSystems->AddToTail(&g_CHookedValveAutoSystem);
 }
 
 void IGameSystem::Add( IGameSystem* pSys )
@@ -103,3 +135,43 @@ CBaseGameSystem::CBaseGameSystem(const char *name)
 		s_my_pSystemList = this;
 	}
 }
+
+IValveGameSystem::~IValveGameSystem()
+{
+	if(s_GameSystems)
+		s_GameSystems->FindAndRemove( this );
+}
+
+
+const char *CPropData::GetRandomChunkModel( const char *pszBreakableSection, int iMaxSize )
+{
+	if ( !m_bPropDataLoaded )
+		return NULL;
+
+	// Find the right section
+	int iCount = m_BreakableChunks.Count();
+	int i;
+	for ( i = 0; i < iCount; i++ )
+	{
+		if ( !Q_strncmp( STRING(m_BreakableChunks[i].iszChunkType), pszBreakableSection, strlen(pszBreakableSection) ) )
+			break;
+	}
+	if ( i == iCount )
+		return NULL;
+
+	// Now pick a random one and return it
+	int iRandom;
+	if ( iMaxSize == -1 )
+	{
+		iRandom = RandomInt( 0, m_BreakableChunks[i].iszChunkModels.Count()-1 );
+	}
+	else
+	{
+		// Don't pick anything over the specified size
+		iRandom = RandomInt( 0, MIN(iMaxSize, m_BreakableChunks[i].iszChunkModels.Count()-1) );
+	}
+
+	return STRING(m_BreakableChunks[i].iszChunkModels[iRandom]);
+}
+
+

@@ -22,7 +22,7 @@ CEAI_Enemies::~CEAI_Enemies()
 {
 	for ( CMemMap::IndexType_t i = m_Map.FirstInorder(); i != m_Map.InvalidIndex(); i = m_Map.NextInorder( i ) )
 	{
-		delete m_Map[i];
+		g_pMemAlloc->Free(m_Map[i]);
 	}
 }
 
@@ -209,7 +209,7 @@ void CEAI_Enemies::RefreshMemories(void)
 		CMemMap::IndexType_t iNext = m_Map.NextInorder( i ); // save so can remove
 		if ( ShouldDiscardMemory( pMemory ) )
 		{
-			delete pMemory;
+			g_pMemAlloc->Free(pMemory);
 			m_Map.RemoveAt(i);
 		}
 		else if ( pMemory->hEnemy )
