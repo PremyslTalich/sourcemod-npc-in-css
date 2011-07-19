@@ -269,7 +269,7 @@ void CNPC_FloorTurret::Spawn( void )
 		{	// select a "random" skin -- rather than being truly random, use a static variable
 			// to cycle through them evenly. The static won't be saved across save/load, but 
 			// frankly I don't care so much about that.
-			// m_nSkin = random->RandomInt( 1, 4 );
+			// m_nSkin = enginerandom->RandomInt( 1, 4 );
 			static unsigned int nextSkin = 0;
 			m_nSkin = nextSkin + 1;
 
@@ -330,7 +330,7 @@ void CNPC_FloorTurret::Spawn( void )
 	}
 
 	//Stagger our starting times
-	SetNextThink( gpGlobals->curtime + random->RandomFloat( 0.1f, 0.3f ) );
+	SetNextThink( gpGlobals->curtime + enginerandom->RandomFloat( 0.1f, 0.3f ) );
 
 	SetUse( &CNPC_FloorTurret::ToggleUse );
 
@@ -681,7 +681,7 @@ void CNPC_FloorTurret::DryFire( void )
 
  	if ( RandomFloat( 0, 1 ) > 0.5 )
 	{
-		m_flShotTime = gpGlobals->curtime + random->RandomFloat( 1, 2.5 );
+		m_flShotTime = gpGlobals->curtime + enginerandom->RandomFloat( 1, 2.5 );
 	}
 	else
 	{
@@ -1029,7 +1029,7 @@ void CNPC_FloorTurret::AutoSearchThink( void )
 		return; 
 
 	//Spread out our thinking
-	SetNextThink( gpGlobals->curtime + random->RandomFloat( 0.2f, 0.4f ) );
+	SetNextThink( gpGlobals->curtime + enginerandom->RandomFloat( 0.2f, 0.4f ) );
 
 	//If the enemy is dead, find a new one
 	if ( ( GetEnemy() != NULL ) && ( GetEnemy()->IsAlive() == false ) )
@@ -1200,8 +1200,8 @@ void CNPC_FloorTurret::TippedThink( void )
 			m_flShotTime = gpGlobals->curtime + 0.05f;
 		}
 
-		m_vecGoalAngles.x = GetAbsAngles().x + random->RandomFloat( -60, 60 );
-		m_vecGoalAngles.y = GetAbsAngles().y + random->RandomFloat( -60, 60 );
+		m_vecGoalAngles.x = GetAbsAngles().x + enginerandom->RandomFloat( -60, 60 );
+		m_vecGoalAngles.y = GetAbsAngles().y + enginerandom->RandomFloat( -60, 60 );
 
 		UpdateFacing();
 	}
@@ -1390,7 +1390,7 @@ bool CNPC_FloorTurret::PreThink( turretState_e state )
 			if ( HasSpawnFlags( SF_FLOOR_TURRET_OUT_OF_AMMO ) == false )
 			{
 				//Thrash around for a bit
-				m_flThrashTime = gpGlobals->curtime + random->RandomFloat( 2.0f, 2.5f );
+				m_flThrashTime = gpGlobals->curtime + enginerandom->RandomFloat( 2.0f, 2.5f );
 				SetNextThink( gpGlobals->curtime + 0.05f );
 
 				SetThink( &CNPC_FloorTurret::TippedThink );
@@ -1984,8 +1984,8 @@ void CNPC_FloorTurret::SelfDestructThink( void )
 		m_flPingTime = gpGlobals->curtime;
 		
 		// Randomly twitch
-		m_vecGoalAngles.x = GetAbsAngles().x + random->RandomFloat( -60*flDestructPerc, 60*flDestructPerc );
-		m_vecGoalAngles.y = GetAbsAngles().y + random->RandomFloat( -60*flDestructPerc, 60*flDestructPerc );
+		m_vecGoalAngles.x = GetAbsAngles().x + enginerandom->RandomFloat( -60*flDestructPerc, 60*flDestructPerc );
+		m_vecGoalAngles.y = GetAbsAngles().y + enginerandom->RandomFloat( -60*flDestructPerc, 60*flDestructPerc );
 	}
 	
 	UpdateFacing();

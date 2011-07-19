@@ -1210,8 +1210,8 @@ void CNPC_RollerMine::StartTask( const Task_t *pTask )
 				{
 					int x,y;
 
-					x = random->RandomInt( -1, 1 );
-					y = random->RandomInt( -1, 1 );
+					x = enginerandom->RandomInt( -1, 1 );
+					y = enginerandom->RandomInt( -1, 1 );
 
 					Vector vecNudge(x, y, 0.0f);
 
@@ -2451,7 +2451,7 @@ int CNPC_RollerMine::OnTakeDamage( const CTakeDamageInfo &info )
 		if(m_iBulletHit == sk_rollermine_bullet_hit.GetInt())
 		{
 			SetThink( &CNPC_RollerMine::PreDetonate );
-			SetNextThink( gpGlobals->curtime + random->RandomFloat( 0.1f, 0.5f ) );
+			SetNextThink( gpGlobals->curtime + enginerandom->RandomFloat( 0.1f, 0.5f ) );
 		}
 		return 0;
 	}
@@ -2462,7 +2462,7 @@ int CNPC_RollerMine::OnTakeDamage( const CTakeDamageInfo &info )
 		if ( attacker && *(attacker->m_iClassname) != *(m_iClassname))
 		{
 			SetThink( &CNPC_RollerMine::PreDetonate );
-			SetNextThink( gpGlobals->curtime + random->RandomFloat( 0.1f, 0.5f ) );
+			SetNextThink( gpGlobals->curtime + enginerandom->RandomFloat( 0.1f, 0.5f ) );
 		}
 		else
 		{

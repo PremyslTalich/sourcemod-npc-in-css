@@ -364,7 +364,7 @@ void CalculateExplosiveDamageForce( CTakeDamageInfo *info, const Vector &vecDir,
 	// This simulates features that usually vary from
 	// person-to-person variables such as bodyweight,
 	// which are all indentical for characters using the same model.
-	flForceScale *= random->RandomFloat( 0.85, 1.15 );
+	flForceScale *= enginerandom->RandomFloat( 0.85, 1.15 );
 
 	// Calculate the vector and stuff it into the takedamageinfo
 	Vector vecForce = vecDir;

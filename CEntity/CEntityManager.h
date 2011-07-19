@@ -57,7 +57,7 @@ public:
 
 #ifdef _DEBUG
 	static unsigned long long count;
-#endif;
+#endif
 
 private:
 	KTrie<IEntityFactory_CE *> pFactoryTrie;

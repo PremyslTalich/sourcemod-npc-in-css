@@ -791,9 +791,9 @@ int CE_BaseZombie::OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo )
 			{
 				BecomeTorso( vec3_origin, inputInfo.GetDamageForce() * 0.50 );
 
-				if ( ( info.GetDamageType() & DMG_BLAST) && random->RandomInt( 0, 1 ) == 0 )
+				if ( ( info.GetDamageType() & DMG_BLAST) && enginerandom->RandomInt( 0, 1 ) == 0 )
 				{
-					Ignite( 5.0 + random->RandomFloat( 0.0, 5.0 ) );
+					Ignite( 5.0 + enginerandom->RandomFloat( 0.0, 5.0 ) );
 				}
 
 				if (flDamageThreshold >= 1.0)
@@ -802,7 +802,7 @@ int CE_BaseZombie::OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo )
 					BecomeRagdollOnClient( info.GetDamageForce() );
 				}
 			}
-			else if ( random->RandomInt(1, 3) == 1 )
+			else if ( enginerandom->RandomInt(1, 3) == 1 )
 				DieChopped( info );
 		}
 	}
@@ -831,7 +831,7 @@ bool CE_BaseZombie::CanPlayMoanSound()
 		return true;
 
 	// This serves to limit the number of zombies that can moan at one time when there are a lot. 
-	if( random->RandomInt( 1, zombie_moanfreq.GetInt()* (s_iAngryZombies/2) ) == 1 )
+	if( enginerandom->RandomInt( 1, zombie_moanfreq.GetInt()* (s_iAngryZombies/2) ) == 1 )
 	{
 		return true;
 	}
@@ -855,7 +855,7 @@ void CE_BaseZombie::MoanSound( envelopePoint_t *pEnvelope, int iEnvelopeSize )
 	{
 		// Don't set this up until the code calls for it.
 		const char *pszSound = GetMoanSound( m_iMoanSound );
-		m_flMoanPitch = random->RandomInt( zombie_basemin.GetInt(), zombie_basemax.GetInt() );
+		m_flMoanPitch = enginerandom->RandomInt( zombie_basemin.GetInt(), zombie_basemax.GetInt() );
 
 		CPASAttenuationFilter filter( this );
 		m_pMoanSound = g_SoundController->SoundCreate( filter, entindex(), CHAN_STATIC, pszSound, ATTN_NORM );
@@ -867,14 +867,14 @@ void CE_BaseZombie::MoanSound( envelopePoint_t *pEnvelope, int iEnvelopeSize )
 	envDefaultZombieMoanVolumeFast[ 1 ].durationMin = zombie_decaymin.GetFloat();
 	envDefaultZombieMoanVolumeFast[ 1 ].durationMax = zombie_decaymax.GetFloat();
 
-	if( random->RandomInt( 1, 2 ) == 1 )
+	if( enginerandom->RandomInt( 1, 2 ) == 1 )
 	{
 		IdleSound();
 	}
 
 	float duration = g_SoundController->SoundPlayEnvelope( m_pMoanSound, SOUNDCTRL_CHANGE_VOLUME, pEnvelope, iEnvelopeSize );
 
-	float flPitch = random->RandomInt( (int)m_flMoanPitch + zombie_changemin.GetInt(), (int)m_flMoanPitch + zombie_changemax.GetInt() );
+	float flPitch = enginerandom->RandomInt( (int)m_flMoanPitch + zombie_changemin.GetInt(), (int)m_flMoanPitch + zombie_changemax.GetInt() );
 	g_SoundController->SoundChangePitch( m_pMoanSound, flPitch, 0.3 );
 
 	m_flNextMoanSound = gpGlobals->curtime + duration + 9999;
@@ -928,7 +928,7 @@ void CE_BaseZombie::DieChopped( const CTakeDamageInfo &info )
 
 	if( !m_fIsHeadless && !bSquashed )
 	{
-		if( random->RandomInt( 0, 1 ) == 0 )
+		if( enginerandom->RandomInt( 0, 1 ) == 0 )
 		{
 			// Drop a live crab half of the time.
 			ReleaseHeadcrab( EyePosition(), forceVector * 0.005, true, false, false );
@@ -946,9 +946,9 @@ void CE_BaseZombie::DieChopped( const CTakeDamageInfo &info )
 	AddEffects( EF_NODRAW );
 
 	Vector vecLegsForce;
-	vecLegsForce.x = random->RandomFloat( -400, 400 );
-	vecLegsForce.y = random->RandomFloat( -400, 400 );
-	vecLegsForce.z = random->RandomFloat( 0, 250 );
+	vecLegsForce.x = enginerandom->RandomFloat( -400, 400 );
+	vecLegsForce.y = enginerandom->RandomFloat( -400, 400 );
+	vecLegsForce.z = enginerandom->RandomFloat( 0, 250 );
 
 	if( bSquashed && vecLegsForce.z > 0 )
 	{
@@ -962,8 +962,8 @@ void CE_BaseZombie::DieChopped( const CTakeDamageInfo &info )
 		CopyRenderColorTo( pLegGib );
 	}
 
-	forceVector *= random->RandomFloat( 0.04, 0.06 );
-	forceVector.z = ( 100 * 12 * 5 ) * random->RandomFloat( 0.8, 1.2 );
+	forceVector *= enginerandom->RandomFloat( 0.04, 0.06 );
+	forceVector.z = ( 100 * 12 * 5 ) * enginerandom->RandomFloat( 0.8, 1.2 );
 
 	if( bSquashed && forceVector.z > 0 )
 	{
@@ -1000,9 +1000,9 @@ void CE_BaseZombie::DieChopped( const CTakeDamageInfo &info )
 		{
 			vecSpot = WorldSpaceCenter();
 
-			vecSpot.x += random->RandomFloat( -12, 12 ); 
-			vecSpot.y += random->RandomFloat( -12, 12 ); 
-			vecSpot.z += random->RandomFloat( -4, 16 ); 
+			vecSpot.x += enginerandom->RandomFloat( -12, 12 ); 
+			vecSpot.y += enginerandom->RandomFloat( -12, 12 ); 
+			vecSpot.z += enginerandom->RandomFloat( -4, 16 ); 
 
 			UTIL_BloodDrips( vecSpot, vec3_origin, BLOOD_COLOR_YELLOW, 50 );
 		}
@@ -1011,12 +1011,12 @@ void CE_BaseZombie::DieChopped( const CTakeDamageInfo &info )
 		{
 			Vector vecSpot = WorldSpaceCenter();
 
-			vecSpot.x += random->RandomFloat( -12, 12 ); 
-			vecSpot.y += random->RandomFloat( -12, 12 ); 
-			vecSpot.z += random->RandomFloat( -4, 16 );
+			vecSpot.x += enginerandom->RandomFloat( -12, 12 ); 
+			vecSpot.y += enginerandom->RandomFloat( -12, 12 ); 
+			vecSpot.z += enginerandom->RandomFloat( -4, 16 );
 
-			vecDir.x = random->RandomFloat(-1, 1);
-			vecDir.y = random->RandomFloat(-1, 1);
+			vecDir.x = enginerandom->RandomFloat(-1, 1);
+			vecDir.y = enginerandom->RandomFloat(-1, 1);
 			vecDir.z = 0;
 			VectorNormalize( vecDir );
 
@@ -1065,7 +1065,7 @@ void CE_BaseZombie::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize, 
 	BaseClass::Ignite( flFlameLifetime, bNPCOnly, flSize, bCalledByLevelDesigner );
 
 	// Set the zombie up to burn to death in about ten seconds.
-	SetHealth( (int)min( m_iHealth, FLAME_DIRECT_DAMAGE_PER_SEC * (ZOMBIE_BURN_TIME + random->RandomFloat( -ZOMBIE_BURN_TIME_NOISE, ZOMBIE_BURN_TIME_NOISE)) ) );
+	SetHealth( (int)min( m_iHealth, FLAME_DIRECT_DAMAGE_PER_SEC * (ZOMBIE_BURN_TIME + enginerandom->RandomFloat( -ZOMBIE_BURN_TIME_NOISE, ZOMBIE_BURN_TIME_NOISE)) ) );
 
 	// FIXME: use overlays when they come online
 	//AddOverlay( ACT_ZOM_WALK_ON_FIRE, false );
@@ -1249,7 +1249,7 @@ CEntity *CE_BaseZombie::ClawAttack( float flDist, int iDamage, QAngle &qaViewPun
 	if ( pHurt == m_hPhysicsEnt && IsCurSchedule(SCHED_ZOMBIE_ATTACKITEM) )
 	{
 		m_hPhysicsEnt.Set(NULL);
-		m_flNextSwat = gpGlobals->curtime + random->RandomFloat( 2, 4 );
+		m_flNextSwat = gpGlobals->curtime + enginerandom->RandomFloat( 2, 4 );
 	}
 
 	return pHurt;
@@ -1415,7 +1415,7 @@ void CE_BaseZombie::HandleAnimEvent( animevent_t *pEvent )
 			// add some spin so the object doesn't appear to just fly in a straight line
 			// Also this spin will move the object slightly as it will press on whatever the object
 			// is resting on.
-			AngularImpulse angVelocity( random->RandomFloat(-180, 180), 20, random->RandomFloat(-360, 360) );
+			AngularImpulse angVelocity( enginerandom->RandomFloat(-180, 180), 20, enginerandom->RandomFloat(-360, 360) );
 
 			pPhysObj->AddVelocity( &v, &angVelocity );
 
@@ -1462,7 +1462,7 @@ void CE_BaseZombie::HandleAnimEvent( animevent_t *pEvent )
 	if ( pEvent->event == AE_ZOMBIE_ATTACK_BOTH )
 	{
 		Vector forward;
-		QAngle qaPunch( 45, random->RandomInt(-5,5), random->RandomInt(-5,5) );
+		QAngle qaPunch( 45, enginerandom->RandomInt(-5,5), enginerandom->RandomInt(-5,5) );
 		AngleVectors( GetLocalAngles(), &forward );
 		forward = forward * 200;
 		ClawAttack( GetClawAttackRange(), sk_zombie_dmg_one_slash.GetInt(), qaPunch, forward, ZOMBIE_BLOOD_BOTH_HANDS );
@@ -1871,7 +1871,7 @@ void CE_BaseZombie::PrescheduleThink( void )
 	if( m_NPCState == NPC_STATE_COMBAT )
 	{
 		// Zombies should make idle sounds in combat
-		if( random->RandomInt( 0, 30 ) == 0 )
+		if( enginerandom->RandomInt( 0, 30 ) == 0 )
 		{
 			IdleSound();
 		}
@@ -2144,7 +2144,7 @@ void CE_BaseZombie::RemoveHead( void )
 
 bool CE_BaseZombie::ShouldPlayFootstepMoan( void )
 {
-	if( random->RandomInt( 1, zombie_stepfreq.GetInt() * s_iAngryZombies ) == 1 )
+	if( enginerandom->RandomInt( 1, zombie_stepfreq.GetInt() * s_iAngryZombies ) == 1 )
 	{
 		return true;
 	}
@@ -2241,9 +2241,9 @@ void CE_BaseZombie::ReleaseHeadcrab( const Vector &vecOrigin, const Vector &vecV
 				{
 					Vector vecSpot = pGib->WorldSpaceCenter();
 					
-					vecSpot.x += random->RandomFloat( -8, 8 ); 
-					vecSpot.y += random->RandomFloat( -8, 8 ); 
-					vecSpot.z += random->RandomFloat( -8, 8 ); 
+					vecSpot.x += enginerandom->RandomFloat( -8, 8 ); 
+					vecSpot.y += enginerandom->RandomFloat( -8, 8 ); 
+					vecSpot.z += enginerandom->RandomFloat( -8, 8 ); 
 
 					UTIL_BloodDrips( vecSpot, vec3_origin, BLOOD_COLOR_YELLOW, 50 );
 				}

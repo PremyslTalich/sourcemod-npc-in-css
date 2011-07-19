@@ -399,8 +399,8 @@ Vector CNPC_Vortigaunt::BodyTarget( const Vector &posSrc, bool bNoisy )
 	if ( bNoisy )
 	{
 		// bell curve
-		float rand1 = random->RandomFloat( 0.0, 0.5 );
-		float rand2 = random->RandomFloat( 0.0, 0.5 );
+		float rand1 = enginerandom->RandomFloat( 0.0, 0.5 );
+		float rand2 = enginerandom->RandomFloat( 0.0, 0.5 );
 		result = low + delta * rand1 + delta * rand2;
 	}
 	else
@@ -679,7 +679,7 @@ void CNPC_Vortigaunt::HandleAnimEvent( animevent_t *pEvent )
 		m_flAimDelay = gpGlobals->curtime + 0.75f;
 
 		// Stagger the next time we can attack
-		m_flNextAttack = gpGlobals->curtime + random->RandomFloat( 2.0f, 3.0f );
+		m_flNextAttack = gpGlobals->curtime + enginerandom->RandomFloat( 2.0f, 3.0f );
 		return;
 	}
 	
@@ -861,7 +861,7 @@ void CNPC_Vortigaunt::Spawn( void )
 	//SetAimTarget(NULL);
 	//m_bReadinessCapable = IsReadinessCapable();
 	//SetReadinessValue( 0.0f );
-	//SetReadinessSensitivity( random->RandomFloat( 0.7, 1.3 ) );
+	//SetReadinessSensitivity( enginerandom->RandomFloat( 0.7, 1.3 ) );
 	//m_flReadinessLockedUntil = 0.0f;
 
 	//m_AnnounceAttackTimer.Set( 10, 30 );
@@ -955,7 +955,7 @@ void CNPC_Vortigaunt::PainSound( const CTakeDamageInfo &info )
 	if ( gpGlobals->curtime < m_flPainTime )
 		return;
 	
-	m_flPainTime = gpGlobals->curtime + random->RandomFloat(0.5, 0.75);
+	m_flPainTime = gpGlobals->curtime + enginerandom->RandomFloat(0.5, 0.75);
 }
 
 //=========================================================
@@ -1260,7 +1260,7 @@ void CNPC_Vortigaunt::ArmBeam( int beamType, int nHand )
 
 	for (int i = 0; i < 3; i++)
 	{
-		Vector vecAim = forward * random->RandomFloat( -1, 1 ) + right * side * random->RandomFloat( 0, 1 ) + up * random->RandomFloat( -1, 1 );
+		Vector vecAim = forward * enginerandom->RandomFloat( -1, 1 ) + right * side * enginerandom->RandomFloat( 0, 1 ) + up * enginerandom->RandomFloat( -1, 1 );
 		trace_t tr1;
 		UTIL_TraceLine ( vecSrc, vecSrc + vecAim * (10*12), MASK_SOLID, BaseEntity(), COLLISION_GROUP_NONE, &tr1);
 		
@@ -1406,7 +1406,7 @@ void CNPC_Vortigaunt::CreateBeamBlast( const Vector &vecOrigin )
 	{
 		pBlastSprite->SetTransparency( kRenderTransAddFrameBlend, 255, 255, 255, 255, kRenderFxNone );
 		pBlastSprite->SetBrightness( 255 );
-		pBlastSprite->SetScale( random->RandomFloat( 1.0f, 1.5f ) );
+		pBlastSprite->SetScale( enginerandom->RandomFloat( 1.0f, 1.5f ) );
 		pBlastSprite->AnimateAndDie( 45.0f );
 		pBlastSprite->EmitSound( "NPC_Vortigaunt.Explode" );
 	}

@@ -212,7 +212,7 @@ inline bool CFuncTank::CanFire( void )
 	// If less than persistence2, occasionally do another burst
 	if ( flTimeDelay <= m_persist2 )
 	{
-		if ( random->RandomInt( 0, 30 ) == 0 )
+		if ( enginerandom->RandomInt( 0, 30 ) == 0 )
 		{
 			m_persist2burst = flTimeDelay + 0.5f;
 			return true;
@@ -1328,7 +1328,7 @@ float CFuncTank::GetRandomFireTime( void )
 	float flOOFireRate = 1.0f / m_fireRate;
 	float flOOFireRateBy2 = flOOFireRate * 0.5f;
 	float flOOFireRateBy4 = flOOFireRate * 0.25f;
-	return random->RandomFloat( flOOFireRateBy4, flOOFireRateBy2 );
+	return enginerandom->RandomFloat( flOOFireRateBy4, flOOFireRateBy2 );
 }
 
 //-----------------------------------------------------------------------------
@@ -1337,7 +1337,7 @@ float CFuncTank::GetRandomFireTime( void )
 //-----------------------------------------------------------------------------
 int CFuncTank::GetRandomBurst( void )
 {
-	return random->RandomInt( (int)m_fireRate-2, (int)m_fireRate+2 );
+	return enginerandom->RandomInt( (int)m_fireRate-2, (int)m_fireRate+2 );
 }
 
 //-----------------------------------------------------------------------------
@@ -1759,8 +1759,8 @@ void CFuncTank::ComputeLeadingPosition( const Vector &vecShootPosition, CEntity 
 	{
 		m_flStartLeadFactor = m_flNextLeadFactor;
 		m_flStartLeadFactorTime = gpGlobals->curtime;
-		m_flNextLeadFactor = random->RandomFloat( 0.8f, 1.3f );
-		m_flNextLeadFactorTime = gpGlobals->curtime + random->RandomFloat( 2.0f, 4.0f );
+		m_flNextLeadFactor = enginerandom->RandomFloat( 0.8f, 1.3f );
+		m_flNextLeadFactorTime = gpGlobals->curtime + enginerandom->RandomFloat( 2.0f, 4.0f );
 	}
 
 	float flFactor = (gpGlobals->curtime - m_flStartLeadFactorTime) / (m_flNextLeadFactorTime - m_flStartLeadFactorTime);
@@ -2131,10 +2131,10 @@ void CFuncTank::Fire( int bulletCount, const Vector &barrelEnd, const Vector &fo
 		if ( m_iszSpriteSmoke != NULL_STRING )
 		{
 			CE_CSprite *pSprite = CE_CSprite::SpriteCreate( STRING(m_iszSpriteSmoke), barrelEnd, TRUE );
-			pSprite->AnimateAndDie( random->RandomFloat( 15.0, 20.0 ) );
+			pSprite->AnimateAndDie( enginerandom->RandomFloat( 15.0, 20.0 ) );
 			pSprite->SetTransparency( kRenderTransAlpha, m_clrRender->r, m_clrRender->g, m_clrRender->b, 255, kRenderFxNone );
 
-			Vector vecVelocity( 0, 0, random->RandomFloat(40, 80) ); 
+			Vector vecVelocity( 0, 0, enginerandom->RandomFloat(40, 80) ); 
 			pSprite->SetAbsVelocity( vecVelocity );
 			pSprite->SetScale( m_spriteScale );
 		}
@@ -2166,8 +2166,8 @@ void CFuncTank::TankTrace( const Vector &vecStart, const Vector &vecForward, con
 	// get circular gaussian spread
 	float x, y, z;
 	do {
-		x = random->RandomFloat(-0.5,0.5) + random->RandomFloat(-0.5,0.5);
-		y = random->RandomFloat(-0.5,0.5) + random->RandomFloat(-0.5,0.5);
+		x = enginerandom->RandomFloat(-0.5,0.5) + enginerandom->RandomFloat(-0.5,0.5);
+		y = enginerandom->RandomFloat(-0.5,0.5) + enginerandom->RandomFloat(-0.5,0.5);
 		z = x*x+y*y;
 	} while (z > 1);
 	Vector vecDir = vecForward +
@@ -2543,8 +2543,8 @@ void CFuncTankPulseLaser::Fire( int bulletCount, const Vector &barrelEnd, const 
 		// get circular gaussian spread
 		float x, y, z;
 		do {
-			x = random->RandomFloat(-0.5,0.5) + random->RandomFloat(-0.5,0.5);
-			y = random->RandomFloat(-0.5,0.5) + random->RandomFloat(-0.5,0.5);
+			x = enginerandom->RandomFloat(-0.5,0.5) + enginerandom->RandomFloat(-0.5,0.5);
+			y = enginerandom->RandomFloat(-0.5,0.5) + enginerandom->RandomFloat(-0.5,0.5);
 			z = x*x+y*y;
 		} while (z > 1);
 

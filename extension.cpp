@@ -18,7 +18,7 @@ IEngineSound *engsound = NULL;
 IEngineTrace *enginetrace = NULL;
 IServerGameClients *gameclients = NULL;
 ICvar *icvar = NULL;
-IUniformRandomStream *random = NULL;
+IUniformRandomStream *enginerandom = NULL;
 IStaticPropMgrServer *staticpropmgr = NULL;
 IVModelInfo *modelinfo = NULL;
 IPhysicsObjectPairHash *my_g_EntityCollisionHash = NULL;
@@ -275,7 +275,7 @@ bool Monster::SDK_OnMetamodLoad(ISmmAPI *ismm, char *error, size_t maxlen, bool 
 	GET_V_IFACE_CURRENT(GetEngineFactory, engsound, IEngineSound, IENGINESOUND_SERVER_INTERFACE_VERSION);
     GET_V_IFACE_CURRENT(GetEngineFactory, enginetrace, IEngineTrace, INTERFACEVERSION_ENGINETRACE_SERVER);
 	GET_V_IFACE_CURRENT(GetServerFactory, gameclients, IServerGameClients, INTERFACEVERSION_SERVERGAMECLIENTS);
-	GET_V_IFACE_CURRENT(GetEngineFactory, random, IUniformRandomStream, VENGINE_SERVER_RANDOM_INTERFACE_VERSION);
+	GET_V_IFACE_CURRENT(GetEngineFactory, enginerandom, IUniformRandomStream, VENGINE_SERVER_RANDOM_INTERFACE_VERSION);
 	GET_V_IFACE_CURRENT(GetEngineFactory, staticpropmgr, IStaticPropMgrServer, INTERFACEVERSION_STATICPROPMGR_SERVER);
 	GET_V_IFACE_CURRENT(GetEngineFactory, modelinfo, IVModelInfo, VMODELINFO_SERVER_INTERFACE_VERSION);
 	GET_V_IFACE_CURRENT(GetEngineFactory, partition, ISpatialPartition, INTERFACEVERSION_SPATIALPARTITION);

@@ -739,7 +739,7 @@ void CEnvHeadcrabCanister::HeadcrabCanisterSpawnHeadcrabThink()
 
 	if ( m_nHeadcrabCount != 0 )
 	{
-		float flWaitTime = random->RandomFloat( 1.0f, 2.0f );
+		float flWaitTime = enginerandom->RandomFloat( 1.0f, 2.0f );
 		SetContextThink( &CEnvHeadcrabCanister::HeadcrabCanisterSpawnHeadcrabThink_CBE, gpGlobals->curtime + flWaitTime, s_pHeadcrabThinkContext );
 	}
 	else
@@ -1091,7 +1091,7 @@ void CEnvHeadcrabCanister::HeadcrabCanisterSkyboxOnlyThink( void )
 		}
 	}
 
-	float flRefireTime = random->RandomFloat( m_flMinRefireTime, m_flMaxRefireTime ) + ENV_HEADCRABCANISTER_TRAIL_TIME;
+	float flRefireTime = enginerandom->RandomFloat( m_flMinRefireTime, m_flMaxRefireTime ) + ENV_HEADCRABCANISTER_TRAIL_TIME;
 	SetThink( &CEnvHeadcrabCanister::HeadcrabCanisterSkyboxRestartThink );
 	SetNextThink( gpGlobals->curtime + flRefireTime );
 }

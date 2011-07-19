@@ -266,7 +266,7 @@ void CGrenadeBeam::GrenadeBeamTouch( CEntity *pOther )
 	}
 	else 
 	{
-		UTIL_Smoke(GetAbsOrigin(), random->RandomInt(5, 10), 10);
+		UTIL_Smoke(GetAbsOrigin(), enginerandom->RandomInt(5, 10), 10);
 	}
 
 	// --------------------------------------------

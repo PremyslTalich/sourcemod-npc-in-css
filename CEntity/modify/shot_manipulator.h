@@ -76,8 +76,8 @@ inline const Vector &CShotManipulator::ApplySpread( const Vector &vecSpread, flo
 
 	do
 	{
-		x = random->RandomFloat(-1,1) * flatness + random->RandomFloat(-1,1) * (1 - flatness);
-		y = random->RandomFloat(-1,1) * flatness + random->RandomFloat(-1,1) * (1 - flatness);
+		x = enginerandom->RandomFloat(-1,1) * flatness + enginerandom->RandomFloat(-1,1) * (1 - flatness);
+		y = enginerandom->RandomFloat(-1,1) * flatness + enginerandom->RandomFloat(-1,1) * (1 - flatness);
 		if ( shotBias < 0 )
 		{
 			x = ( x >= 0 ) ? 1.0 - x : -1.0 - x;

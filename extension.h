@@ -34,19 +34,6 @@ typedef CHandle<CBaseEntity> EHANDLE;
 
 class CBasePlayer;
 
-//#define GAME_DLL
-//#include "cbase.h"
-//#include "takedamageinfo.h"
-//#include "networkvar.h"
-//#include <typeinfo>
-//#include <variant_t.h>
-
-//#include "macros.h"
-//#include "CEntityManager.h"
-
-//#include "CEntityManager.h"
-//#include "CEntity.h"
-
 #include "sign_func.h"
 
 
@@ -83,7 +70,7 @@ extern INetworkStringTableContainer *netstringtables;
 extern IEngineSound *engsound;
 extern IEngineTrace *enginetrace;
 extern IServerGameClients *gameclients;
-extern IUniformRandomStream *random;
+extern IUniformRandomStream *enginerandom;
 extern IStaticPropMgrServer *staticpropmgr;
 extern IVModelInfo *modelinfo;
 extern ISpatialPartition *partition;

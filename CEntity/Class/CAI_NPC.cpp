@@ -1360,7 +1360,7 @@ float CAI_NPC::SetWait( float minWait, float maxWait )
 			minThinks = 1;
 		int maxThinks = Ceil2Int( maxWait * 10 );
 
-		m_flWaitFinished = gpGlobals->curtime + ( 0.1 * random->RandomInt( minThinks, maxThinks ) );
+		m_flWaitFinished = gpGlobals->curtime + ( 0.1 * enginerandom->RandomInt( minThinks, maxThinks ) );
 	}
 	return m_flWaitFinished;
 }
@@ -2143,7 +2143,7 @@ Vector CAI_NPC::GetActualShootTrajectory( const Vector &shootOrigin )
 	if (GetEnemy()->IsPlayer() && (GetWaterLevel() != 3) && (GetEnemy()->GetWaterLevel() == 3))
 	{
 #if 1
-		if (random->RandomInt(0, 4) < 3)
+		if (enginerandom->RandomInt(0, 4) < 3)
 		{
 			Vector vecEnemyForward;
 			GetEnemy()->GetVectors( &vecEnemyForward, NULL, NULL );
@@ -2169,7 +2169,7 @@ Vector CAI_NPC::GetActualShootTrajectory( const Vector &shootOrigin )
 			return vecShotDir;
 		}
 #else
-		if (random->RandomInt(0, 4) < 3)
+		if (enginerandom->RandomInt(0, 4) < 3)
 		{
 			// Aim at a point a few feet in front of the player's eyes
 			Vector vecEnemyForward;

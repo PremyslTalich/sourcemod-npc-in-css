@@ -46,5 +46,5 @@ inline void CFlex::Blink()
 }
 
 
-
 #endif
+

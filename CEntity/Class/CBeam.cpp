@@ -295,7 +295,7 @@ CEntity *CE_CBeam::RandomTargetname( const char *szName )
 	while ((pNewEntity = g_helpfunc.FindEntityByName( pNewEntity, szName )) != NULL)
 	{
 		total++;
-		if (random->RandomInt(0,total-1) < 1)
+		if (enginerandom->RandomInt(0,total-1) < 1)
 			pEntity = pNewEntity;
 	}
 	return pEntity;

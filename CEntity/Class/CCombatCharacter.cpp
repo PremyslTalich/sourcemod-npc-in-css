@@ -321,7 +321,7 @@ Vector CCombatCharacter::CalcDamageForceVector( const CTakeDamageInfo &info )
 			// This simulates features that usually vary from
 			// person-to-person variables such as bodyweight,
 			// which are all indentical for characters using the same model.
-			float scale = random->RandomFloat( 0.85, 1.15 );
+			float scale = enginerandom->RandomFloat( 0.85, 1.15 );
 			Vector force = info.GetDamageForce();
 			force.x *= scale;
 			force.y *= scale;
@@ -361,10 +361,10 @@ Vector CCombatCharacter::CalcDamageForceVector( const CTakeDamageInfo &info )
 			// taking damage from self?  Take a little random force, but still try to collapse on the spot.
 			if ( this == pForce )
 			{
-				forceVector.x = random->RandomFloat( -1.0f, 1.0f );
-				forceVector.y = random->RandomFloat( -1.0f, 1.0f );
+				forceVector.x = enginerandom->RandomFloat( -1.0f, 1.0f );
+				forceVector.y = enginerandom->RandomFloat( -1.0f, 1.0f );
 				forceVector.z = 0.0;
-				forceScale = random->RandomFloat( 1000.0f, 2000.0f );
+				forceScale = enginerandom->RandomFloat( 1000.0f, 2000.0f );
 			}
 			else
 			{
@@ -441,12 +441,12 @@ void CCombatCharacter::ThrowDirForWeaponStrip( CCombatWeapon *pWeapon, const Vec
 {
 	// Nowhere in particular; just drop it.
 	VMatrix zRot;
-	MatrixBuildRotateZ( zRot, random->RandomFloat( -60.0f, 60.0f ) );
+	MatrixBuildRotateZ( zRot, enginerandom->RandomFloat( -60.0f, 60.0f ) );
 
 	Vector vecThrow;
 	Vector3DMultiply( zRot, vecForward, *pVecThrowDir );
 
-	pVecThrowDir->z = random->RandomFloat( -0.5f, 0.5f );
+	pVecThrowDir->z = enginerandom->RandomFloat( -0.5f, 0.5f );
 	VectorNormalize( *pVecThrowDir );
 }
 
@@ -474,7 +474,7 @@ void CCombatCharacter::DropWeaponForWeaponStrip( CCombatWeapon *pWeapon,
 		VectorMA( vecOrigin, flDiameter, vecThrow, vecOffsetOrigin );
 	}
 
-	vecThrow *= random->RandomFloat( 400.0f, 600.0f );
+	vecThrow *= enginerandom->RandomFloat( 400.0f, 600.0f );
 
 	pWeapon->SetAbsOrigin( vecOrigin );
 	pWeapon->SetAbsAngles( vecAngles );
@@ -579,7 +579,7 @@ void CCombatCharacter::Weapon_DropAll( bool bDisallowWeaponPickup )
 		ThrowDirForWeaponStrip( pActiveWeapon, vecForward, &vecThrow );
 
 		// Throw a little more vigorously; it starts closer to the player
-		vecThrow *= random->RandomFloat( 800.0f, 1000.0f );
+		vecThrow *= enginerandom->RandomFloat( 800.0f, 1000.0f );
 
 		Weapon_Drop( pActiveWeapon->BaseEntity(), NULL, &vecThrow );
 		pActiveWeapon->SetRemoveable( false );

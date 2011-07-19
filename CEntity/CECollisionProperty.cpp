@@ -77,9 +77,9 @@ const Vector & CECollisionProperty::NormalizedToWorldSpace( const Vector &in, Ve
 void CECollisionProperty::RandomPointInBounds( const Vector &vecNormalizedMins, const Vector &vecNormalizedMaxs, Vector *pPoint) const
 {
 	Vector vecNormalizedSpace;
-	vecNormalizedSpace.x = random->RandomFloat( vecNormalizedMins.x, vecNormalizedMaxs.x );
-	vecNormalizedSpace.y = random->RandomFloat( vecNormalizedMins.y, vecNormalizedMaxs.y );
-	vecNormalizedSpace.z = random->RandomFloat( vecNormalizedMins.z, vecNormalizedMaxs.z );
+	vecNormalizedSpace.x = enginerandom->RandomFloat( vecNormalizedMins.x, vecNormalizedMaxs.x );
+	vecNormalizedSpace.y = enginerandom->RandomFloat( vecNormalizedMins.y, vecNormalizedMaxs.y );
+	vecNormalizedSpace.z = enginerandom->RandomFloat( vecNormalizedMins.z, vecNormalizedMaxs.z );
 	NormalizedToWorldSpace( vecNormalizedSpace, pPoint );
 }
 

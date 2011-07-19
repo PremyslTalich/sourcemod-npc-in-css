@@ -212,9 +212,9 @@ bool FBoxVisible( CEntity *pLooker, CEntity *pTarget, Vector &vecTargetOrigin, f
 	for (int i = 0; i < 5; i++)
 	{
 		Vector vecTarget = pTarget->GetAbsOrigin();
-		vecTarget.x += random->RandomFloat( pTarget->WorldAlignMins().x + flSize, pTarget->WorldAlignMaxs().x - flSize);
-		vecTarget.y += random->RandomFloat( pTarget->WorldAlignMins().y + flSize, pTarget->WorldAlignMaxs().y - flSize);
-		vecTarget.z += random->RandomFloat( pTarget->WorldAlignMins().z + flSize, pTarget->WorldAlignMaxs().z - flSize);
+		vecTarget.x += enginerandom->RandomFloat( pTarget->WorldAlignMins().x + flSize, pTarget->WorldAlignMaxs().x - flSize);
+		vecTarget.y += enginerandom->RandomFloat( pTarget->WorldAlignMins().y + flSize, pTarget->WorldAlignMaxs().y - flSize);
+		vecTarget.z += enginerandom->RandomFloat( pTarget->WorldAlignMins().z + flSize, pTarget->WorldAlignMaxs().z - flSize);
 
 		UTIL_TraceLine(vecLookerOrigin, vecTarget, MASK_BLOCKLOS, pLooker->BaseEntity(), COLLISION_GROUP_NONE, &tr);
 		

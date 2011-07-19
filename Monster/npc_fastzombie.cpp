@@ -980,7 +980,7 @@ void CEFastZombie::HandleAnimEvent( animevent_t *pEvent )
 	{
 		if( ++m_iClimbCount % 3 == 0 )
 		{
-			g_SoundController->SoundChangePitch( m_pLayer2, random->RandomFloat( 100, 150 ), 0.0 );
+			g_SoundController->SoundChangePitch( m_pLayer2, enginerandom->RandomFloat( 100, 150 ), 0.0 );
 			g_SoundController->SoundPlayEnvelope( m_pLayer2, SOUNDCTRL_CHANGE_VOLUME, envFastZombieVolumeClimb, ARRAYSIZE(envFastZombieVolumeClimb) );
 		}
 
@@ -1405,7 +1405,7 @@ void CEFastZombie::LeapAttackTouch( CEntity *pOther )
 
 	Vector forward;
 	AngleVectors( GetLocalAngles(), &forward );
-	QAngle qaPunch( 15, random->RandomInt(-5,5), random->RandomInt(-5,5) );
+	QAngle qaPunch( 15, enginerandom->RandomInt(-5,5), enginerandom->RandomInt(-5,5) );
 	Vector velocityPunch = forward * 5;
 
 	ClawAttack( GetClawAttackRange(), sk_zombie_dmg_one_slash.GetInt(), qaPunch, velocityPunch, ZOMBIE_BLOOD_BOTH_HANDS );
@@ -1575,7 +1575,7 @@ void CEFastZombie::OnChangeActivity( Activity NewActivity )
 	{
 		// Scream!!!!
 		EmitSound( "NPC_FastZombie.Frenzy" );
-		SetPlaybackRate( random->RandomFloat( .9, 1.1 ) );	
+		SetPlaybackRate( enginerandom->RandomFloat( .9, 1.1 ) );	
 	}
 
 	if( NewActivity == ACT_JUMP )

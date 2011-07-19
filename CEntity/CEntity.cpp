@@ -1965,9 +1965,9 @@ void CEntity::TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr, in
 	{
 		vecTraceDir = vecDir * -1;// trace in the opposite direction the shot came from (the direction the shot is going)
 
-		vecTraceDir.x += random->RandomFloat( -flNoise, flNoise );
-		vecTraceDir.y += random->RandomFloat( -flNoise, flNoise );
-		vecTraceDir.z += random->RandomFloat( -flNoise, flNoise );
+		vecTraceDir.x += enginerandom->RandomFloat( -flNoise, flNoise );
+		vecTraceDir.y += enginerandom->RandomFloat( -flNoise, flNoise );
+		vecTraceDir.z += enginerandom->RandomFloat( -flNoise, flNoise );
 
 		// Don't bleed on grates.
 		UTIL_TraceLine( ptr->endpos, ptr->endpos + vecTraceDir * -flTraceDist, MASK_SOLID_BRUSHONLY & ~CONTENTS_GRATE, BaseEntity(), COLLISION_GROUP_NONE, &Bloodtr);
