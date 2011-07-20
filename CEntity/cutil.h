@@ -466,4 +466,8 @@ edict_t		*UTIL_FindClientInVisibilityPVS( edict_t *pEdict );
 
 bool		UTIL_ClientPVSIsExpanded();
 
+int SENTENCEG_Lookup(const char *sample);
+int SENTENCEG_PlayRndSz(edict_t *entity, const char *szrootname, float volume, soundlevel_t soundlevel, int flags, int pitch);
+
+
 #endif // _INCLUDE_UTIL_H_

@@ -4,6 +4,7 @@
 #include "GameSystem.h"
 #include "tier3.h"
 #include "datacache/imdlcache.h"
+#include "scenefilecache/ISceneFileCache.h"
 
 Monster g_Monster;
 
@@ -37,6 +38,7 @@ CSharedEdictChangeInfo *g_pSharedChangeInfo = NULL;
 IGameMovement *g_pGameMovement = NULL;
 IGameConfig *g_pGameConf = NULL;
 IServerTools *servertools = NULL;
+ISceneFileCache *scenefilecache = NULL;
 
 CBaseEntityList *g_pEntityList = NULL;
 
@@ -289,6 +291,7 @@ bool Monster::SDK_OnMetamodLoad(ISmmAPI *ismm, char *error, size_t maxlen, bool 
 	GET_V_IFACE_CURRENT(GetEngineFactory, mdlcache, IMDLCache,  MDLCACHE_INTERFACE_VERSION);
 	GET_V_IFACE_CURRENT(GetServerFactory, g_pGameMovement, IGameMovement, INTERFACENAME_GAMEMOVEMENT);
 	GET_V_IFACE_ANY(GetServerFactory, servertools, IServerTools, VSERVERTOOLS_INTERFACE_VERSION);
+	GET_V_IFACE_ANY(GetEngineFactory, scenefilecache, ISceneFileCache, SCENE_FILE_CACHE_INTERFACE_VERSION);
 
 	g_pCVar = icvar;
 	

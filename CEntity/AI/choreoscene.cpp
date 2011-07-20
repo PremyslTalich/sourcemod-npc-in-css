@@ -43,3 +43,13 @@ float CChoreoScene::GetTime( void )
 	return m_flCurrentTime;
 }
 
+bool CChoreoScene::IsBackground( )
+{
+	return m_bIsBackground;
+}
+
+char const *CChoreoScene::GetFilename() const
+{
+	return m_szFileName;
+}
+

@@ -337,7 +337,11 @@ public: // CEntity
 
 	static int	PrecacheModel( const char *name ); 
 
-	const trace_t *GetTouchTrace( void );
+	static void	EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, int iSentenceIndex, 
+		float flVolume, soundlevel_t iSoundlevel, int iFlags = 0, int iPitch = PITCH_NORM,
+		const Vector *pOrigin = NULL, const Vector *pDirection = NULL, bool bUpdatePositions = true, float soundtime = 0.0f );
+
+	static const trace_t *GetTouchTrace( void );
 
 
 public: // CBaseEntity virtuals
@@ -417,6 +421,7 @@ public: // CBaseEntity virtuals
 	virtual int	UpdateTransmitState();
 	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
 	virtual bool CanBeSeenBy( CBaseEntity *pNPC );
+	virtual bool IsViewable();
 
 public:
 	void SetLocalOrigin(const Vector& origin);
@@ -695,6 +700,8 @@ public: // custom
 	int			RegisterThinkContext( const char *szContext );
 	int			GetNextThinkTick( const char *szContext = NULL );
 
+	void		GenderExpandString( char const *in, char *out, int maxlen );
+
 private:
 	bool		NameMatchesComplex( const char *pszNameOrWildcard );
 	bool		ClassMatchesComplex( const char *pszClassOrWildcard );
@@ -774,6 +781,7 @@ public: // All the internal hook implementations for the above virtuals
 	DECLARE_DEFAULTHEADER(UpdateTransmitState, int, ());
 	DECLARE_DEFAULTHEADER(SetTransmit, void, ( CCheckTransmitInfo *pInfo, bool bAlways ));
 	DECLARE_DEFAULTHEADER(CanBeSeenBy, bool, ( CBaseEntity *pNPC ));
+	DECLARE_DEFAULTHEADER(IsViewable, bool, ());
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetLocalOrigin, void, (const Vector& origin));

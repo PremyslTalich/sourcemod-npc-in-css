@@ -114,6 +114,7 @@ SH_DECL_MANUALHOOK0(GetTracerType, 0, 0, 0, const char	*);
 SH_DECL_MANUALHOOK0(UpdateTransmitState, 0, 0, 0, int);
 SH_DECL_MANUALHOOK2_void(SetTransmit, 0, 0, 0, CCheckTransmitInfo *, bool);
 SH_DECL_MANUALHOOK1(CanBeSeenBy, 0, 0, 0, bool, CBaseEntity *);
+SH_DECL_MANUALHOOK0(IsViewable, 0, 0, 0, bool);
 
 
 
@@ -192,6 +193,7 @@ DECLARE_HOOK(GetTracerType, CEntity);
 DECLARE_HOOK(UpdateTransmitState, CEntity);
 DECLARE_HOOK(SetTransmit, CEntity);
 DECLARE_HOOK(CanBeSeenBy, CEntity);
+DECLARE_HOOK(IsViewable, CEntity);
 
 
 DECLARE_DEFAULTHANDLER_void(CEntity, Teleport, (const Vector *origin, const QAngle* angles, const Vector *velocity), (origin, angles, velocity));
@@ -259,7 +261,7 @@ DECLARE_DEFAULTHANDLER(CEntity,GetTracerType, const char *, (), ());
 DECLARE_DEFAULTHANDLER(CEntity,UpdateTransmitState, int, (), ());
 DECLARE_DEFAULTHANDLER_void(CEntity,SetTransmit, (CCheckTransmitInfo *pInfo, bool bAlways), (pInfo, bAlways));
 DECLARE_DEFAULTHANDLER(CEntity,CanBeSeenBy, bool, (CBaseEntity *pNPC), (pNPC));
-
+DECLARE_DEFAULTHANDLER(CEntity,IsViewable, bool, (), ());
 
 //Sendprops
 DEFINE_PROP(m_iTeamNum, CEntity);
@@ -988,18 +990,9 @@ int	CEntity::GetNextThinkTick( const char *szContext)
 }
 
 
-//static int think_offset = -1;
 VALVE_BASEPTR CEntity::GetCurrentThinkPointer()
 {
 	return m_pfnThink;
-	/*if(think_offset == -1)
-	{
-		datamap_t *pMap = gamehelpers->GetDataMap(BaseEntity());
-		typedescription_t *td = gamehelpers->FindInDataMap(pMap,"m_pfnThink");
-		think_offset = td->fieldOffset[TD_OFFSET_NORMAL];
-	}
-	VALVE_BASEPTR addr = *(VALVE_BASEPTR *)((unsigned char *)BaseEntity() + think_offset);
-	return addr;*/
 }
 
 void CEntity::SetNextThink(float thinkTime, const char *szContext)
@@ -2357,3 +2350,19 @@ CE_CSkyCamera *CEntity::GetEntitySkybox()
 
 	return NULL;
 }
+
+void CEntity::GenderExpandString( char const *in, char *out, int maxlen )
+{
+	soundemitterbase->GenderExpandString( STRING(GetModelName()) , in, out, maxlen );
+}
+
+void CEntity::EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, int iSentenceIndex, 
+	float flVolume, soundlevel_t iSoundlevel, int iFlags /*= 0*/, int iPitch /*=PITCH_NORM*/,
+	const Vector *pOrigin /*=NULL*/, const Vector *pDirection /*=NULL*/, 
+	bool bUpdatePositions /*=true*/, float soundtime /*=0.0f*/ )
+{
+	CUtlVector< Vector > dummy;
+	enginesound->EmitSentenceByIndex( filter, iEntIndex, iChannel, iSentenceIndex, 
+		flVolume, iSoundlevel, iFlags, iPitch, pOrigin, pDirection, &dummy, bUpdatePositions, soundtime );
+}
+

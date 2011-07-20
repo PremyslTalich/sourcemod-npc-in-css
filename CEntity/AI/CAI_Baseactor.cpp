@@ -13,14 +13,11 @@
 #include "choreoscene.h"
 
 
-ConVar flex_minplayertime( "flex_minplayertime", "5" );
-ConVar flex_maxplayertime( "flex_maxplayertime", "7" );
-ConVar flex_minawaytime( "flex_minawaytime", "0.5" );
-ConVar flex_maxawaytime( "flex_maxawaytime", "1.0" );
-ConVar ai_debug_looktargets( "ai_debug_looktargets", "0" );
-ConVar ai_debug_expressions( "ai_debug_expressions", "0", FCVAR_NONE, "Show random expression decisions for NPCs." );
-static ConVar scene_showfaceto( "scene_showfaceto", "0", FCVAR_ARCHIVE, "When playing back, show the directions of faceto events." );
-
+extern ConVar *flex_minplayertime;
+extern ConVar *flex_maxplayertime;
+extern ConVar *flex_minawaytime;
+extern ConVar *flex_maxawaytime;
+extern ConVar *scene_showfaceto;
 
 
 BEGIN_DATADESC( CAI_BaseActor )
@@ -368,7 +365,7 @@ bool CAI_BaseActor::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 			}
 
 			// lock in place if aiming at self
-			if (info->m_hTarget == this)
+			if (info->m_hTarget == BaseEntity())
 			{
 				return true;
 			}
@@ -429,7 +426,7 @@ bool CAI_BaseActor::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 			NDebugOverlay::YawArrow( GetAbsOrigin() + Vector( 0, 0, 24 ), info->m_flTargetYaw, 64, 16, 128, 128, 255, 0, true, 0.1 );
 			*/
 
-			CAI_BaseNPC *pGoalNpc = info->m_hTarget->MyNPCPointer();
+			CAI_NPC *pGoalNpc = CEntity::Instance(info->m_hTarget)->MyNPCPointer();
 
 			float goalYaw = GetLocalAngles().y;
 			
@@ -439,12 +436,7 @@ bool CAI_BaseActor::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 			}
 			else
 			{
-				goalYaw = CalcIdealYaw( info->m_hTarget->EyePosition() );
-			}
-
-			if (developer.GetInt() > 0 && scene_showfaceto.GetBool())
-			{
-				NDebugOverlay::YawArrow( GetAbsOrigin() + Vector( 0, 0, 1 ), goalYaw, 8 + 32 * intensity, 8, 255, 255, 255, 0, true, 0.12 );
+				goalYaw = CalcIdealYaw( CEntity::Instance(info->m_hTarget)->EyePosition() );
 			}
 
 			diff = UTIL_AngleDiff( goalYaw, info->m_flInitialYaw ) * intensity;
@@ -473,7 +465,7 @@ bool CAI_BaseActor::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 
 			if (!event->IsLockBodyFacing())
 			{
-				AddFacingTarget( info->m_hTarget, intensity, 0.2 ); // facing targets are lagged by one frame
+				AddFacingTarget_E_F_F_F( info->m_hTarget, intensity, 0.2 ); // facing targets are lagged by one frame
 			}
 			return true;
 		}
@@ -498,9 +490,9 @@ bool CAI_BaseActor::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 					return true;
 				case SCENE_AI_AIM:
 					{
-						if ( info->m_hTarget )
+						if ( CEntity::Instance(info->m_hTarget) )
 						{
-							Vector vecAimTargetLoc = info->m_hTarget->EyePosition();
+							Vector vecAimTargetLoc = CEntity::Instance(info->m_hTarget)->EyePosition();
 							Vector vecAimDir = vecAimTargetLoc - EyePosition();
 
 							VectorNormalize( vecAimDir );
@@ -531,7 +523,7 @@ bool CAI_BaseActor::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 					if (info->m_hTarget && info->m_flNext < gpGlobals->curtime)
 					{
 						float remaining = event->GetEndTime() - scene->GetTime();
-						NPCPhysics_CreateSolver( this, info->m_hTarget, true, remaining );
+						g_helpfunc.NPCPhysics_CreateSolver( BaseEntity(), info->m_hTarget, true, remaining );
 						info->m_flNext = gpGlobals->curtime + remaining;
 					}
 
@@ -903,9 +895,7 @@ void CAI_BaseActor::UpdateBodyControl( )
 	Set( m_ParameterNeckTrans, Get( m_FlexweightHeadForwardBack ) );
 }
 
-
-static ConVar scene_clamplookat( "scene_clamplookat", "1", FCVAR_NONE, "Clamp head turns to a max of 20 degrees per think." );
-
+extern ConVar *scene_clamplookat;
 
 void CAI_BaseActor::UpdateHeadControl( const Vector &vHeadTarget, float flHeadInfluence )
 {
@@ -984,7 +974,7 @@ void CAI_BaseActor::UpdateHeadControl( const Vector &vHeadTarget, float flHeadIn
 	targetXform = forwardToWorld;
 	Vector vTargetDir = vHeadTarget - EyePosition();
 
-	if (scene_clamplookat.GetBool())
+	if (scene_clamplookat->GetBool())
 	{
 		// scale down pitch when the target is behind the head
 		Vector vTargetLocal;
@@ -1197,14 +1187,14 @@ float CAI_BaseActor::PickLookTarget( CAI_InterestTarget &queue, bool bExcludePla
 
 bool CAI_BaseActor::PickTacticalLookTarget( AILookTargetArgs_t *pArgs )
 {
-	CBaseEntity *pEnemy = GetEnemy();
+	CEntity *pEnemy = GetEnemy();
 
 	if (pEnemy != NULL)
 	{
-		if ( ( FVisible( pEnemy ) || enginerandom->RandomInt(0, 3) == 0 ) && ValidHeadTarget(pEnemy->EyePosition()))
+		if ( ( FVisible_Entity( pEnemy->BaseEntity() ) || enginerandom->RandomInt(0, 3) == 0 ) && ValidHeadTarget(pEnemy->EyePosition()))
 		{
 			// look at enemy closer
-			pArgs->hTarget = pEnemy;
+			pArgs->hTarget = pEnemy->BaseEntity();
 			pArgs->flInfluence = enginerandom->RandomFloat( 0.7, 1.0 );
 			pArgs->flRamp = 0;
 			return true;
@@ -1237,7 +1227,7 @@ bool CAI_BaseActor::PickRandomLookTarget( AILookTargetArgs_t *pArgs )
 			}
 			else
 			{
-				pArgs->hTarget = this;
+				pArgs->hTarget = BaseEntity();
 				pArgs->flDuration = enginerandom->RandomFloat( 1.0, 2.0 );
 			}
 			pArgs->flRamp = 0.2;
@@ -1248,12 +1238,12 @@ bool CAI_BaseActor::PickRandomLookTarget( AILookTargetArgs_t *pArgs )
 	if ( GetState() == NPC_STATE_COMBAT && enginerandom->RandomInt(1, 10) <= 8 )
 	{
 		// if in combat, look forward 80% of the time?
-		pArgs->hTarget = this;
+		pArgs->hTarget = BaseEntity();
 		return true;
 	}
 
-	CBaseEntity *pBestEntity = NULL;
-	CBaseEntity *pEntity = NULL;
+	CEntity *pBestEntity = NULL;
+	CEntity *pEntity = NULL;
 	int iHighestImportance = 0;
 	int iConsidered = 0;
 	for ( CEntitySphereQuery sphere( GetAbsOrigin(), 30 * 12, 0 ); (pEntity = sphere.GetCurrentEntity()) != NULL; sphere.NextEntity() )
@@ -1286,7 +1276,7 @@ bool CAI_BaseActor::PickRandomLookTarget( AILookTargetArgs_t *pArgs )
 		// Don't look at any object that is ultimately parented to the player.
 		// These objects will almost always be at the player's origin (feet), and it
 		// looks bad when an actor looks at the player's feet. (sjb)
-		CBaseEntity *pParent = pEntity->GetParent();
+		CEntity *pParent = pEntity->GetParent();
 		bool bObjectParentedToPlayer = false;
 		while( pParent )
 		{
@@ -1303,7 +1293,7 @@ bool CAI_BaseActor::PickRandomLookTarget( AILookTargetArgs_t *pArgs )
 			continue;
 		
 		// skip entities we're already looking at
-		if ( pArgs->pQueue->Find( pEntity ) != pArgs->pQueue->InvalidIndex() )
+		if ( pArgs->pQueue->Find( pEntity->BaseEntity() ) != pArgs->pQueue->InvalidIndex() )
 			continue;
 
 		// keep track of number of interesting things
@@ -1311,7 +1301,7 @@ bool CAI_BaseActor::PickRandomLookTarget( AILookTargetArgs_t *pArgs )
 
 		if ((pEntity->GetFlags() & FL_CLIENT) && (pEntity->IsMoving() || enginerandom->RandomInt( 0, 2) == 0))
 		{
-			if (FVisible( pEntity ) && ValidHeadTarget(pEntity->EyePosition()))
+			if (FVisible_Entity( pEntity->BaseEntity() ) && ValidHeadTarget(pEntity->EyePosition()))
 			{
 				pArgs->flDuration = enginerandom->RandomFloat( 1.0, 4.0 );
 				pBestEntity = pEntity;
@@ -1343,7 +1333,7 @@ bool CAI_BaseActor::PickRandomLookTarget( AILookTargetArgs_t *pArgs )
 
 		if ( iImportance > iHighestImportance )
 		{
-			if (FVisible( pEntity ) && ValidHeadTarget(pEntity->EyePosition()))
+			if (FVisible_Entity( pEntity->BaseEntity() ) && ValidHeadTarget(pEntity->EyePosition()))
 			{
 				iHighestImportance = iImportance;
 				pBestEntity	= pEntity; 
@@ -1362,7 +1352,7 @@ bool CAI_BaseActor::PickRandomLookTarget( AILookTargetArgs_t *pArgs )
 	{
 		//Msg("looking at %s\n", pBestEntity->GetClassname() );
 		//NDebugOverlay::Line( EyePosition(), pBestEntity->WorldSpaceCenter(), 255, 0, 0, false, 5 );
-		pArgs->hTarget = pBestEntity;
+		pArgs->hTarget = pBestEntity->BaseEntity();
 		return true;
 	}
 	
@@ -1405,7 +1395,7 @@ void CAI_BaseActor::StartTaskRangeAttack1( const Task_t *pTask )
 	BaseClass::StartTaskRangeAttack1( pTask );
 	if (GetEnemy())
 	{
-		AddLookTarget( GetEnemy(), 1.0, 0.5, 0.2 );
+		AddLookTarget( GetEnemy_CBase(), 1.0, 0.5, 0.2 );
 	}
 }
 
@@ -1533,7 +1523,7 @@ void CAI_BaseActor::MaintainLookTargets( float flInterval )
 		bExpectedHeadTarget = true;
 		float flInterest = active[i]->Interest( );
 
-		if (active[i]->IsThis( this ))
+		if (active[i]->IsThis( BaseEntity() ))
 		{
 			int iForward = LookupAttachment( "forward" );
 			if (iForward)
@@ -1614,11 +1604,11 @@ void CAI_BaseActor::MaintainLookTargets( float flInterval )
 
 	for (i = active.Count() - 1; i >= 0; i--)
 	{
-		if (active[i]->IsThis( this ))
+		if (active[i]->IsThis( BaseEntity() ))
 		{
 			// DevMsg( "eyes (%d) %s\n", i, STRING( active[i]->m_hTarget->GetEntityName().ToCStr() ) );
 			bFoundTarget = true;
-			hTarget = this;
+			hTarget = BaseEntity();
 			SetViewtarget( vEyePosition + HeadDirection3D() * 100 );
 			// NDebugOverlay::Line( vEyePosition, vEyePosition + HeadDirection3D() * 100, 255,0,0, false, 0.1);
 			break;
@@ -1644,17 +1634,6 @@ void CAI_BaseActor::MaintainLookTargets( float flInterval )
 		m_flBlinktime -= 0.5;
 		m_hLookTarget = hTarget;
 
-		if ( (m_debugOverlays & OVERLAY_NPC_SELECTED_BIT) && ai_debug_looktargets.GetInt() == 2 && m_hLookTarget.Get() )
-		{
-			if ( m_hLookTarget != this )
-			{
-				Vector vecEyePos = m_hLookTarget->EyePosition();
-				NDebugOverlay::Box( vecEyePos, -Vector(5,5,5), Vector(5,5,5), 0, 255, 0, 255, 20 );
-				NDebugOverlay::Line( EyePosition(), vecEyePos, 0,255,0, true, 20 );
-				NDebugOverlay::Text( vecEyePos, UTIL_VarArgs( "%s (%s)", m_hLookTarget->GetClassname(), m_hLookTarget->GetDebugName() ), false, 20 );
-			}
-		}
-
 		OnNewLookTarget();
 	}
 
@@ -1669,8 +1648,9 @@ void CAI_BaseActor::MaintainLookTargets( float flInterval )
 
 	if ( m_hLookTarget != NULL )
 	{
-		Vector absVel = m_hLookTarget->GetAbsVelocity();
-		CBaseEntity *ground = m_hLookTarget->GetGroundEntity();
+		CEntity *cent = CEntity::Instance(m_hLookTarget);
+		Vector absVel = cent->GetAbsVelocity();
+		CEntity *ground = cent->GetGroundEntity();
 		if ( ground && ground->GetMoveType() == MOVETYPE_PUSH)
 		{
 			absVel = absVel + ground->GetAbsVelocity();
@@ -1716,12 +1696,6 @@ void CAI_BaseActor::MaintainLookTargets( float flInterval )
 	{
 		Blink();
 		m_flBlinktime = gpGlobals->curtime + enginerandom->RandomFloat( 1.5, 4.5 );
-	}
-
-	if ( ai_debug_looktargets.GetInt() == 1 && (m_debugOverlays & OVERLAY_NPC_SELECTED_BIT) )
-	{
-		NDebugOverlay::Box( GetViewtarget(), -Vector(2,2,2), Vector(2,2,2), 0, 255, 0, 0, 20 );
-		NDebugOverlay::Line( EyePosition(),GetViewtarget(), 0,255,0, false, .1 );
 	}
 }
 
@@ -1832,11 +1806,6 @@ float CAI_BaseActor::SetExpression( const char *pszExpressionScene )
 		StopScriptedScene( this, m_hExpressionSceneEnt );
 	}
 
-	if ( ai_debug_expressions.GetInt() )
-	{
-		Msg("%s (%s) set expression to: %s\n", GetClassname(), GetDebugName(), pszExpressionScene );
-	}
-
 	m_iszExpressionScene = NULL_STRING;
 	if ( pszExpressionScene )
 	{
@@ -1901,7 +1870,7 @@ bool CAI_BaseActor::UseSemaphore( void )
 
 CAI_Expresser *CAI_BaseActor::CreateExpresser()
 {
-	m_pExpresser = new CAI_Expresser(this);
+	m_pExpresser = new CAI_Expresser(BaseEntity());
 	return m_pExpresser;
 }
 

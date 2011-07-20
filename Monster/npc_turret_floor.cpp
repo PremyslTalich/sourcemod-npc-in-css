@@ -1306,7 +1306,8 @@ void CNPC_FloorTurret::ReturnToLife( void )
 	m_flThrashTime = 0;
 
 	// Enable the tip controller
-	m_pMotionController->Enable( true );
+	if(m_pMotionController)
+		m_pMotionController->Enable( true );
 
 	// Return to life
 	SetState( NPC_STATE_IDLE );
@@ -1418,7 +1419,8 @@ bool CNPC_FloorTurret::PreThink( turretState_e state )
 			m_lifeState = LIFE_DEAD;
 
 			//Disable the tip controller
-			m_pMotionController->Enable( false );
+			if(m_pMotionController)
+				m_pMotionController->Enable( false );
 
 			//Interrupt current think function
 			return true;

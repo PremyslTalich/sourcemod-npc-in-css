@@ -273,6 +273,9 @@ bool HelperFunction::Initialize()
 	GET_VARIABLE(AI_Waypoint_t_s_Allocator, CMemoryPool *);
 	AI_Waypoint_t::s_Allocator = AI_Waypoint_t_s_Allocator;
 
+	GET_VARIABLE(g_AIFriendliesTalkSemaphore, CAI_TimedSemaphore *);
+	GET_VARIABLE(g_AIFoesTalkSemaphore, CAI_TimedSemaphore *);
+
 	g_CGameMovement = (CGameMovement *)g_pGameMovement;
 
 	SH_ADD_MANUALHOOK_MEMFUNC(OnLadderHook, g_CGameMovement, &g_helpfunc, &HelperFunction::OnLadder, false);

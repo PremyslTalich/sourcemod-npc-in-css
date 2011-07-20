@@ -885,3 +885,26 @@ const char *CAnimating::GetFlexControllerName( LocalFlexController_t iFlexContro
 	return pflexcontroller->pszName( );
 }
 
+float CAnimating::EdgeLimitPoseParameter( int iParameter, float flValue, float flBase )
+{
+	CStudioHdr *pstudiohdr = GetModelPtr( );
+	if ( !pstudiohdr )
+	{
+		return flValue;
+	}
+
+	if (iParameter < 0 || iParameter >= pstudiohdr->GetNumPoseParameters())
+	{
+		return flValue;
+	}
+
+	const mstudioposeparamdesc_t &Pose = pstudiohdr->pPoseParameter( iParameter );
+
+	if (Pose.loop || Pose.start == Pose.end)
+	{
+		return flValue;
+	}
+
+	return RangeCompressor( flValue, Pose.start, Pose.end, flBase );
+}
+

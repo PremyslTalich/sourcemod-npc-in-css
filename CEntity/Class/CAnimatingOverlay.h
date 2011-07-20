@@ -138,6 +138,9 @@ public:
 	int		FindGestureLayer( Activity activity );
 	bool	IsPlayingGesture( Activity activity );
 	void	RestartGesture( Activity activity, bool addifmissing = true, bool autokill = true );
+	float	GetLayerCycle( int iLayer );
+	int		GetLayerSequence( int iLayer );
+
 
 private:
 	int		AllocateLayer( int iPriority = 0 ); 

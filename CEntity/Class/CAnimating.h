@@ -153,6 +153,7 @@ public:
 	LocalFlexController_t GetNumFlexControllers( void );
 	const char *GetFlexControllerName( LocalFlexController_t iFlexController );
 
+	float	EdgeLimitPoseParameter( int iParameter, float flValue, float flBase = 0.0f );
 
 public:
 	CStudioHdr *		GetModelPtr();

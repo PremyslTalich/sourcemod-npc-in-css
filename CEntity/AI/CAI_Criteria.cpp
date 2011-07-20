@@ -43,3 +43,8 @@ int AI_CriteriaSet::FindCriterionIndex( const char *name ) const
 }
 
 
+AI_Response::~AI_Response()
+{
+	g_pMemAlloc->Free(m_pCriteria);
+	g_pMemAlloc->Free(m_szContext);
+}

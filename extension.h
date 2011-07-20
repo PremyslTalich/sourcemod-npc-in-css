@@ -62,6 +62,8 @@ public:
 };
 
 class CEntity;
+class ISceneFileCache;
+
 
 extern Monster g_Monster;
 
@@ -86,6 +88,7 @@ extern ITempEntsSystem *te;
 extern IPhysicsObjectPairHash *my_g_EntityCollisionHash;
 extern IGameMovement *g_pGameMovement;
 extern IServerTools *servertools;
+extern ISceneFileCache *scenefilecache;
 
 extern IGameConfig *g_pGameConf;
 extern CBaseEntityList *g_pEntityList;

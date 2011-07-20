@@ -462,3 +462,25 @@ void CAnimatingOverlay::RestartGesture( Activity activity, bool addifmissing /*=
 	p_m_AnimOverlay->m_flPrevCycle = 0.0f;
 	p_m_AnimOverlay->m_flLastEventCheck = 0.0f;
 }
+
+
+float CAnimatingOverlay::GetLayerCycle( int iLayer )
+{
+	if (!IsValidLayer( iLayer ))
+		return 0.0;
+
+	CAnimationLayer	*p_m_AnimOverlay = &m_AnimOverlay->Element(iLayer);
+	return p_m_AnimOverlay->m_flCycle;
+}
+
+
+int CAnimatingOverlay::GetLayerSequence( int iLayer )
+{
+	if (!IsValidLayer( iLayer ))
+	{
+		return ACT_INVALID;
+	}
+	CAnimationLayer	*p_m_AnimOverlay = &m_AnimOverlay->Element(iLayer);
+	return p_m_AnimOverlay->m_nSequence;
+}
+

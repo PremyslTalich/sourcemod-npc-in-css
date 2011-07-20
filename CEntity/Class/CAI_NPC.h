@@ -661,6 +661,8 @@ public:
 
 	bool				ExitScriptedSequence();
 
+	bool				TaskRanAutomovement( void ) { return m_ScheduleState->bTaskRanAutomovement; }
+
 protected:
 	void				ChainStartTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; StartTask( (const Task_t *)&tempTask ); }
 	void				ChainRunTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; RunTask( (const Task_t *)	&tempTask );	}
@@ -841,6 +843,11 @@ public:
 	virtual int	HolsterWeapon( void );
 	virtual int	UnholsterWeapon( void );
 	virtual	CBaseEntity *FindNamedEntity( const char *pszName, IEntityFindFilter *pFilter = NULL );
+	virtual	Vector FacingPosition();
+	virtual void AddFacingTarget_E_F_F_F( CBaseEntity *pTarget, float flImportance, float flDuration, float flRamp = 0.0 );
+	virtual bool ValidEyeTarget(const Vector &lookTargetPos);
+	virtual void SetHeadDirection( const Vector &vTargetPos, float flInterval );
+	virtual	void MaintainTurnActivity( void );
 
 public: // sign
 	void CallNPCThink();
@@ -1067,6 +1074,11 @@ public:
 	DECLARE_DEFAULTHEADER(HolsterWeapon, int, ( void ));
 	DECLARE_DEFAULTHEADER(UnholsterWeapon, int,( void ));
 	DECLARE_DEFAULTHEADER(FindNamedEntity, CBaseEntity *, ( const char *pszName, IEntityFindFilter *pFilter ));
+	DECLARE_DEFAULTHEADER(FacingPosition, Vector, ());
+	DECLARE_DEFAULTHEADER(AddFacingTarget_E_F_F_F, void, ( CBaseEntity *pTarget, float flImportance, float flDuration, float flRamp ));
+	DECLARE_DEFAULTHEADER(ValidEyeTarget, bool, (const Vector &lookTargetPos));
+	DECLARE_DEFAULTHEADER(SetHeadDirection, void, ( const Vector &vTargetPos, float flInterval ));
+	DECLARE_DEFAULTHEADER(MaintainTurnActivity, void, ( void ));
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetSchedule_Int, bool, (int localScheduleID));

@@ -51,8 +51,8 @@ private:
 
 //-----------------------------------------------------------------------------
 
-extern CAI_TimedSemaphore g_AIFriendliesTalkSemaphore;
-extern CAI_TimedSemaphore g_AIFoesTalkSemaphore;
+extern CAI_TimedSemaphore *g_AIFriendliesTalkSemaphore;
+extern CAI_TimedSemaphore *g_AIFoesTalkSemaphore;
 
 #define GetSpeechSemaphore( pNpc ) (((pNpc)->IsPlayerAlly()) ? &g_AIFriendliesTalkSemaphore : &g_AIFoesTalkSemaphore )
 //-----------------------------------------------------------------------------
@@ -195,7 +195,7 @@ public:
 	void ForceNotSpeaking( void );
 
 protected:
-	CAI_TimedSemaphore *GetMySpeechSemaphore( CBaseEntity *pNpc );
+	CAI_TimedSemaphore *GetMySpeechSemaphore( CEntity *pNpc );
 
 	bool SpeakRawScene( const char *pszScene, float delay, AI_Response *response, IRecipientFilter *filter = NULL );
 	// This will create a fake .vcd/CChoreoScene to wrap the sound to be played

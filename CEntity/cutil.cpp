@@ -2151,3 +2151,40 @@ edict_t *UTIL_FindClientInVisibilityPVS( edict_t *pEdict )
 	return UTIL_FindClientInPVSGuts( pEdict, g_CheckClient->m_checkVisibilityPVS, sizeof( g_CheckClient->m_checkVisibilityPVS ) );
 }
 
+int SENTENCEG_Lookup(const char *sample)
+{
+	return engine->SentenceIndexFromName( sample + 1 );
+}
+
+int SENTENCEG_PlayRndSz(edict_t *entity, const char *szgroupname, 
+					  float volume, soundlevel_t soundlevel, int flags, int pitch)
+{
+	char name[64];
+	int ipick;
+	int isentenceg;
+
+	//CE_TODO
+	//if (!fSentencesInit)
+	//	return -1;
+
+	name[0] = 0;
+
+	isentenceg = engine->SentenceGroupIndexFromName(szgroupname);
+	if (isentenceg < 0)
+	{
+		Warning( "No such sentence group %s\n", szgroupname );
+		return -1;
+	}
+
+	ipick = engine->SentenceGroupPick(isentenceg, name, sizeof( name ));
+	if (ipick >= 0 && name[0])
+	{
+		int sentenceIndex = SENTENCEG_Lookup( name );
+		CPASAttenuationFilter filter( CEntity::Instance( entity ), soundlevel );
+		CEntity::EmitSentenceByIndex( filter, ENTINDEX(entity), CHAN_VOICE, sentenceIndex, volume, soundlevel, flags, pitch );
+		return sentenceIndex;
+	}
+
+	return -1;
+}
+

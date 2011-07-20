@@ -1615,3 +1615,46 @@ float CAI_Navigator::GetGoalTolerance() const
 {
 	return GetPath()->GetGoalTolerance(); 
 }
+
+bool CAI_Navigator::GetPointAlongPath( Vector *pResult, float distance, bool fReducibleOnly )
+{
+	if ( !GetPath()->GetCurWaypoint() )
+		return false;
+
+	AI_Waypoint_t *pCurWaypoint	 = GetPath()->GetCurWaypoint();
+	AI_Waypoint_t *pEndPoint 	 = pCurWaypoint;
+	float 		   distRemaining = distance;
+	float 		   distToNext;
+	Vector		   vPosPrev		 = GetLocalOrigin();
+
+	while ( pEndPoint->GetNext() )
+	{
+		distToNext = ComputePathDistance( GetNavType(), vPosPrev, pEndPoint->GetPos() );
+		
+		if ( distToNext > distRemaining)
+			break;
+		
+		distRemaining -= distToNext;
+		vPosPrev = pEndPoint->GetPos();
+		if ( fReducibleOnly && !pEndPoint->IsReducible() )
+			break;
+		pEndPoint = pEndPoint->GetNext();
+	}
+	
+	Vector &result = *pResult;
+	float distToEnd = ComputePathDistance( GetNavType(), vPosPrev, pEndPoint->GetPos() ); 
+	if ( distToEnd - distRemaining < 0.1 )
+	{
+		result = pEndPoint->GetPos();
+	}
+	else
+	{
+		result = pEndPoint->GetPos() - vPosPrev;
+		VectorNormalize( result );
+		result *= distRemaining;
+		result += vPosPrev;
+	}
+
+	return true;
+}
+

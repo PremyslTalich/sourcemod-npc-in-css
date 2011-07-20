@@ -142,7 +142,6 @@ IValveGameSystem::~IValveGameSystem()
 		s_GameSystems->FindAndRemove( this );
 }
 
-
 const char *CPropData::GetRandomChunkModel( const char *pszBreakableSection, int iMaxSize )
 {
 	if ( !m_bPropDataLoaded )

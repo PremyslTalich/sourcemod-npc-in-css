@@ -1,5 +1,6 @@
 
 #include "CAI_NPC.h"
+#include "eventqueue.h"
 
 ConVar *sv_gravity = NULL;
 ConVar *phys_pushscale = NULL;
@@ -40,6 +41,13 @@ ConVar *ai_spread_pattern_focus_time = NULL;
 
 ConVar *ai_lead_time = NULL;
 
+
+ConVar *scene_clamplookat = NULL;
+ConVar *scene_showfaceto = NULL;
+ConVar *flex_maxawaytime = NULL;
+ConVar *flex_minawaytime = NULL;
+ConVar *flex_maxplayertime = NULL;
+ConVar *flex_minplayertime = NULL;
 
 void cmd1_CommandCallback(const CCommand &command)
 {
@@ -105,6 +113,8 @@ void cmd1_CommandCallback(const CCommand &command)
 
 		cent->Spawn();
 		cent->Activate();
+
+		//g_CEventQueue->AddEvent( cbase, "SelfDestruct", 0.5f, cbase,cbase );
 
 		//hc->Dissolve(NULL, gpGlobals->curtime, false, 0 );
 
@@ -198,6 +208,13 @@ bool CommandInitialize()
 	GET_CONVAR(ai_spread_pattern_focus_time);
 
 	GET_CONVAR(ai_lead_time);
+
+	GET_CONVAR(scene_clamplookat);
+	GET_CONVAR(scene_showfaceto);
+	GET_CONVAR(flex_maxawaytime);
+	GET_CONVAR(flex_minawaytime);
+	GET_CONVAR(flex_maxplayertime);
+	GET_CONVAR(flex_minplayertime);
 
 	return true;
 }

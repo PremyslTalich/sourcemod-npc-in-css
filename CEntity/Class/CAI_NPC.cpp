@@ -759,6 +759,27 @@ SH_DECL_MANUALHOOK2(FindNamedEntity, 0, 0, 0, CBaseEntity *, const char *, IEnti
 DECLARE_HOOK(FindNamedEntity, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, FindNamedEntity, CBaseEntity *, (const char *pszName, IEntityFindFilter *pFilter), (pszName, pFilter));
 
+SH_DECL_MANUALHOOK0(FacingPosition, 0, 0, 0, Vector);
+DECLARE_HOOK(FacingPosition, CAI_NPC);
+DECLARE_DEFAULTHANDLER_SPECIAL(CAI_NPC, FacingPosition, Vector, (), (), vec3_origin);
+
+SH_DECL_MANUALHOOK4_void(AddFacingTarget_E_F_F_F, 0, 0, 0, CBaseEntity *, float , float , float);
+DECLARE_HOOK(AddFacingTarget_E_F_F_F, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, AddFacingTarget_E_F_F_F, (CBaseEntity *pTarget, float flImportance, float flDuration, float flRamp), (pTarget, flImportance, flDuration, flRamp));
+
+SH_DECL_MANUALHOOK1(ValidEyeTarget, 0, 0, 0, bool, const Vector &);
+DECLARE_HOOK(ValidEyeTarget, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, ValidEyeTarget, bool, (const Vector &lookTargetPos), (lookTargetPos));
+
+SH_DECL_MANUALHOOK2_void(SetHeadDirection, 0, 0, 0, const Vector &, float );
+DECLARE_HOOK(SetHeadDirection, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, SetHeadDirection, (const Vector &vTargetPos, float flInterval), (vTargetPos, flInterval));
+
+SH_DECL_MANUALHOOK0_void(MaintainTurnActivity, 0, 0, 0 );
+DECLARE_HOOK(MaintainTurnActivity, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, MaintainTurnActivity, (), ());
+
+
 
 
 //Datamaps

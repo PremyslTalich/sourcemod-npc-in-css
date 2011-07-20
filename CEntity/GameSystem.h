@@ -177,7 +177,7 @@ private:
 
 
 
-class CPropData : public CValveBaseGameSystem
+class CPropData : public CValveAutoGameSystem
 {
 public:
 	CPropData( void );
