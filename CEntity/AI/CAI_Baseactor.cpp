@@ -1395,7 +1395,7 @@ void CAI_BaseActor::StartTaskRangeAttack1( const Task_t *pTask )
 	BaseClass::StartTaskRangeAttack1( pTask );
 	if (GetEnemy())
 	{
-		AddLookTarget( GetEnemy_CBase(), 1.0, 0.5, 0.2 );
+		AddLookTarget_E( GetEnemy_CBase(), 1.0, 0.5, 0.2 );
 	}
 }
 
@@ -1403,13 +1403,13 @@ void CAI_BaseActor::StartTaskRangeAttack1( const Task_t *pTask )
 //-----------------------------------------------------------------------------
 // Purpose: Set direction that the NPC is looking
 //-----------------------------------------------------------------------------
-void CAI_BaseActor::AddLookTarget( CBaseEntity *pTarget, float flImportance, float flDuration, float flRamp )
+void CAI_BaseActor::AddLookTarget_E( CBaseEntity *pTarget, float flImportance, float flDuration, float flRamp )
 {
 	m_lookQueue.Add( pTarget, flImportance, flDuration, flRamp );
 }
 
 
-void CAI_BaseActor::AddLookTarget( const Vector &vecPosition, float flImportance, float flDuration, float flRamp )
+void CAI_BaseActor::AddLookTarget_V( const Vector &vecPosition, float flImportance, float flDuration, float flRamp )
 {
 	m_lookQueue.Add( vecPosition, flImportance, flDuration, flRamp );
 }

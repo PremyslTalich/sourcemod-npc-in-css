@@ -3,7 +3,9 @@
 #include "CFlex.h"
 #include "sceneentity.h"
 #include "scenefilecache/ISceneFileCache.h"
-
+#include "CAI_Criteria.h"
+#include "CE_recipientfilter.h"
+#include "choreoscene.h"
 
 
 class CE_CSceneEntity : public CEntity
@@ -13,20 +15,97 @@ public:
 
 public:
 	virtual void CancelPlayback( void );
+	virtual void StartPlayback( void );
+	virtual float EstimateLength( void );
+
+public:
+	void SetBackground( bool bIsBackground );
+	void SetRecipientFilter( IRecipientFilter *filter );
+	
+	void	SetBreakOnNonIdle( bool bBreakOnNonIdle ) { m_bBreakOnNonIdle = bBreakOnNonIdle; }
 
 public:
 	DECLARE_DEFAULTHEADER(CancelPlayback, void, ());
+	DECLARE_DEFAULTHEADER(StartPlayback, void, ());
+	DECLARE_DEFAULTHEADER(EstimateLength, float, ());
+
+public:
+	DECLARE_SENDPROP(bool, m_bMultiplayer);
+
+public:
+	DECLARE_DATAMAP(bool, m_bBreakOnNonIdle);
+	DECLARE_DATAMAP_OFFSET(CRecipientFilter *, m_pRecipientFilter);
+	DECLARE_DATAMAP_OFFSET(CChoreoScene *, m_pScene);
+
 
 };
+
+CE_LINK_ENTITY_TO_CLASS(CSceneEntity, CE_CSceneEntity);
 
 
 SH_DECL_MANUALHOOK0_void(CancelPlayback, 0, 0, 0);
 DECLARE_HOOK(CancelPlayback, CE_CSceneEntity);
 DECLARE_DEFAULTHANDLER_void(CE_CSceneEntity, CancelPlayback, (), ());
 
+SH_DECL_MANUALHOOK0_void(StartPlayback, 0, 0, 0);
+DECLARE_HOOK(StartPlayback, CE_CSceneEntity);
+DECLARE_DEFAULTHANDLER_void(CE_CSceneEntity, StartPlayback, (), ());
+
+SH_DECL_MANUALHOOK0(EstimateLength, 0, 0, 0, float);
+DECLARE_HOOK(EstimateLength, CE_CSceneEntity);
+DECLARE_DEFAULTHANDLER(CE_CSceneEntity, EstimateLength, float, (), ());
 
 
-CE_LINK_ENTITY_TO_CLASS(CSceneEntity, CE_CSceneEntity);
+
+//Sendprops
+DEFINE_PROP(m_bMultiplayer,CE_CSceneEntity);
+
+//DataMap
+DEFINE_PROP(m_bBreakOnNonIdle,CE_CSceneEntity);
+DEFINE_PROP(m_pRecipientFilter,CE_CSceneEntity);
+DEFINE_PROP(m_pScene,CE_CSceneEntity);
+
+
+
+
+class CE_CInstancedSceneEntity : public CE_CSceneEntity
+{
+public:
+	CE_DECLARE_CLASS(CE_CInstancedSceneEntity, CE_CSceneEntity);
+
+public:
+	// not hooked
+	virtual void SetPostSpeakDelay( float flDelay ) { m_flPostSpeakDelay = flDelay; }
+	virtual void SetPreDelay( float flDelay ) { m_flPreDelay = flDelay; }
+
+public:
+	DECLARE_DATAMAP(char *, m_szInstanceFilename);
+	DECLARE_DATAMAP(string_t, m_iszSceneFile);
+	DECLARE_DATAMAP(CFakeHandle, m_hOwner);
+	DECLARE_DATAMAP(bool, m_bHadOwner);
+	DECLARE_DATAMAP(float, m_flPostSpeakDelay);
+	DECLARE_DATAMAP(bool, m_bIsBackground);
+	DECLARE_DATAMAP(float, m_flPreDelay);
+
+};
+
+CE_LINK_ENTITY_TO_CLASS(CInstancedSceneEntity, CE_CInstancedSceneEntity);
+
+
+//DataMap
+DEFINE_PROP(m_szInstanceFilename,CE_CInstancedSceneEntity);
+DEFINE_PROP(m_iszSceneFile,CE_CInstancedSceneEntity);
+DEFINE_PROP(m_hOwner,CE_CInstancedSceneEntity);
+DEFINE_PROP(m_bHadOwner,CE_CInstancedSceneEntity);
+DEFINE_PROP(m_bIsBackground,CE_CInstancedSceneEntity);
+DEFINE_PROP(m_flPreDelay,CE_CInstancedSceneEntity);
+
+
+
+
+
+
+
 
 void StopScriptedScene( CFlex *pActor, EHANDLE hSceneEnt )
 {
@@ -50,30 +129,28 @@ float InstancedScriptedScene( CFlex *pActor, const char *pszScene, EHANDLE *phSc
 							 float flPostDelay, bool bIsBackground, AI_Response *response,
 							 bool bMultiplayer, IRecipientFilter *filter /* = NULL */ )
 {
-	return 0;
-	//CE_TODO
-#if 0
-	CInstancedSceneEntity *pScene = (CInstancedSceneEntity *)CBaseEntity::CreateNoSpawn( "instanced_scripted_scene", vec3_origin, vec3_angle );
+
+	CE_CInstancedSceneEntity *pScene = (CE_CInstancedSceneEntity *)CEntity::CreateNoSpawn( "instanced_scripted_scene", vec3_origin, vec3_angle );
 
 	// This code expands any $gender tags into male or female tags based on the gender of the actor (based on his/her .mdl)
 	if ( pActor )
 	{
-		pActor->GenderExpandString( pszScene, pScene->m_szInstanceFilename, sizeof( pScene->m_szInstanceFilename ) );
+		pActor->GenderExpandString( pszScene, pScene->m_szInstanceFilename, /*sizeof( pScene->m_szInstanceFilename ) */128);
 	}
 	else
 	{
-		Q_strncpy( pScene->m_szInstanceFilename, pszScene, sizeof( pScene->m_szInstanceFilename ) );
+		Q_strncpy( pScene->m_szInstanceFilename, pszScene, /*sizeof( pScene->m_szInstanceFilename ) */128);
 	}
 	pScene->m_iszSceneFile = MAKE_STRING( pScene->m_szInstanceFilename );
 
 	// FIXME: I should set my output to fire something that kills me....
 
 	// FIXME: add a proper initialization function
-	pScene->m_hOwner = pActor;
+	pScene->m_hOwner.ptr->Set((pActor)?pActor->BaseEntity():NULL);
 	pScene->m_bHadOwner = pActor != NULL;
 	pScene->m_bMultiplayer = bMultiplayer;
 	pScene->SetPostSpeakDelay( flPostDelay );
-	DispatchSpawn( pScene );
+	DispatchSpawn( pScene->BaseEntity() );
 	pScene->Activate();
 	pScene->m_bIsBackground = bIsBackground;
 
@@ -99,60 +176,35 @@ float InstancedScriptedScene( CFlex *pActor, const char *pszScene, EHANDLE *phSc
 
 	if ( phSceneEnt )
 	{
-		*phSceneEnt = pScene;
+		*phSceneEnt = pScene->BaseEntity();
 	}
 
 	return pScene->EstimateLength();
+}
 
-#endif
-
+void PrecacheInstancedScene( char const *pszScene )
+{
+	g_helpfunc.PrecacheInstancedScene(pszScene);
 }
 
 
-
-//-----------------------------------------------------------------------------
-// Purpose: Used for precaching instanced scenes
-// Input  : *pszScene - 
-//-----------------------------------------------------------------------------
-void PrecacheInstancedScene( char const *pszScene )
+void CE_CSceneEntity::SetRecipientFilter( IRecipientFilter *filter )
 {
-	//CE_TODO
-#if 0
-	static int nMakingReslists = -1;
-	
-	if ( nMakingReslists == -1 )
+	// create a copy of this filter
+	if ( filter )
 	{
-		nMakingReslists = CommandLine()->FindParm( "-makereslists" ) > 0 ? 1 : 0;
+		CRecipientFilter *recp = new CRecipientFilter();
+		recp->CopyFrom( (CRecipientFilter &)( *filter ) );
+		*(m_pRecipientFilter.ptr) = recp;
 	}
+}
 
-	if ( nMakingReslists == 1 )
+void CE_CSceneEntity::SetBackground( bool bIsBackground )
+{
+	if ( *(m_pScene.ptr) )
 	{
-		// Just stat the file to add to reslist
-		g_pFullFileSystem->Size( pszScene );
+		(*(m_pScene.ptr))->SetBackground( bIsBackground );
 	}
-
-	// verify existence, cache is pre-populated, should be there
-	SceneCachedData_t sceneData;
-	if ( !scenefilecache->GetSceneCachedData( pszScene, &sceneData ) )
-	{
-		// Scenes are sloppy and don't always exist.
-		// A scene that is not in the pre-built cache image, but on disk, is a true error.
-		if ( developer.GetInt() && ( IsX360() && ( g_pFullFileSystem->GetDVDMode() != DVDMODE_STRICT ) && g_pFullFileSystem->FileExists( pszScene, "GAME" ) ) )
-		{
-			Warning( "PrecacheInstancedScene: Missing scene '%s' from scene image cache.\nRebuild scene image cache!\n", pszScene );
-		}
-	}
-	else
-	{
-		for ( int i = 0; i < sceneData.numSounds; ++i )
-		{
-			short stringId = scenefilecache->GetSceneCachedSound( sceneData.sceneId, i );
-			CBaseEntity::PrecacheScriptSound( scenefilecache->GetSceneString( stringId ) );
-		}
-	}
-
-	g_pStringTableClientSideChoreoScenes->AddString( CBaseEntity::IsServer(), pszScene );
-#endif
 }
 
 

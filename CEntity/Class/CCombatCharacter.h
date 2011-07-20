@@ -4,6 +4,7 @@
 
 #include "CFlex.h"
 #include "ai_hull.h"
+#include "weapon_proficiency.h"
 
 enum Capability_t 
 {
@@ -166,6 +167,10 @@ public:
 	virtual bool ShouldShootMissTarget( CBaseEntity *pAttacker );
 	virtual CBaseEntity *FindMissTarget( void );
 	virtual	float GetSpreadBias( CBaseEntity *pWeapon, CBaseEntity *pTarget );
+	virtual Vector	HeadDirection2D();
+	virtual Vector	HeadDirection3D();
+	virtual Vector	EyeDirection2D();
+	virtual WeaponProficiency_t CalcWeaponProficiency( CBaseEntity *pWeapon );
 
 public:
 	DECLARE_DEFAULTHEADER(IRelationType, Disposition_t, (CBaseEntity *pTarget));
@@ -207,6 +212,10 @@ public:
 	DECLARE_DEFAULTHEADER(ShouldShootMissTarget, bool, ( CBaseEntity *pAttacker ));
 	DECLARE_DEFAULTHEADER(FindMissTarget, CBaseEntity*, ( void ));
 	DECLARE_DEFAULTHEADER(GetSpreadBias, float, ( CBaseEntity *pWeapon, CBaseEntity *pTarget ));
+	DECLARE_DEFAULTHEADER(HeadDirection2D, Vector, ());
+	DECLARE_DEFAULTHEADER(HeadDirection3D, Vector, ());
+	DECLARE_DEFAULTHEADER(EyeDirection2D, Vector, ());
+	DECLARE_DEFAULTHEADER(CalcWeaponProficiency, WeaponProficiency_t,( CBaseEntity *pWeapon ));
 
 public:
 	static void Shutdown();

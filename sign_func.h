@@ -79,6 +79,7 @@ public:
 	void UTIL_RemoveImmediate( CBaseEntity *oldObj );
 	void SetEventIndexForSequence( mstudioseqdesc_t &seqdesc );
 	string_t AllocPooledString( const char * pszValue );
+	void PrecacheInstancedScene( char const *pszScene );
 
 public: //CAI_HintManager
 	CEntity *CAI_HintManager_FindHint(CBaseEntity *pNPC, const Vector &position, const CHintCriteria &hintCriteria );

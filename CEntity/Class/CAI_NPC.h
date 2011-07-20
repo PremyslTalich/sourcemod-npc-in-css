@@ -420,6 +420,7 @@ public:
 
 	void		SetCondition(int iCondition);
 	bool		HasCondition( int iCondition );
+	bool		HasCondition( int iCondition, bool bUseIgnoreConditions );
 	void		ClearCondition( int iCondition );
 	void		ClearConditions( int *pConditions, int nConditions );
 
@@ -619,6 +620,7 @@ public:
 	inline CAI_ShotRegulator* GetShotRegulator()		{ return m_ShotRegulator; }
 
 	void				TaskInterrupt()					{ m_ScheduleState.ptr->iTaskInterrupt++; }
+	void				ClearTaskInterrupt()			{ m_ScheduleState.ptr->iTaskInterrupt = 0; }
 	int					GetTaskInterrupt() const		{ return m_ScheduleState.ptr->iTaskInterrupt; }
 
 	bool IsActiveDynamicInteraction( void ) { return (m_iInteractionState == NPCINT_RUNNING_ACTIVE && (m_hCine != NULL)); }
@@ -663,10 +665,20 @@ public:
 
 	bool				TaskRanAutomovement( void ) { return m_ScheduleState->bTaskRanAutomovement; }
 
+	inline void			DesireStand() {	m_bCrouchDesired = false; }
+
+	int					SelectFlinchSchedule( void );
+	
+	bool				IsLimitingHintGroups( void )	{ return m_bHintGroupNavLimiting; }
+
+	bool				CrouchIsDesired( void ) const;
+
 protected:
 	void				ChainStartTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; StartTask( (const Task_t *)&tempTask ); }
 	void				ChainRunTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; RunTask( (const Task_t *)	&tempTask );	}
-
+	
+	bool				CouldShootIfCrouching( CEntity *pTarget );
+		
 public:
 	template <class BEHAVIOR_TYPE>
 	bool GetBehavior( BEHAVIOR_TYPE **ppBehavior )
@@ -848,6 +860,19 @@ public:
 	virtual bool ValidEyeTarget(const Vector &lookTargetPos);
 	virtual void SetHeadDirection( const Vector &vTargetPos, float flInterval );
 	virtual	void MaintainTurnActivity( void );
+	virtual void AddLookTarget_E( CBaseEntity *pTarget, float flImportance, float flDuration, float flRamp = 0.0 );
+	virtual void AddLookTarget_V( const Vector &vecPosition, float flImportance, float flDuration, float flRamp = 0.0 );
+	virtual void MaintainLookTargets( float flInterval );
+	virtual bool Stand( void );
+	virtual bool Crouch( void );
+	virtual CSound *GetBestSound( int validTypes = ALL_SOUNDS );
+	virtual bool FOkToMakeSound( int soundPriority = 0 );
+	virtual void JustMadeSound( int soundPriority = 0, float flSoundLength = 0.0f );
+	virtual void FearSound( void );
+	virtual bool IsWaitingToRappel();
+	virtual void BeginRappel();
+	virtual void DesireCrouch( void );
+	virtual bool WeaponLOSCondition(const Vector &ownerPos, const Vector &targetPos, bool bSetConditions);
 
 public: // sign
 	void CallNPCThink();
@@ -1079,6 +1104,19 @@ public:
 	DECLARE_DEFAULTHEADER(ValidEyeTarget, bool, (const Vector &lookTargetPos));
 	DECLARE_DEFAULTHEADER(SetHeadDirection, void, ( const Vector &vTargetPos, float flInterval ));
 	DECLARE_DEFAULTHEADER(MaintainTurnActivity, void, ( void ));
+	DECLARE_DEFAULTHEADER(AddLookTarget_E, void, ( CBaseEntity *pTarget, float flImportance, float flDuration, float flRamp ));
+	DECLARE_DEFAULTHEADER(AddLookTarget_V, void, ( const Vector &vecPosition, float flImportance, float flDuration, float flRamp ));
+	DECLARE_DEFAULTHEADER(MaintainLookTargets, void, ( float flInterval ));
+	DECLARE_DEFAULTHEADER(Stand, bool, ( void ));
+	DECLARE_DEFAULTHEADER(Crouch, bool, ( void ));
+	DECLARE_DEFAULTHEADER(GetBestSound, CSound *, ( int validTypes ));
+	DECLARE_DEFAULTHEADER(FOkToMakeSound, bool, ( int soundPriority ));
+	DECLARE_DEFAULTHEADER(JustMadeSound, void, ( int soundPriority, float flSoundLength ));
+	DECLARE_DEFAULTHEADER(FearSound, void, ( void ));
+	DECLARE_DEFAULTHEADER(IsWaitingToRappel, bool, ());
+	DECLARE_DEFAULTHEADER(BeginRappel, void,());
+	DECLARE_DEFAULTHEADER(DesireCrouch, void, ( void ));
+	DECLARE_DEFAULTHEADER(WeaponLOSCondition, bool, (const Vector &ownerPos, const Vector &targetPos, bool bSetConditions));
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetSchedule_Int, bool, (int localScheduleID));
@@ -1171,6 +1209,8 @@ protected:
 	DECLARE_DATAMAP_OFFSET(int, m_poseAim_Pitch);
 	DECLARE_DATAMAP_OFFSET(int, m_poseAim_Yaw);
 	DECLARE_DATAMAP(float, m_flSceneTime);
+	DECLARE_DATAMAP(bool, m_bCrouchDesired);
+	DECLARE_DATAMAP(bool, m_bForceCrouch);
 
 
 	friend class CAI_SchedulesManager;
@@ -1195,6 +1235,10 @@ inline void	CAI_NPC::SetIdealState( NPC_STATE eIdealState )
 	}
 }
 
+inline bool CAI_NPC::CrouchIsDesired( void ) const
+{
+	return ( (CapabilitiesGet() & bits_CAP_DUCK) && (m_bCrouchDesired | m_bForceCrouch) );
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns the current ideal state the NPC will try to achieve.

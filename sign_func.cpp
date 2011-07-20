@@ -24,7 +24,7 @@ class CGameStringPool;
 class CMemoryPool;
 class CCallQueue;
 class CCheckClient;
-
+class CFlexSceneFileManager;
 
 HelperFunction g_helpfunc;
 
@@ -45,6 +45,7 @@ extern trace_t *g_TouchTrace;
 extern INetworkStringTable *g_pStringTableParticleEffectNames;
 extern CUtlVector<IValveGameSystem*> *s_GameSystems;
 extern CCheckClient *g_CheckClient;
+extern CFlexSceneFileManager *g_FlexSceneFileManager;
 
 void InitDefaultAIRelationships();
 
@@ -192,6 +193,8 @@ bool HelperFunction::FindAllValveGameSystem()
 	FindValveGameSystem(g_PropDataSystem, CPropData *, "CPropData");
 
 	FindValveGameSystem(g_SoundEmitterSystem, CValveBaseGameSystem *, "CSoundEmitterSystem");
+
+	FindValveGameSystem(g_FlexSceneFileManager, CFlexSceneFileManager *, "CFlexSceneFileManager");
 
 	return true;
 }
@@ -1605,6 +1608,24 @@ string_t HelperFunction::AllocPooledString( const char * pszValue )
 	typedef string_t (*_func)(const char * );
     _func thisfunc = (_func)func;
     return thisfunc(pszValue);
+}
+
+void HelperFunction::PrecacheInstancedScene( char const *pszScene )
+{
+	
+	static void *func = NULL;
+	if(!func)
+	{
+		if(!g_pGameConf->GetMemSig("PrecacheInstancedScene", &func))
+		{
+			assert(0);
+			return;
+		}
+	}
+
+	typedef void (*_func)(const char * );
+    _func thisfunc = (_func)func;
+    thisfunc(pszScene);
 }
 
 void HelperFunction::SetSolid(void *collision_ptr, SolidType_t val)

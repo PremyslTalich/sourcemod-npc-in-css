@@ -6,6 +6,7 @@
 #include "CAnimating.h"
 #include "CItem.h"
 #include "weapon_proficiency.h"
+#include "weapon_parse.h"
 
 class CPlayer;
 
@@ -33,6 +34,13 @@ public:
 	virtual bool	Holster( CBaseEntity *pSwitchingTo = NULL );
 	virtual bool	Deploy();
 
+	virtual int		GetRandomBurst();
+	virtual float	GetFireRate( void );
+	virtual int		Weapon_CapabilitiesGet( void );
+	virtual void	Operator_HandleAnimEvent( animevent_t *pEvent, CBaseEntity *pOperator );
+	virtual void	WeaponSound( WeaponSound_t sound_type, float soundtime = 0.0f );
+	virtual int		GetMaxClip2( void ) const;
+
 public:
 	DECLARE_DEFAULTHEADER(Drop, void, (const Vector &vecVelocity));
 	DECLARE_DEFAULTHEADER(GetMaxClip1, int, () const);
@@ -46,6 +54,12 @@ public:
 	DECLARE_DEFAULTHEADER(Holster, bool, (CBaseEntity *pSwitchingTo));
 	DECLARE_DEFAULTHEADER(Deploy, bool, ());
 
+	DECLARE_DEFAULTHEADER(GetRandomBurst, int, ());
+	DECLARE_DEFAULTHEADER(GetFireRate, float, ());
+	DECLARE_DEFAULTHEADER(Weapon_CapabilitiesGet, int, ());
+	DECLARE_DEFAULTHEADER(Operator_HandleAnimEvent, void, (animevent_t *pEvent, CBaseEntity *pOperator));
+	DECLARE_DEFAULTHEADER(WeaponSound, void, (WeaponSound_t sound_type, float soundtime));
+	DECLARE_DEFAULTHEADER(GetMaxClip2, int, () const);
 };
 
 class CCombatWeapon : public CItem<Template_CCombatWeapon>

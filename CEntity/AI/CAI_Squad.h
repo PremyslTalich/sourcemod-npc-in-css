@@ -109,10 +109,10 @@ public:
 	CBaseEntity	*			SquadMemberInRange( const Vector &vecLocation, float flDist );
 	CBaseEntity *			NearestSquadMember( CAI_BaseNPC *pMember );
 	int						GetVisibleSquadMembers( CAI_BaseNPC *pMember );
-	CAI_BaseNPC *			GetSquadMemberNearestTo( const Vector &vecLocation );
+	CAI_NPC *				GetSquadMemberNearestTo( const Vector &vecLocation );
 	bool					SquadIsMember( CEntity *pMember );
-	bool					IsLeader( CAI_BaseNPC *pLeader );
-	CAI_BaseNPC				*GetLeader( void );
+	bool					IsLeader( CAI_NPC *pLeader );
+	CAI_NPC					*GetLeader( void );
 
 	int						BroadcastInteraction( int interactionType, void *data, CCombatCharacter *sender = NULL );
 

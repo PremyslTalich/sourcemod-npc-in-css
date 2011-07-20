@@ -3,6 +3,19 @@
 #include "soundflags.h"
 #include "CAI_Criteria.h"
 
+float RandomInterval( const interval_t &interval )
+{
+	float out = interval.start;
+	if ( interval.range != 0 )
+	{
+		out += RandomFloat( 0, interval.range );
+	}
+
+	return out;
+}
+
+
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : *criteria - 
@@ -47,4 +60,20 @@ AI_Response::~AI_Response()
 {
 	g_pMemAlloc->Free(m_pCriteria);
 	g_pMemAlloc->Free(m_szContext);
+}
+
+bool AI_Response::ShouldBreakOnNonIdle( void ) const
+{
+	return ( m_Params.flags & AI_ResponseParams::RG_STOP_ON_NONIDLE ) != 0;
+}
+
+float AI_Response::GetPreDelay() const
+{
+	if ( m_Params.flags & AI_ResponseParams::RG_DELAYBEFORESPEAK )
+	{
+		interval_t temp;
+		m_Params.predelay.ToInterval( temp );
+		return RandomInterval( temp );
+	}
+	return 0.0f;
 }

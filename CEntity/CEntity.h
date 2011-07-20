@@ -434,6 +434,7 @@ public:
 	void PhysicsMarkEntitiesAsTouching( CBaseEntity *other, trace_t &trace );
 	IPhysicsObject *VPhysicsInitNormal( SolidType_t solidType, int nSolidFlags, bool createAsleep, solid_t *pSolid = NULL);
 	IPhysicsObject *VPhysicsInitStatic( void );
+	bool CBaseEntity_FVisible( const Vector &vecTarget, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL );
 
 public:
 	virtual CCombatCharacter *MyCombatCharacterPointer( void ) { return NULL; }

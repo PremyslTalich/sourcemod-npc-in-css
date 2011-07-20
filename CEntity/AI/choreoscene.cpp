@@ -53,3 +53,7 @@ char const *CChoreoScene::GetFilename() const
 	return m_szFileName;
 }
 
+void CChoreoScene::SetBackground( bool bIsBackground )
+{
+	m_bIsBackground = bIsBackground;
+}

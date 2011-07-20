@@ -168,6 +168,25 @@ SH_DECL_MANUALHOOK2(GetSpreadBias, 0, 0, 0, float, CBaseEntity *, CBaseEntity *)
 DECLARE_HOOK(GetSpreadBias, CCombatCharacter);
 DECLARE_DEFAULTHANDLER(CCombatCharacter, GetSpreadBias, float , (CBaseEntity *pWeapon, CBaseEntity *pTarget), (pWeapon, pTarget));
 
+SH_DECL_MANUALHOOK0(HeadDirection2D, 0, 0, 0, Vector);
+DECLARE_HOOK(HeadDirection2D, CCombatCharacter);
+DECLARE_DEFAULTHANDLER_SPECIAL(CCombatCharacter, HeadDirection2D, Vector, (), (), vec3_origin);
+
+SH_DECL_MANUALHOOK0(HeadDirection3D, 0, 0, 0, Vector);
+DECLARE_HOOK(HeadDirection3D, CCombatCharacter);
+DECLARE_DEFAULTHANDLER_SPECIAL(CCombatCharacter, HeadDirection3D, Vector, (), (), vec3_origin);
+
+SH_DECL_MANUALHOOK0(EyeDirection2D, 0, 0, 0, Vector);
+DECLARE_HOOK(EyeDirection2D, CCombatCharacter);
+DECLARE_DEFAULTHANDLER_SPECIAL(CCombatCharacter, EyeDirection2D, Vector, (), (), vec3_origin);
+
+SH_DECL_MANUALHOOK1(CalcWeaponProficiency, 0, 0, 0, WeaponProficiency_t, CBaseEntity *);
+DECLARE_HOOK(CalcWeaponProficiency, CCombatCharacter);
+DECLARE_DEFAULTHANDLER(CCombatCharacter, CalcWeaponProficiency, WeaponProficiency_t, (CBaseEntity *pWeapon) , (pWeapon));
+
+
+
+
 
 
 // Sendprops

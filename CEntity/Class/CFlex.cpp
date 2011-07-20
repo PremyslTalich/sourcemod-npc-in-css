@@ -4,7 +4,7 @@
 #include "choreoevent.h"
 #include "choreoscene.h"
 #include "sceneentity_shared.h"
-
+#include "GameSystem.h"
 
 CE_LINK_ENTITY_TO_CLASS(CBaseFlex, CFlex);
 
@@ -42,6 +42,7 @@ DEFINE_PROP(m_flexWeight,CFlex);
 
 //DataMap
 DEFINE_PROP(m_flLastFlexAnimationTime,CFlex);
+DEFINE_PROP(m_LocalToGlobal,CFlex);
 
 
 CFlex::CFlex()
@@ -177,18 +178,184 @@ bool CFlex::IsSuppressedFlexAnimation( CSceneEventInfo *info )
 	return false;
 }
 
+
+class CFlexSceneFileManager : CValveAutoGameSystem
+{
+public:
+
+	CFlexSceneFileManager( char const *name ) : CValveAutoGameSystem( name )
+	{
+	}
+
+	virtual bool Init()
+	{
+		return true;
+	}
+
+	// Tracker 14992:  We used to load 18K of .vfes for every CBaseFlex who lipsynced, but now we only load those files once globally.
+	// Note, we could wipe these between levels, but they don't ever load more than the weak/normal/strong phoneme classes that I can tell
+	//  so I'll just leave them loaded forever for now
+	virtual void Shutdown()
+	{
+
+	}
+
+	//-----------------------------------------------------------------------------
+	// Purpose: Sets up translations
+	// Input  : *instance - 
+	//			*pSettinghdr - 
+	// Output : 	void
+	//-----------------------------------------------------------------------------
+	void EnsureTranslations( CFlex *instance, const flexsettinghdr_t *pSettinghdr )
+	{
+		// The only time instance is NULL is in Init() above, where we're just loading the .vfe files off of the hard disk.
+		if ( instance )
+		{
+			instance->EnsureTranslations( pSettinghdr );
+		}
+	}
+
+	const void *FindSceneFile( CFlex *instance, const char *filename, bool allowBlockingIO )
+	{
+		// See if it's already loaded
+		int i;
+		for ( i = 0; i < m_FileList.Size(); i++ )
+		{
+			CFlexSceneFile *file = m_FileList[ i ];
+			if ( file && !stricmp( file->filename, filename ) )
+			{
+				// Make sure translations (local to global flex controller) are set up for this instance
+				EnsureTranslations( instance, ( const flexsettinghdr_t * )file->buffer );
+				return file->buffer;
+			}
+		}
+
+		if ( !allowBlockingIO )
+		{
+			return NULL;
+		}
+
+		// Load file into memory
+		void *buffer = NULL;
+		int len = filesystem->ReadFileEx( UTIL_VarArgs( "expressions/%s.vfe", filename ), "GAME", &buffer, false, true );
+
+		if ( !len )
+			return NULL;
+
+		// Create scene entry
+		CFlexSceneFile *pfile = new CFlexSceneFile;
+		// Remember filename
+		Q_strncpy( pfile->filename, filename, sizeof( pfile->filename ) );
+		// Remember data pointer
+		pfile->buffer = buffer;
+		// Add to list
+		m_FileList.AddToTail( pfile );
+
+		// Swap the entire file
+		if ( IsX360() )
+		{
+			CByteswap swap;
+			swap.ActivateByteSwapping( true );
+			byte *pData = (byte*)buffer;
+			flexsettinghdr_t *pHdr = (flexsettinghdr_t*)pData;
+			swap.SwapFieldsToTargetEndian( pHdr );
+
+			// Flex Settings
+			flexsetting_t *pFlexSetting = (flexsetting_t*)((byte*)pHdr + pHdr->flexsettingindex);
+			for ( int i = 0; i < pHdr->numflexsettings; ++i, ++pFlexSetting )
+			{
+				swap.SwapFieldsToTargetEndian( pFlexSetting );
+				
+				flexweight_t *pWeight = (flexweight_t*)(((byte*)pFlexSetting) + pFlexSetting->settingindex );
+				for ( int j = 0; j < pFlexSetting->numsettings; ++j, ++pWeight )
+				{
+					swap.SwapFieldsToTargetEndian( pWeight );
+				}
+			}
+
+			// indexes
+			pData = (byte*)pHdr + pHdr->indexindex;
+			swap.SwapBufferToTargetEndian( (int*)pData, (int*)pData, pHdr->numindexes );
+
+			// keymappings
+			pData  = (byte*)pHdr + pHdr->keymappingindex;
+			swap.SwapBufferToTargetEndian( (int*)pData, (int*)pData, pHdr->numkeys );
+
+			// keyname indices
+			pData = (byte*)pHdr + pHdr->keynameindex;
+			swap.SwapBufferToTargetEndian( (int*)pData, (int*)pData, pHdr->numkeys );
+		}
+
+		// Fill in translation table
+		EnsureTranslations( instance, ( const flexsettinghdr_t * )pfile->buffer );
+
+		// Return data
+		return pfile->buffer;
+	}
+
+private:
+
+	void DeleteSceneFiles()
+	{
+
+	}
+
+	CUtlVector< CFlexSceneFile * > m_FileList;
+};
+
+// Singleton manager
+CFlexSceneFileManager *g_FlexSceneFileManager;
+
+
 LocalFlexController_t CFlex::FlexControllerLocalToGlobal( const flexsettinghdr_t *pSettinghdr, int key )
 {
-	//CE_TODO
-	LocalFlexController_t index;
+	FS_LocalToGlobal_t entry( pSettinghdr );
+
+	int idx = m_LocalToGlobal->Find( entry );
+	if ( idx == m_LocalToGlobal->InvalidIndex() )
+	{
+		// This should never happen!!!
+		Assert( 0 );
+		Warning( "Unable to find mapping for flexcontroller %i, settings %p on %i/%s\n", key, pSettinghdr, entindex(), GetClassname() );
+		EnsureTranslations( pSettinghdr );
+		idx = m_LocalToGlobal->Find( entry );
+		if ( idx == m_LocalToGlobal->InvalidIndex() )
+		{
+			Error( "CBaseFlex::FlexControllerLocalToGlobal failed!\n" );
+		}
+	}
+
+	FS_LocalToGlobal_t& result = m_LocalToGlobal->Element(idx);
+	// Validate lookup
+	Assert( result.m_nCount != 0 && key < result.m_nCount );
+	LocalFlexController_t index = result.m_Mapping[ key ];
 	return index;
+}
+
+void CFlex::EnsureTranslations( const flexsettinghdr_t *pSettinghdr )
+{
+	Assert( pSettinghdr );
+
+	FS_LocalToGlobal_t entry( pSettinghdr );
+
+	unsigned short idx = m_LocalToGlobal->Find( entry );
+	if ( idx != m_LocalToGlobal->InvalidIndex() )
+		return;
+
+	entry.SetCount( pSettinghdr->numkeys );
+
+	for ( int i = 0; i < pSettinghdr->numkeys; ++i )
+	{
+		entry.m_Mapping[ i ] = FindFlexController( pSettinghdr->pLocalName( i ) );
+	}
+
+	m_LocalToGlobal->Insert( entry );
 }
 
 const void *CFlex::FindSceneFile( const char *filename )
 {
-	//CE_TODO
 	// Ask manager to get the globally cached scene instead.
-	return NULL;//g_FlexSceneFileManager.FindSceneFile( this, filename, false );
+	return g_FlexSceneFileManager->FindSceneFile( this, filename, false );
 }
 
 
@@ -283,5 +450,38 @@ void CFlex::DoBodyLean( void )
 
 
 
+
+
+
+
+BEGIN_BYTESWAP_DATADESC( flexsettinghdr_t )
+	DEFINE_FIELD( id, FIELD_INTEGER ),
+	DEFINE_FIELD( version, FIELD_INTEGER ),
+	DEFINE_ARRAY( name, FIELD_CHARACTER, 64 ),
+	DEFINE_FIELD( length, FIELD_INTEGER ),
+	DEFINE_FIELD( numflexsettings, FIELD_INTEGER ),
+	DEFINE_FIELD( flexsettingindex, FIELD_INTEGER ),
+	DEFINE_FIELD( nameindex, FIELD_INTEGER ),
+	DEFINE_FIELD( numindexes, FIELD_INTEGER ),
+	DEFINE_FIELD( indexindex, FIELD_INTEGER ),
+	DEFINE_FIELD( numkeys, FIELD_INTEGER ),
+	DEFINE_FIELD( keynameindex, FIELD_INTEGER ),
+	DEFINE_FIELD( keymappingindex, FIELD_INTEGER ),
+END_BYTESWAP_DATADESC()
+
+BEGIN_BYTESWAP_DATADESC( flexsetting_t )
+	DEFINE_FIELD( nameindex, FIELD_INTEGER ),
+	DEFINE_FIELD( obsolete1, FIELD_INTEGER ),
+	DEFINE_FIELD( numsettings, FIELD_INTEGER ),
+	DEFINE_FIELD( index, FIELD_INTEGER ),
+	DEFINE_FIELD( obsolete2, FIELD_INTEGER ),
+	DEFINE_FIELD( settingindex, FIELD_INTEGER ),
+END_BYTESWAP_DATADESC()
+
+BEGIN_BYTESWAP_DATADESC( flexweight_t )
+	DEFINE_FIELD( key, FIELD_INTEGER ),
+	DEFINE_FIELD( weight, FIELD_FLOAT ),
+	DEFINE_FIELD( influence, FIELD_FLOAT ),
+END_BYTESWAP_DATADESC()
 
 

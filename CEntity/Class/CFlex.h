@@ -10,6 +10,23 @@ class CChoreoEvent;
 class CChoreoActor;
 
 
+//-----------------------------------------------------------------------------
+// Purpose:  A .vfe referenced by a scene during .vcd playback
+//-----------------------------------------------------------------------------
+class CFlexSceneFile
+{
+public:
+	enum
+	{
+		MAX_FLEX_FILENAME = 128,
+	};
+
+	char			filename[ MAX_FLEX_FILENAME ];
+	void			*buffer;
+};
+
+
+
 class CFlex : public CAnimatingOverlay
 {
 public:
@@ -38,6 +55,8 @@ public:
 
 	bool				IsSuppressedFlexAnimation( CSceneEventInfo *info );
 
+	void				EnsureTranslations( const flexsettinghdr_t *pSettinghdr );
+
 protected:
 	const void				*FindSceneFile( const char *filename );
 	LocalFlexController_t	FlexControllerLocalToGlobal( const flexsettinghdr_t *pSettinghdr, int key );
@@ -58,6 +77,55 @@ public:
 	DECLARE_DEFAULTHEADER(SetViewtarget, void, (const Vector &viewtarget));
 	DECLARE_DEFAULTHEADER(ProcessSceneEvents, void, ());
 
+private:
+	struct FS_LocalToGlobal_t
+	{
+		explicit FS_LocalToGlobal_t() :
+			m_Key( 0 ),
+			m_nCount( 0 ),
+			m_Mapping( 0 )
+		{
+		}
+
+		explicit FS_LocalToGlobal_t( const flexsettinghdr_t *key ) :
+			m_Key( key ),
+			m_nCount( 0 ),
+			m_Mapping( 0 )
+		{
+		}		
+
+		void SetCount( int count )
+		{
+			Assert( !m_Mapping );
+			Assert( count > 0 );
+			m_nCount = count;
+			m_Mapping = new LocalFlexController_t[ m_nCount ];
+			Q_memset( m_Mapping, 0, m_nCount * sizeof( int ) );
+		}
+
+		FS_LocalToGlobal_t( const FS_LocalToGlobal_t& src )
+		{
+			m_Key = src.m_Key;
+			delete m_Mapping;
+			m_Mapping = new LocalFlexController_t[ src.m_nCount ];
+			Q_memcpy( m_Mapping, src.m_Mapping, src.m_nCount * sizeof( int ) );
+
+			m_nCount = src.m_nCount;
+		}
+
+		~FS_LocalToGlobal_t()
+		{
+			delete m_Mapping;
+			m_nCount = 0;
+			m_Mapping = 0;
+		}
+
+		const flexsettinghdr_t	*m_Key;
+		int						m_nCount;
+		LocalFlexController_t	*m_Mapping;	
+	};
+
+
 public:
 	DECLARE_SENDPROP(int, m_blinktoggle);
 	
@@ -67,6 +135,8 @@ protected:
 
 protected:
 	DECLARE_DATAMAP(float, m_flLastFlexAnimationTime);
+	typedef CUtlRBTree< FS_LocalToGlobal_t, unsigned short > m_LocalToGlobal_TYPE;
+	DECLARE_DATAMAP_OFFSET(m_LocalToGlobal_TYPE,m_LocalToGlobal);
 
 public:
 	Vector m_vecPrevOrigin;

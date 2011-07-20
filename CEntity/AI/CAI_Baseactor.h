@@ -109,9 +109,9 @@ public:
 	virtual bool			CheckSceneEventCompletion( CSceneEventInfo *info, float currenttime, CChoreoScene *scene, CChoreoEvent *event );
 
 	Vector					EyePosition( );
-	virtual Vector			HeadDirection2D( void ); //V
-	virtual Vector			HeadDirection3D( void ); //V
-	virtual Vector			EyeDirection2D( void ); //V
+	virtual Vector			HeadDirection2D( void );
+	virtual Vector			HeadDirection3D( void );
+	virtual Vector			EyeDirection2D( void );
 	virtual Vector			EyeDirection3D( void );
 
 	CBaseEntity				*GetLooktarget() { return m_hLookTarget.Get(); }
@@ -133,9 +133,8 @@ public:
 
 	virtual void			StartTaskRangeAttack1( const Task_t *pTask );
 
-	//VV
-	virtual void			AddLookTarget( CBaseEntity *pTarget, float flImportance, float flDuration, float flRamp = 0.0 );
-	virtual void			AddLookTarget( const Vector &vecPosition, float flImportance, float flDuration, float flRamp = 0.0 );
+	virtual void			AddLookTarget_E( CBaseEntity *pTarget, float flImportance, float flDuration, float flRamp = 0.0 );
+	virtual void			AddLookTarget_V( const Vector &vecPosition, float flImportance, float flDuration, float flRamp = 0.0 );
 
 	virtual void			SetHeadDirection( const Vector &vTargetPos, float flInterval );
 
@@ -143,7 +142,6 @@ public:
 	void					UpdateHeadControl( const Vector &vHeadTarget, float flHeadInfluence );
 	virtual	float			GetHeadDebounce( void ) { return 0.3; } // how much of previous head turn to use
 
-	//V
 	virtual void			MaintainLookTargets( float flInterval );
 	virtual bool			ValidEyeTarget(const Vector &lookTargetPos);
 	virtual bool			ValidHeadTarget(const Vector &lookTargetPos);

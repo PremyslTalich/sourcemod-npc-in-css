@@ -48,7 +48,29 @@ SH_DECL_MANUALHOOK0(Deploy, 0, 0, 0, bool);
 DECLARE_HOOK(Deploy, Template_CCombatWeapon);
 DECLARE_DEFAULTHANDLER(Template_CCombatWeapon, Deploy, bool, (), ());
 
+SH_DECL_MANUALHOOK0(GetRandomBurst, 0, 0, 0, int);
+DECLARE_HOOK(GetRandomBurst, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER(Template_CCombatWeapon, GetRandomBurst, int, (), ());
 
+SH_DECL_MANUALHOOK0(GetFireRate, 0, 0, 0, float);
+DECLARE_HOOK(GetFireRate, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER(Template_CCombatWeapon, GetFireRate, float, (), ());
+
+SH_DECL_MANUALHOOK0(Weapon_CapabilitiesGet, 0, 0, 0, int);
+DECLARE_HOOK(Weapon_CapabilitiesGet, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER(Template_CCombatWeapon, Weapon_CapabilitiesGet, int, (), ());
+
+SH_DECL_MANUALHOOK2_void(Operator_HandleAnimEvent, 0, 0, 0, animevent_t *, CBaseEntity *);
+DECLARE_HOOK(Operator_HandleAnimEvent, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER_void(Template_CCombatWeapon, Operator_HandleAnimEvent, (animevent_t *pEvent, CBaseEntity *pOperator), (pEvent, pOperator));
+
+SH_DECL_MANUALHOOK2_void(WeaponSound, 0, 0, 0, WeaponSound_t , float );
+DECLARE_HOOK(WeaponSound, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER_void(Template_CCombatWeapon, WeaponSound, (WeaponSound_t sound_type, float soundtime), (sound_type, soundtime));
+
+SH_DECL_MANUALHOOK0(GetMaxClip2, 0, 0, 0, int);
+DECLARE_HOOK(GetMaxClip2, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER(Template_CCombatWeapon, GetMaxClip2, int, () const, ());
 
 
 // Sendprops

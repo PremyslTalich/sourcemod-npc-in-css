@@ -779,6 +779,58 @@ SH_DECL_MANUALHOOK0_void(MaintainTurnActivity, 0, 0, 0 );
 DECLARE_HOOK(MaintainTurnActivity, CAI_NPC);
 DECLARE_DEFAULTHANDLER_void(CAI_NPC, MaintainTurnActivity, (), ());
 
+SH_DECL_MANUALHOOK4_void(AddLookTarget_E, 0, 0, 0, CBaseEntity *, float , float , float );
+DECLARE_HOOK(AddLookTarget_E, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, AddLookTarget_E, (CBaseEntity *pTarget, float flImportance, float flDuration, float flRamp), (pTarget, flImportance, flDuration, flRamp));
+
+SH_DECL_MANUALHOOK4_void(AddLookTarget_V, 0, 0, 0, const Vector &, float , float , float );
+DECLARE_HOOK(AddLookTarget_V, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, AddLookTarget_V, (const Vector &vecPosition, float flImportance, float flDuration, float flRamp), (vecPosition, flImportance, flDuration, flRamp));
+
+SH_DECL_MANUALHOOK1_void(MaintainLookTargets, 0, 0, 0, float);
+DECLARE_HOOK(MaintainLookTargets, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, MaintainLookTargets, (float flInterval), (flInterval));
+
+SH_DECL_MANUALHOOK0(Stand, 0, 0, 0, bool);
+DECLARE_HOOK(Stand, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, Stand, bool, (), ());
+
+SH_DECL_MANUALHOOK0(Crouch, 0, 0, 0, bool);
+DECLARE_HOOK(Crouch, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, Crouch, bool, (), ());
+
+SH_DECL_MANUALHOOK1(GetBestSound, 0, 0, 0, CSound *, int);
+DECLARE_HOOK(GetBestSound, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetBestSound, CSound *, (int validTypes), (validTypes));
+
+SH_DECL_MANUALHOOK1(FOkToMakeSound, 0, 0, 0, bool, int);
+DECLARE_HOOK(FOkToMakeSound, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, FOkToMakeSound, bool, (int soundPriority), (soundPriority));
+
+SH_DECL_MANUALHOOK2_void(JustMadeSound, 0, 0, 0, int, float);
+DECLARE_HOOK(JustMadeSound, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, JustMadeSound, (int soundPriority, float flSoundLength), (soundPriority, flSoundLength));
+
+SH_DECL_MANUALHOOK0_void(FearSound, 0, 0, 0);
+DECLARE_HOOK(FearSound, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, FearSound, (), ());
+
+SH_DECL_MANUALHOOK0(IsWaitingToRappel, 0, 0, 0, bool);
+DECLARE_HOOK(IsWaitingToRappel, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsWaitingToRappel, bool, (), ());
+
+SH_DECL_MANUALHOOK0_void(BeginRappel, 0, 0, 0);
+DECLARE_HOOK(BeginRappel, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, BeginRappel, (), ());
+
+SH_DECL_MANUALHOOK0_void(DesireCrouch, 0, 0, 0);
+DECLARE_HOOK(DesireCrouch, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, DesireCrouch, (), ());
+
+SH_DECL_MANUALHOOK3(WeaponLOSCondition, 0, 0, 0, bool, const Vector &, const Vector &, bool);
+DECLARE_HOOK(WeaponLOSCondition, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, WeaponLOSCondition, bool, (const Vector &ownerPos, const Vector &targetPos, bool bSetConditions), (ownerPos, targetPos, bSetConditions));
+
 
 
 
@@ -854,6 +906,8 @@ DEFINE_PROP(m_flLastPlayerDamageTime, CAI_NPC);
 DEFINE_PROP(m_poseAim_Pitch, CAI_NPC);
 DEFINE_PROP(m_poseAim_Yaw, CAI_NPC);
 DEFINE_PROP(m_flSceneTime, CAI_NPC);
+DEFINE_PROP(m_bCrouchDesired, CAI_NPC);
+DEFINE_PROP(m_bForceCrouch, CAI_NPC);
 
 
 
@@ -914,6 +968,23 @@ bool CAI_NPC::HasCondition( int iCondition )
 	}
 	
 	bool bReturn = m_Conditions->IsBitSet(interrupt);
+	return (bReturn);
+}
+
+bool CAI_NPC::HasCondition( int iCondition, bool bUseIgnoreConditions )
+{
+	if ( bUseIgnoreConditions )
+		return HasCondition( iCondition );
+	
+	int interrupt = InterruptFromCondition( iCondition );
+	
+	if ( interrupt == -1 )
+	{
+		Assert(0);
+		return false;
+	}
+	
+	bool bReturn = m_ConditionsPreIgnore.IsBitSet(interrupt);
 	return (bReturn);
 }
 
