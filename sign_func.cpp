@@ -25,6 +25,7 @@ class CMemoryPool;
 class CCallQueue;
 class CCheckClient;
 class CFlexSceneFileManager;
+class CDefaultResponseSystem;
 
 HelperFunction g_helpfunc;
 
@@ -83,6 +84,8 @@ public:
 static HelperSystem g_helpersystem("HelperSystem");
 
 
+
+
 string_t AllocPooledString( const char * pszValue )
 {
 	return g_helpfunc.AllocPooledString(pszValue);
@@ -90,7 +93,7 @@ string_t AllocPooledString( const char * pszValue )
 
 string_t FindPooledString( const char *pszValue )
 {
-	return NULL_STRING;
+	return g_helpfunc.AllocPooledString(pszValue);
 }
 
 HelperFunction::HelperFunction()
@@ -170,7 +173,7 @@ void HelperFunction::Shutdown()
 }
 
 
-extern bool Get_g_pResponseSystem();
+extern bool SetResponseSystem();
 
 bool HelperFunction::FindAllValveGameSystem()
 {
@@ -182,7 +185,9 @@ bool HelperFunction::FindAllValveGameSystem()
 
 	FindValveGameSystem(g_FlexSceneFileManager, CFlexSceneFileManager *, "CFlexSceneFileManager");
 
-	bool ret = Get_g_pResponseSystem();
+	if(!SetResponseSystem())
+		return false;
+
 
 	return true;
 }
@@ -1587,6 +1592,23 @@ string_t HelperFunction::AllocPooledString( const char * pszValue )
 	if(!func)
 	{
 		if(!g_pGameConf->GetMemSig("AllocPooledString", &func))
+		{
+			assert(0);
+			return NULL_STRING;
+		}
+	}
+
+	typedef string_t (*_func)(const char * );
+    _func thisfunc = (_func)func;
+    return thisfunc(pszValue);
+}
+
+string_t HelperFunction::FindPooledString( const char * pszValue )
+{
+	static void *func = NULL;
+	if(!func)
+	{
+		if(!g_pGameConf->GetMemSig("FindPooledString", &func))
 		{
 			assert(0);
 			return NULL_STRING;

@@ -182,10 +182,37 @@ BEGIN_SIMPLE_DATADESC( AI_FollowParams_t )
 END_DATADESC();
 */
 
+BEGIN_DATADESC( CAI_FollowBehavior )
+	DEFINE_FIELD( m_hFollowTarget, FIELD_EHANDLE ),
+	/*DEFINE_EMBEDDED( m_FollowNavGoal ),
+	DEFINE_FIELD( m_flTimeUpdatedFollowPosition, FIELD_TIME ),
+	DEFINE_FIELD( m_bFirstFacing, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_flTimeFollowTargetVisible, FIELD_TIME ),
+	DEFINE_EMBEDDED( m_TargetMonitor ),
+	DEFINE_FIELD( m_bTargetUnreachable, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bFollowNavFailed, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bMovingToCover, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_flOriginalEnemyDiscardTime, FIELD_FLOAT ),
+	DEFINE_FIELD( m_SavedDistTooFar, FIELD_FLOAT ),
+	DEFINE_EMBEDDED( m_FollowDelay ),
+	DEFINE_EMBEDDED( m_RepathOnFollowTimer ),
+	DEFINE_CUSTOM_FIELD( m_CurrentFollowActivity,	ActivityDataOps() ),
+	DEFINE_EMBEDDED( m_TimeBlockUseWaitPoint ),
+	DEFINE_EMBEDDED( m_TimeCheckForWaitPoint ),
+	DEFINE_FIELD( m_pInterruptWaitPoint, FIELD_CLASSPTR ),
+	DEFINE_EMBEDDED( m_TimeBeforeSpreadFacing ),
+	DEFINE_EMBEDDED( m_TimeNextSpreadFacing ),
+	//				m_hFollowManagerInfo	(reset on load)
+	DEFINE_EMBEDDED( m_params ),
+	DEFINE_FIELD( m_hFollowGoalEnt, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_nFailedFollowAttempts, FIELD_INTEGER ),
+	DEFINE_FIELD( m_flTimeFailFollowStarted, FIELD_TIME ),
+	DEFINE_FIELD( m_vFollowMoveAnchor, FIELD_POSITION_VECTOR ),*/
+END_DATADESC();
+
 CAI_FollowBehavior::CAI_FollowBehavior( const AI_FollowParams_t &params )
 {
 	memset( &m_FollowNavGoal, 0, sizeof( m_FollowNavGoal ) );
-	memset(this, 0, sizeof(CAI_FollowBehavior));
 
 	m_FollowDelay.Set( 1.0, 3.0 );
 	m_hFollowManagerInfo.m_pGroup = NULL;
@@ -200,6 +227,20 @@ CAI_FollowBehavior::CAI_FollowBehavior( const AI_FollowParams_t &params )
 
 	m_params = params;
 
+	m_flTimeUpdatedFollowPosition = 0.0f;
+	m_bFirstFacing = false;
+	m_flTimeFollowTargetVisible = 0.0f;
+	m_bTargetUnreachable = false;
+	m_bFollowNavFailed = false;
+	m_nFailedFollowAttempts = 0;
+	m_flTimeFailFollowStarted = 0.0f;
+	m_vFollowMoveAnchor.Init();
+	m_bMovingToCover = false;
+	m_flOriginalEnemyDiscardTime = 0.0f;
+	m_SavedDistTooFar = 0.0f;
+	m_CurrentFollowActivity = ACT_RESET;
+
+
 	NoteSuccessfulFollow();
 }
 
@@ -212,6 +253,18 @@ CAI_FollowBehavior::~CAI_FollowBehavior()
 
 
 //-------------------------------------
+
+int CAI_FollowBehavior::DrawDebugTextOverlays( int text_offset )
+{
+	int		offset = text_offset;
+	offset++;
+	return offset;
+}
+
+void CAI_FollowBehavior::DrawDebugGeometryOverlays()
+{
+
+}
 
 void CAI_FollowBehavior::SetParameters( const AI_FollowParams_t &params )
 {

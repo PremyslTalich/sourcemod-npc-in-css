@@ -411,6 +411,7 @@ public:
 	
 	CAI_NPC();
 	virtual ~CAI_NPC();
+	virtual void CE_PostInit();
 
 	void		SetHullSizeNormal(bool force=false);
 
@@ -714,6 +715,7 @@ public:
 public:
 	//is virtual, but not hooked, for npc only?
 	virtual bool OnMoveBlocked( AIMoveResult_t *pResult ) { return false;	}
+	virtual bool CreateComponents() { return true; }
 
 public:
 	virtual CEAI_Enemies *GetEnemies();

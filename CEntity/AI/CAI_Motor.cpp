@@ -3,7 +3,7 @@
 #include "CAI_NPC.h"
 #include "CAI_localnavigator.h"
 
-CAI_Motor::CAI_Motor(CBaseEntity *pOuter)
+CAI_Motor::CAI_Motor(CEntity *pOuter)
  :	CAI_Component( pOuter )
 {
 	m_flMoveInterval = 0;

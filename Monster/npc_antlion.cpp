@@ -11,7 +11,6 @@
 #include "antlion_maker.h"
 
 
-
 LINK_ENTITY_TO_CUSTOM_CLASS( npc_antlion, cycler, CNPC_Antlion );
 
 ConVar	sk_antlion_health( "sk_antlion_health", "0" );
@@ -114,8 +113,6 @@ int ACT_ANTLION_WORKER_EXPLODE;
 //==================================================
 // CNPC_Antlion
 //==================================================
-
-
 
 
 CNPC_Antlion::CNPC_Antlion( void )

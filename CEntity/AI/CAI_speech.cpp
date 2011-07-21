@@ -31,8 +31,10 @@ CAI_Expresser::CAI_Expresser( CBaseEntity *pOuter )
 	m_flStopTalkTimeWithoutDelay( 0 ),
 	m_flBlockedTalkTime( 0 ),
 	m_voicePitch( 100 ),
+	m_flLastTimeAcceptedSpeak(0.0f),
 	m_pOuter( pOuter )
 {
+
 }
 
 CAI_Expresser::~CAI_Expresser()

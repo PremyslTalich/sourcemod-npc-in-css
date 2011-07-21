@@ -13,6 +13,10 @@ END_DATADESC();
 
 CAI_SentenceBase::CAI_SentenceBase()
 {
+	m_voicePitch = 0;
+	m_nQueuedSentenceIndex = 0;
+	m_flQueueTimeout = 0.0f;
+	m_nQueueSoundPriority = 0;
 	ClearQueue();
 }
 

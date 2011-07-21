@@ -107,8 +107,11 @@ void cmd1_CommandCallback(const CCommand &command)
 
 		//CEntity *cent = CreateEntityByName("npc_turret_floor");
 
-		CEntity *cent = CreateEntityByName("npc_combine");
-		
+		//CEntity *cent = CreateEntityByName("npc_combine");
+			
+		CEntity *cent = CreateEntityByName("npc_combine_s");
+
+		cent->DispatchKeyValue("additionalequipment","weapon_ak47");
 		CBaseEntity *cbase = cent->BaseEntity();
 
 		CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);
@@ -133,7 +136,7 @@ void cmd1_CommandCallback(const CCommand &command)
 void cmd2_CommandCallback(const CCommand &command)
 {
 	Vector vec(501.0f,22.7f,70.21f);
-	CEntity *cent = CreateEntityByName("npc_stalker");
+	CEntity *cent = CreateEntityByName("npc_antlion");
 
 	CBaseEntity *cbase = cent->BaseEntity();
 	CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);

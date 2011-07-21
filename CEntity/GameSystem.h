@@ -64,7 +64,7 @@ public:
 	// Init, shutdown
 	// return true on success. false to abort DLL init!
 	virtual bool Init() = 0;
-	virtual void CE_PostInit() = 0;
+	virtual void PostInit() = 0;
 	virtual void Shutdown() = 0;
 
 	// Level init, shutdown
@@ -135,7 +135,7 @@ public:
 	// Init, shutdown
 	// return true on success. false to abort DLL init!
 	virtual bool Init() { return true; }
-	virtual void CE_PostInit() {}
+	virtual void PostInit() {}
 	virtual void Shutdown() {}
 
 	// Level init, shutdown

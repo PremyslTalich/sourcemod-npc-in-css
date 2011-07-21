@@ -43,7 +43,7 @@ class CAI_Motor : public CAI_Component,
 				  public CAI_ProxyMovementSink
 {
 public:
-	CAI_Motor(CBaseEntity *pOuter);
+	CAI_Motor(CEntity *pOuter);
 	virtual ~CAI_Motor();
 
 	void Init( IAI_MovementSink *pMovementServices );

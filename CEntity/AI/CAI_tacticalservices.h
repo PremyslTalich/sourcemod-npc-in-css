@@ -28,7 +28,7 @@ enum FlankType_t
 class CAI_TacticalServices : public CAI_Component
 {
 public:
-	CAI_TacticalServices( CBaseEntity *pOuter )
+	CAI_TacticalServices( CEntity *pOuter )
 	 :	CAI_Component(pOuter),
 		m_pNetwork( NULL )
 	{

@@ -940,6 +940,17 @@ CAI_NPC::~CAI_NPC()
 	g_AI_Manager.RemoveAI( this );
 }
 
+void CAI_NPC::CE_PostInit()
+{
+	BaseClass::CE_PostInit();
+
+	if(!CreateComponents())
+	{
+		META_CONPRINT("CAI_NPC::CreateComponents Fail\n");
+		Assert(0);
+	}
+}
+
 void CAI_NPC::CapabilitiesClear()
 {
 	m_afCapability = 0;

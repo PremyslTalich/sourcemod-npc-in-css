@@ -8,6 +8,7 @@
 #ifndef AI_BEHAVIOR_H
 #define AI_BEHAVIOR_H
 
+#include "CEntity.h"
 #include "CAI_NPC.h"
 #include "CAI_component.h"
 #include "ai_default.h"
@@ -64,8 +65,9 @@ public:
 	DECLARE_CLASS( CAI_BehaviorBase, CAI_Component );
 
 public:
-	CAI_BehaviorBase(CAI_NPC *pOuter = NULL)
-		: 	CAI_Component((pOuter) ? pOuter->BaseEntity() : NULL),
+	CAI_BehaviorBase(CEntity *pOuter = NULL)
+		: 	CAI_Component(pOuter),
+		m_fOverrode(false),
 	 	m_pBackBridge(NULL)
 	{
 	}
@@ -312,7 +314,7 @@ public:
 	}
 
 protected:
-	CAI_Behavior(NPC_CLASS *pOuter = NULL)
+	CAI_Behavior(CEntity *pOuter = NULL)
 	 : CAI_ComponentWithOuter<NPC_CLASS, CAI_BehaviorBase>(pOuter)
 	{
 	}

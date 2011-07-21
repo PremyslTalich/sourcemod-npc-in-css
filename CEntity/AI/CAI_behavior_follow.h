@@ -119,8 +119,8 @@ public:
 	CAI_FollowBehavior( const AI_FollowParams_t &params = AIF_SIMPLE );
 	~CAI_FollowBehavior();
 
-	//virtual int		DrawDebugTextOverlays( int text_offset );
-	//virtual void	DrawDebugGeometryOverlays();
+	virtual int		DrawDebugTextOverlays( int text_offset );
+	virtual void	DrawDebugGeometryOverlays();
 	
 	// Returns true if the NPC is actively following a target.
 	bool			IsActive( void );
@@ -324,7 +324,7 @@ protected:
 	
 	//---------------------------------
 	
-	//DECLARE_DATADESC();
+	DECLARE_DATADESC();
 };
 
 //-------------------------------------

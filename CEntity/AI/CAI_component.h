@@ -8,6 +8,7 @@
 #ifndef AI_COMPONENT_H
 #define AI_COMPONENT_H
 
+
 #if defined( _WIN32 )
 #pragma once
 #endif
@@ -30,9 +31,9 @@ public:
 	DECLARE_CLASS_NOBASE( CAI_Component );
 
 protected:
-	CAI_Component( CBaseEntity *pOuter = NULL )
-		: m_pOuter(pOuter)
+	CAI_Component( CEntity *pOuter = NULL )
 	{
+		m_pOuter = (pOuter)?pOuter->BaseEntity():NULL;
 	}
 
 	virtual ~CAI_Component() {}
@@ -149,14 +150,14 @@ template <class NPC_CLASS, class BASE_COMPONENT = CAI_Component>
 class CAI_ComponentWithOuter : public BASE_COMPONENT
 {
 protected:
-	CAI_ComponentWithOuter(NPC_CLASS *pOuter = NULL)
+	CAI_ComponentWithOuter(CEntity *pOuter = NULL)
 	 : BASE_COMPONENT(pOuter)
 	{
 	}
 
 public:
 	// Hides base version
-	void SetOuter( NPC_CLASS *pOuter )		{ BASE_COMPONENT::SetOuter((CAI_NPC *)pOuter); }
+	void SetOuter( CBaseEntity *pOuter )		{ BASE_COMPONENT::SetOuter((CBaseEntity *)pOuter); }
 	NPC_CLASS * 		GetOuter() 			{ return (NPC_CLASS *)(BASE_COMPONENT::GetOuter()); }
 	const NPC_CLASS *	GetOuter() const 	{ return (NPC_CLASS *)(BASE_COMPONENT::GetOuter()); }
 };
@@ -164,7 +165,7 @@ public:
 //-----------------------------------------------------------------------------
 
 #define DEFINE_AI_COMPONENT_OUTER( NPC_CLASS ) \
-	void SetOuter( NPC_CLASS *pOuter )		{ CAI_Component::SetOuter((CAI_BaseNPC *)pOuter); } \
+	void SetOuter( CBaseEntity *pOuter )		{ CAI_Component::SetOuter((CBaseEntity *)pOuter); } \
 	NPC_CLASS * 		GetOuter() 			{ return (NPC_CLASS *)(CAI_Component::GetOuter()); } \
 	const NPC_CLASS *	GetOuter() const 	{ return (NPC_CLASS *)(CAI_Component::GetOuter()); }
 

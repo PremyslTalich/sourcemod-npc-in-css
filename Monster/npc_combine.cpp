@@ -6,7 +6,7 @@
 #include "CAI_tacticalservices.h"
 #include "CGrenade.h"
 #include "CAI_Route.h"
-
+#include "CAI_behavior_follow.h"
 
 
 
@@ -162,6 +162,18 @@ END_DATADESC()
 CNPC_Combine::CNPC_Combine()
 {
 	m_vecTossVelocity = vec3_origin;
+
+	m_nKickDamage = 0.0f;
+
+	m_nShots = 0;
+	m_flShotDelay = 0.0f;
+	m_flStopMoveShootTime = 0.0f;
+	m_iNumGrenades = 0;
+	m_iLastAnimEventHandled = 0;
+	m_fIsElite = false;
+	m_vecAltFireTarget.Init();
+	m_iTacticalVariant = 0;
+	m_iPathfindingVariant = 0;
 }
 
 

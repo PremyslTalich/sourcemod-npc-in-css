@@ -250,12 +250,10 @@ private:
 IResponseSystem *g_pResponseSystem = NULL;
 extern CUtlVector<IValveGameSystem*> *s_GameSystems;
 
-bool Get_g_pResponseSystem()
+bool SetResponseSystem()
 {
-	FindValveGameSystem(g_pResponseSystem, CDefaultResponseSystem *, "CDefaultResponseSystem");
-	
-	CUtlVector<AI_Response *> pResponses;
-	g_pResponseSystem->GetAllResponses(&pResponses);
+	FindValveGameSystem(g_pResponseSystem, CDefaultResponseSystem *, "CDefaultResponseSystem");	
 
 	return true;
 }
+

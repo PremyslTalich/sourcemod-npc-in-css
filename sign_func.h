@@ -79,6 +79,7 @@ public:
 	void UTIL_RemoveImmediate( CBaseEntity *oldObj );
 	void SetEventIndexForSequence( mstudioseqdesc_t &seqdesc );
 	string_t AllocPooledString( const char * pszValue );
+	string_t FindPooledString( const char * pszValue );
 	void PrecacheInstancedScene( char const *pszScene );
 	const char *ActivityList_NameForIndex( int activityIndex );
 

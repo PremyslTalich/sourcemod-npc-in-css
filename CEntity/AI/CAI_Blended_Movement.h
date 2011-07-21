@@ -28,7 +28,7 @@ class CAI_BlendedMotor : public CAI_Motor
 {
 	typedef CAI_Motor BaseClass;
 public:
-	CAI_BlendedMotor( CBaseEntity *pOuter )
+	CAI_BlendedMotor( CEntity *pOuter )
 	 :	BaseClass( pOuter )
 	{
 		m_iPrimaryLayer = -1;
@@ -224,12 +224,14 @@ public:
 	CAI_BlendedMotor *		GetBlendedMotor()		{ return assert_cast<CAI_BlendedMotor *>(this->GetMotor()); }
 
 	/* Replace Original pointer */
-	virtual void CE_PostInit()
+	virtual bool CreateComponents()
 	{
-		BaseClass::CE_PostInit();
+		if(!BaseClass::CreateComponents())
+			return false;
 
 		CreateMotor();
 		CreateNavigator();
+		return true;
 	}
 
 	CAI_Motor *CreateMotor()
@@ -239,7 +241,7 @@ public:
 		delete ptr;
 
 		// create & set
-		ptr = new CAI_BlendedMotor(this->BaseEntity());
+		ptr = new CAI_BlendedMotor(this);
 		ptr->Init( m_pLocalNavigator );		
 		*(m_pMotor.ptr) = ptr;
 		

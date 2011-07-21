@@ -48,7 +48,7 @@ enum RouteBuildFlags_e
 class CAI_Pathfinder : public CAI_Component
 {
 public:
-	CAI_Pathfinder( CBaseEntity *pOuter )
+	CAI_Pathfinder( CEntity *pOuter )
 	 :	CAI_Component(pOuter),
 		m_flLastStaleLinkCheckTime( 0 ),
 		m_pNetwork( NULL )

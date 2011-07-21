@@ -90,6 +90,17 @@ public:
 		m_iszDeathExpression( NULL_STRING )
 	{
 		memset( m_flextarget, 0, 64 * sizeof( m_flextarget[0] ) );
+		m_goalHeadDirection.Init();
+		m_goalHeadInfluence = 0.0f;
+		m_goalSpineYaw = 0.0f;
+		m_goalBodyYaw = 0.0f;
+		m_goalHeadCorrection.Init();
+		m_flNextRandomLookTime = 0.0f;
+		m_flNextRandomExpressionTime = 0.0f;
+		m_bDontUseSemaphore = false;
+		m_flAccumYawDelta = 0.0f;
+		m_flAccumYawScale = 0.0f;
+		m_pExpresser = NULL;
 	}
 
 	~CAI_BaseActor()
