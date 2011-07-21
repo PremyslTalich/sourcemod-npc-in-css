@@ -14,7 +14,7 @@ public:
 	CE_CUSTOM_ENTITY();
 
 public:
-	virtual void PostInit();
+	virtual void CE_PostInit();
 	virtual void Spawn(void);
 	virtual void Precache(void);
 	virtual int ObjectCaps(void);

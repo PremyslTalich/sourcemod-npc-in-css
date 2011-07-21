@@ -2188,3 +2188,11 @@ int SENTENCEG_PlayRndSz(edict_t *entity, const char *szgroupname,
 	return -1;
 }
 
+void SENTENCEG_PlaySentenceIndex( edict_t *entity, int iSentenceIndex, float volume, soundlevel_t soundlevel, int flags, int pitch )
+{
+	if ( iSentenceIndex >= 0 )
+	{
+		CPASAttenuationFilter filter( CEntity::Instance( entity ), soundlevel );
+		CEntity::EmitSentenceByIndex( filter, ENTINDEX(entity), CHAN_VOICE, iSentenceIndex, volume, soundlevel, flags, pitch );
+	}
+}

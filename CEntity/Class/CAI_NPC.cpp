@@ -831,6 +831,21 @@ SH_DECL_MANUALHOOK3(WeaponLOSCondition, 0, 0, 0, bool, const Vector &, const Vec
 DECLARE_HOOK(WeaponLOSCondition, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, WeaponLOSCondition, bool, (const Vector &ownerPos, const Vector &targetPos, bool bSetConditions), (ownerPos, targetPos, bSetConditions));
 
+SH_DECL_MANUALHOOK0(OnBeginMoveAndShoot, 0, 0, 0, bool);
+DECLARE_HOOK(OnBeginMoveAndShoot, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, OnBeginMoveAndShoot, bool, (), ());
+
+SH_DECL_MANUALHOOK1(GetSquadSlotDebugName, 0, 0, 0, const char *, int);
+DECLARE_HOOK(GetSquadSlotDebugName, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetSquadSlotDebugName, const char *, (int iSquadSlot), (iSquadSlot));
+
+SH_DECL_MANUALHOOK0_void(OnEndMoveAndShoot, 0, 0, 0);
+DECLARE_HOOK(OnEndMoveAndShoot, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnEndMoveAndShoot, (), ());
+
+SH_DECL_MANUALHOOK2(TestShootPosition, 0, 0, 0, bool, const Vector &, const Vector &);
+DECLARE_HOOK(TestShootPosition, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, TestShootPosition, bool, (const Vector &vecShootPos, const Vector &targetPos), (vecShootPos, targetPos));
 
 
 
@@ -908,7 +923,8 @@ DEFINE_PROP(m_poseAim_Yaw, CAI_NPC);
 DEFINE_PROP(m_flSceneTime, CAI_NPC);
 DEFINE_PROP(m_bCrouchDesired, CAI_NPC);
 DEFINE_PROP(m_bForceCrouch, CAI_NPC);
-
+DEFINE_PROP(m_ConditionsPreIgnore, CAI_NPC);
+DEFINE_PROP(m_flLastEnemyTime, CAI_NPC);
 
 
 
@@ -984,7 +1000,7 @@ bool CAI_NPC::HasCondition( int iCondition, bool bUseIgnoreConditions )
 		return false;
 	}
 	
-	bool bReturn = m_ConditionsPreIgnore.IsBitSet(interrupt);
+	bool bReturn = m_ConditionsPreIgnore->IsBitSet(interrupt);
 	return (bReturn);
 }
 
@@ -2427,7 +2443,79 @@ bool CAI_NPC::ExitScriptedSequence()
 	return true;
 }
 
+bool CAI_NPC::CouldShootIfCrouching( CEntity *pTarget )
+{
+	bool bWasStanding = !IsCrouching();
+	Crouch();
 
+	Vector vecTarget;
+	if (GetActiveWeapon())
+	{
+		vecTarget = pTarget->BodyTarget( GetActiveWeapon()->GetLocalOrigin() );
+	}
+	else 
+	{
+		vecTarget = pTarget->BodyTarget( GetLocalOrigin() );
+	}
+
+	bool bResult = WeaponLOSCondition( GetLocalOrigin(), vecTarget, false );
+
+	if ( bWasStanding )
+	{
+		Stand();
+	}
+
+	return bResult;
+}
+
+int CAI_NPC::SelectFlinchSchedule()
+{
+	if ( !HasCondition(COND_HEAVY_DAMAGE) )
+		return SCHED_NONE;
+
+	// If we've flinched recently, don't do it again. A gesture flinch will be played instead.
+ 	if ( HasMemory(bits_MEMORY_FLINCHED) )
+		return SCHED_NONE;
+
+	if ( !CanFlinch() )
+		return SCHED_NONE;
+
+	// Robin: This was in the original HL1 flinch code. Do we still want it?
+	//if ( fabs( GetMotor()->DeltaIdealYaw() ) < (1.0 - m_flFieldOfView) * 60 ) // roughly in the correct direction
+	//	return SCHED_TAKE_COVER_FROM_ORIGIN;
+
+	// Heavy damage. Break out of my current schedule and flinch.
+	Activity iFlinchActivity = GetFlinchActivity( true, false );
+	if ( HaveSequenceForActivity( iFlinchActivity ) )
+		return SCHED_BIG_FLINCH;
+
+	/*
+	// Not used anymore, because gesture flinches are played instead for heavy damage
+	// taken shortly after we've already flinched full.
+	//
+	iFlinchActivity = GetFlinchActivity( false, false );
+	if ( HaveSequenceForActivity( iFlinchActivity ) )
+		return SCHED_SMALL_FLINCH;
+	*/
+
+	return SCHED_NONE;
+}
+
+const char *CAI_NPC::GetActivityName(int actID) 
+{
+	if ( actID == -1 )
+		return "ACT_INVALID";
+
+	// m_pActivitySR only contains public activities, ActivityList_NameForIndex() has them all
+	const char *name = ActivityList_NameForIndex(actID);	
+
+	if( !name )
+	{
+		AssertOnce( !"CAI_BaseNPC::GetActivityName() returning NULL!" );
+	}
+
+	return name;
+}
 
 
 
@@ -2451,5 +2539,4 @@ bool AIStrongOpt( void )
 {
 	return ai_strong_optimizations->GetBool();
 }
-
 

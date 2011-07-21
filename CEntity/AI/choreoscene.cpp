@@ -57,3 +57,9 @@ void CChoreoScene::SetBackground( bool bIsBackground )
 {
 	m_bIsBackground = bIsBackground;
 }
+
+int CChoreoScene::GetNumActors( void )
+{
+	return m_Actors.Size();
+}
+

@@ -11,7 +11,6 @@ typedef void (IGameSystem::*GameSystemFunc_t)();
 CUtlVector<IValveGameSystem*> *s_GameSystems = NULL;
 CPropData *g_PropDataSystem = NULL;
 
-
 class CHookedValveAutoSystem : public CValveBaseGameSystem
 {
 public:

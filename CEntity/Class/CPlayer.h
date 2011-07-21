@@ -50,6 +50,7 @@ public:
 	virtual void PickupObject( CBaseEntity *pObject, bool bLimitMassAndSize = true );
 	virtual Vector GetAutoaimVector_Float( float flScale );
 	virtual void ForceDropOfCarriedPhysObjects( CBaseEntity *pOnlyIfHoldingThis);
+	virtual void ModifyOrAppendPlayerCriteria( AI_CriteriaSet& set );
 
 public:
 	DECLARE_DEFAULTHEADER(GiveNamedItem, CBaseEntity *, (const char *szName, int iSubType));
@@ -61,6 +62,9 @@ public:
 	DECLARE_DEFAULTHEADER(PickupObject, void, (CBaseEntity *pObject, bool bLimitMassAndSize));
 	DECLARE_DEFAULTHEADER(GetAutoaimVector_Float, Vector, ( float flScale));
 	DECLARE_DEFAULTHEADER(ForceDropOfCarriedPhysObjects, void, (CBaseEntity *pOnlyIfHoldingThis));
+	DECLARE_DEFAULTHEADER(ModifyOrAppendPlayerCriteria, void, (AI_CriteriaSet& set));
+
+
 };
 
 class CPlayer : public Hooked_CPlayer

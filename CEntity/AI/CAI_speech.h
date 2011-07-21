@@ -243,8 +243,8 @@ private:
 public:
 	virtual void SetOuter( CBaseEntity *pOuter )	{ m_pOuter = pOuter; }
 
-	CEntity *		GetOuter() 			{ return CEntity::Instance(m_pOuter); }
-	const CEntity *	GetOuter() const 	{ return CEntity::Instance(m_pOuter); }
+	CFlex *		GetOuter() 			{ return (CFlex *)CEntity::Instance(m_pOuter); }
+	const CFlex *	GetOuter() const 	{ return (CFlex *)CEntity::Instance(m_pOuter); }
 
 private:
 	CHandle<CBaseEntity>	m_pOuter;

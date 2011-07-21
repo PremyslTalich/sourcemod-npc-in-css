@@ -1658,3 +1658,20 @@ bool CAI_Navigator::GetPointAlongPath( Vector *pResult, float distance, bool fRe
 	return true;
 }
 
+float CAI_Navigator::GetPathTimeToGoal()
+{
+	if ( GetOuter()->m_flGroundSpeed )
+		return (GetPathDistanceToGoal() / GetOuter()->m_flGroundSpeed);
+	return 0;
+}
+
+void CAI_Navigator::SetArrivalDistance( float flDistance )
+{
+	GetPath()->SetGoalStoppingDistance( flDistance );
+}
+
+float CAI_Navigator::GetPathDistanceToGoal()
+{
+	return GetPath()->GetPathDistanceToGoal(GetAbsOrigin());
+}
+

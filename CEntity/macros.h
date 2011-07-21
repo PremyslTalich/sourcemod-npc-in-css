@@ -676,5 +676,28 @@ ret (type::* type::name##_Actual) params = NULL;
 	name##_CDetour->EnableDetour();
 
 
+#define FindValveGameSystem(ptr, bclass, systemname) \
+	META_CONPRINTF("[%s] Getting Valve System %s - ",g_Monster.GetLogTag(),#ptr);\
+	ptr = NULL;\
+	for(int i=0;i<s_GameSystems->Count();i++)\
+	{\
+		IValveGameSystem *vsystem = s_GameSystems->Element(i);\
+		if(vsystem)\
+		{\
+			char const *name = vsystem->Name();\
+			if(strcmp(name, systemname) == 0)\
+			{\
+				ptr = (bclass)(vsystem);\
+			}\
+		}\
+	}\
+	if(ptr == NULL) {\
+		META_CONPRINT("Fail\n");\
+		g_pSM->LogError(myself,"Unable getting Valve System %s", systemname);\
+		return false;\
+	}\
+	META_CONPRINT("Success\n");\
+
+
 
 #endif // _INCLUDE_MACROS_H_

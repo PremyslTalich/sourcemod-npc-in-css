@@ -401,9 +401,9 @@ public:
 	{
 	}
 	
-	virtual void PostInit()
+	virtual void CE_PostInit()
 	{
-		BaseClass::PostInit();
+		BaseClass::CE_PostInit();
 
 		CreateBehaviors();
 	}

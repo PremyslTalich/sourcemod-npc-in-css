@@ -224,9 +224,9 @@ public:
 	CAI_BlendedMotor *		GetBlendedMotor()		{ return assert_cast<CAI_BlendedMotor *>(this->GetMotor()); }
 
 	/* Replace Original pointer */
-	virtual void PostInit()
+	virtual void CE_PostInit()
 	{
-		BaseClass::PostInit();
+		BaseClass::CE_PostInit();
 
 		CreateMotor();
 		CreateNavigator();

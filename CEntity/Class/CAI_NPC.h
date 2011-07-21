@@ -673,6 +673,15 @@ public:
 
 	bool				CrouchIsDesired( void ) const;
 
+	float				GetTimeScheduleStarted() const				{ return m_ScheduleState.ptr->timeStarted; }
+
+	void				SetLastAttackTime( float time)	{ m_flLastAttackTime = time; }
+
+	float				GetLastAttackTime() const { return m_flLastAttackTime; }
+	float				GetLastDamageTime() const { return m_flLastDamageTime; }
+	float				GetLastPlayerDamageTime() const { return m_flLastPlayerDamageTime; }
+	float				GetLastEnemyTime() const { return m_flLastEnemyTime; }
+
 protected:
 	void				ChainStartTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; StartTask( (const Task_t *)&tempTask ); }
 	void				ChainRunTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; RunTask( (const Task_t *)	&tempTask );	}
@@ -873,6 +882,10 @@ public:
 	virtual void BeginRappel();
 	virtual void DesireCrouch( void );
 	virtual bool WeaponLOSCondition(const Vector &ownerPos, const Vector &targetPos, bool bSetConditions);
+	virtual bool OnBeginMoveAndShoot( void );
+	virtual const char *GetSquadSlotDebugName( int iSquadSlot );
+	virtual void OnEndMoveAndShoot( void );
+	virtual bool TestShootPosition(const Vector &vecShootPos, const Vector &targetPos );
 
 public: // sign
 	void CallNPCThink();
@@ -921,6 +934,8 @@ public:
 	static bool			FindSpotForNPCInRadius( Vector *pResult, const Vector &vStartPos, CAI_NPC *pNPC, float radius, bool bOutOfPlayerViewcone = false );
 
 	static string_t gm_iszPlayerSquad;
+
+	static const char*	GetActivityName	(int actID);
 
 public:
 	static void InitSchedulingTables();
@@ -1117,6 +1132,11 @@ public:
 	DECLARE_DEFAULTHEADER(BeginRappel, void,());
 	DECLARE_DEFAULTHEADER(DesireCrouch, void, ( void ));
 	DECLARE_DEFAULTHEADER(WeaponLOSCondition, bool, (const Vector &ownerPos, const Vector &targetPos, bool bSetConditions));
+	DECLARE_DEFAULTHEADER(OnBeginMoveAndShoot, bool, ( void ));
+	DECLARE_DEFAULTHEADER(GetSquadSlotDebugName, const char*, ( int iSquadSlot ));
+	DECLARE_DEFAULTHEADER(OnEndMoveAndShoot, void,( void ));
+	DECLARE_DEFAULTHEADER(TestShootPosition, bool, (const Vector &vecShootPos, const Vector &targetPos ));
+
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetSchedule_Int, bool, (int localScheduleID));
@@ -1211,7 +1231,8 @@ protected:
 	DECLARE_DATAMAP(float, m_flSceneTime);
 	DECLARE_DATAMAP(bool, m_bCrouchDesired);
 	DECLARE_DATAMAP(bool, m_bForceCrouch);
-
+	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_ConditionsPreIgnore);
+	DECLARE_DATAMAP(float, m_flLastEnemyTime);
 
 	friend class CAI_SchedulesManager;
 	friend class CEAI_ScriptedSequence;

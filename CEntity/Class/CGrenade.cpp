@@ -14,7 +14,7 @@ DEFINE_PROP(m_flDamage, CE_Grenade);
 DEFINE_PROP(m_DmgRadius, CE_Grenade);
 DEFINE_PROP(m_hThrower, CE_Grenade);
 
-void CE_Grenade::PostInit()
+void CE_Grenade::CE_PostInit()
 {
 	m_hOriginalThrower.offset = m_hThrower.offset + 4;
 	m_hOriginalThrower.ptr = (CFakeHandle *)(((uint8_t *)(BaseEntity())) + m_hOriginalThrower.offset);

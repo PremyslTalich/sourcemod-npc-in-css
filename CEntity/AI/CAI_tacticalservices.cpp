@@ -3,6 +3,11 @@
 #include "CAI_tacticalservices.h"
 #include "CAI_Node.h"
 #include "CAI_Network.h"
+#include "CAI_utils.h"
+
+
+#define	COVER_CHECKS	5// how many checks are made
+#define COVER_DELTA		48// distance between checks
 
 
 bool CAI_TacticalServices::FindLos(const Vector &threatPos, const Vector &threatEyePos, float minThreatDist, float maxThreatDist, float blockTime, Vector *pResult)
@@ -27,7 +32,6 @@ bool CAI_TacticalServices::FindLos(const Vector &threatPos, const Vector &threat
 
 int CAI_TacticalServices::FindLosNode(const Vector &vThreatPos, const Vector &vThreatEyePos, float flMinThreatDist, float flMaxThreatDist, float flBlockTime, FlankType_t eFlankType, const Vector &vecFlankRefPos, float flFlankParam )
 {
-	META_CONPRINTF("FindLosNode\n");
 	return g_helpfunc.CAI_TacticalServices_FindLosNode(this, vThreatPos, vThreatEyePos, flMinThreatDist, flMaxThreatDist, flBlockTime, eFlankType, vecFlankRefPos, flFlankParam);
 }
 
@@ -58,4 +62,107 @@ int CAI_TacticalServices::FindCoverNode(const Vector &vNearPos, const Vector &vT
 {
 	return g_helpfunc.CAI_TacticalServices_FindCoverNode(this, vNearPos, vThreatPos, vThreatEyePos, flMinDist, flMaxDist);
 }
+
+extern ConVar *ai_find_lateral_los;
+
+bool CAI_TacticalServices::FindLateralLos( const Vector &vecThreat, Vector *pResult )
+{
+	if( !m_bAllowFindLateralLos )
+	{
+		return false;
+	}
+
+	MARK_TASK_EXPENSIVE();
+
+	Vector	vecLeftTest;
+	Vector	vecRightTest;
+	Vector	vecStepRight;
+	Vector  vecCheckStart;
+	bool	bLookingForEnemy = GetEnemy() && VectorsAreEqual(vecThreat, GetEnemy()->EyePosition(), 0.1f);
+	int		i;
+
+	if(  !bLookingForEnemy || GetOuter()->HasCondition(COND_SEE_ENEMY) || GetOuter()->HasCondition(COND_HAVE_ENEMY_LOS) || 
+		 GetOuter()->GetTimeScheduleStarted() == gpGlobals->curtime ) // Conditions get nuked before tasks run, assume should try
+	{
+		// My current position might already be valid.
+		if ( TestLateralLos(vecThreat, GetLocalOrigin()) )
+		{
+			*pResult = GetLocalOrigin();
+			return true;
+		}
+	}
+
+	if( !ai_find_lateral_los->GetBool() )
+	{
+		// Allows us to turn off lateral LOS at the console. Allow the above code to run 
+		// just in case the NPC has line of sight to begin with.
+		return false;
+	}
+
+	int iChecks = COVER_CHECKS;
+	int iDelta = COVER_DELTA;
+
+	// If we're limited in how far we're allowed to move laterally, don't bother checking past it
+	int iMaxLateralDelta = (int)GetOuter()->GetMaxTacticalLateralMovement();
+	if ( iMaxLateralDelta != MAXTACLAT_IGNORE && iMaxLateralDelta < iDelta )
+	{
+		iChecks = 1;
+		iDelta = iMaxLateralDelta;
+	}
+
+	Vector right;
+	AngleVectors( GetLocalAngles(), NULL, &right, NULL );
+	vecStepRight = right * iDelta;
+	vecStepRight.z = 0;
+
+	vecLeftTest = vecRightTest = GetLocalOrigin();
+ 	vecCheckStart = vecThreat;
+
+	for ( i = 0 ; i < iChecks; i++ )
+	{
+		vecLeftTest = vecLeftTest - vecStepRight;
+		vecRightTest = vecRightTest + vecStepRight;
+
+		if (TestLateralLos( vecCheckStart, vecLeftTest ))
+		{
+			*pResult = vecLeftTest;
+			return true;
+		}
+
+		if (TestLateralLos( vecCheckStart, vecRightTest ))
+		{
+			*pResult = vecRightTest;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool CAI_TacticalServices::TestLateralLos( const Vector &vecCheckStart, const Vector &vecCheckEnd )
+{
+	trace_t	tr;
+
+	// it's faster to check the SightEnt's visibility to the potential spot than to check the local move, so we do that first.
+	AI_TraceLOS(  vecCheckStart, vecCheckEnd + GetOuter()->GetViewOffset(), NULL, &tr );
+
+	if (tr.fraction == 1.0)
+	{
+		if ( GetOuter()->IsValidShootPosition( vecCheckEnd, NULL, NULL ) )
+			{
+				if (GetOuter()->TestShootPosition(vecCheckEnd,vecCheckStart))
+				{
+					AIMoveTrace_t moveTrace;
+					GetOuter()->GetMoveProbe()->MoveLimit( NAV_GROUND, GetLocalOrigin(), vecCheckEnd, MASK_NPCSOLID, NULL, &moveTrace );
+					if (moveTrace.fStatus == AIMR_OK)
+					{
+						return true;
+					}
+				}
+		}
+	}
+
+	return false;
+}
+
 

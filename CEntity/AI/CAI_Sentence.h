@@ -132,7 +132,7 @@ inline int CAI_SentenceBase::GetVoicePitch() const
 template< class NPC_CLASS >
 void CAI_Sentence< NPC_CLASS >::Init( NPC_CLASS *pOuter, const char *pGameSound )
 {
-	SetOuter( pOuter );
+	SetOuter( pOuter->BaseEntity() );
 
 	if ( m_voicePitchMin <= 0 || m_voicePitchMax <= 0 )
 	{
@@ -148,9 +148,9 @@ void CAI_Sentence< NPC_CLASS >::Init( NPC_CLASS *pOuter, const char *pGameSound 
 	}
 	
 	// Select a voice pitch
-	if ( random->RandomInt(0,1) )
+	if ( enginerandom->RandomInt(0,1) )
 	{
-		SetVoicePitch( random->RandomInt( m_voicePitchMin, m_voicePitchMax ) );
+		SetVoicePitch( enginerandom->RandomInt( m_voicePitchMin, m_voicePitchMax ) );
 	}
 	else
 	{

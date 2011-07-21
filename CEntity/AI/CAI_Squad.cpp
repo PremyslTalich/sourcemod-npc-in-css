@@ -354,3 +354,83 @@ bool CAI_Squad::SquadIsMember( CEntity *pMember )
 
 	return false;
 }
+
+void CAI_Squad::SquadRemember( int iMemory )
+{
+	for (int i = 0; i < m_SquadMembers.Count(); i++)
+	{
+		if (m_SquadMembers[i] != NULL )
+		{
+			CAI_NPC* pSquadMem = (CAI_NPC *)CEntity::Instance(m_SquadMembers[i]);
+			pSquadMem->Remember( iMemory );
+		}
+	}
+}
+
+CAI_NPC *CAI_Squad::GetLeader( void )
+{
+	CAI_NPC *pLeader = NULL;
+	int nSilentMembers = 0;
+	for ( int i = 0; i < m_SquadMembers.Count(); i++ )
+	{
+		if ( !IsSilentMember( m_SquadMembers[i] ) )
+		{
+			if ( !pLeader )
+				pLeader = (CAI_NPC *)CEntity::Instance(m_SquadMembers[i]);
+		}
+		else
+		{
+			nSilentMembers++;
+		}
+	}
+	return ( m_SquadMembers.Count() - nSilentMembers > 1) ? pLeader : NULL;
+}
+
+bool CAI_Squad::IsLeader( CAI_NPC *pNPC )
+{
+	if ( IsSilentMember( pNPC ) )
+		return false;
+
+	if ( !pNPC )
+		return false;
+
+	if ( GetLeader() == pNPC )
+		return true;
+
+	return false;
+}
+
+CAI_NPC *CAI_Squad::SquadMemberInRange( const Vector &vecLocation, float flDist )
+{
+	for (int i = 0; i < m_SquadMembers.Count(); i++)
+	{
+		CAI_NPC *npc = (CAI_NPC *)CEntity::Instance(m_SquadMembers[i]);
+		if (npc != NULL && (vecLocation - npc->GetAbsOrigin() ).Length2D() <= flDist)
+			return npc;
+	}
+	return false;
+}
+
+CAI_NPC *CAI_Squad::GetSquadMemberNearestTo( const Vector &vecLocation )
+{
+	CAI_NPC *pNearest = NULL;
+	float		flNearest = FLT_MAX;
+
+	for ( int i = 0; i < m_SquadMembers.Count(); i++ )
+	{
+		float flDist;
+		CAI_NPC *npc = (CAI_NPC *)CEntity::Instance(m_SquadMembers[i]);
+
+		flDist = npc->GetAbsOrigin().DistToSqr( vecLocation );
+
+		if( flDist < flNearest )
+		{
+			flNearest = flDist;
+			pNearest = npc;
+		}
+	}
+
+	Assert( pNearest != NULL );
+	return pNearest;
+}
+

@@ -260,7 +260,7 @@ IServerNetworkable *CEntityManager::Create(const char *pClassName)
 
 	pEntity->SetClassname(pClassName);
 
-	pEntity->PostInit();
+	pEntity->CE_PostInit();
 
 	return NULL;
 }

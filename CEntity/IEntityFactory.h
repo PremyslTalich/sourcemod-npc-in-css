@@ -66,7 +66,7 @@ public:
 		}
 
 		T* pOurEnt = new T();
-		pOurEnt->Init(pEdict, pEnt);
+		pOurEnt->CE_Init(pEdict, pEnt);
 
 		return pOurEnt;
 	}

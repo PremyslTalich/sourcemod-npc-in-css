@@ -17,17 +17,25 @@ public:
 	virtual void CancelPlayback( void );
 	virtual void StartPlayback( void );
 	virtual float EstimateLength( void );
+	virtual CBaseEntity	*FindNamedActor_I( int index );
 
 public:
 	void SetBackground( bool bIsBackground );
 	void SetRecipientFilter( IRecipientFilter *filter );
 	
-	void	SetBreakOnNonIdle( bool bBreakOnNonIdle ) { m_bBreakOnNonIdle = bBreakOnNonIdle; }
+	void SetBreakOnNonIdle( bool bBreakOnNonIdle ) { m_bBreakOnNonIdle = bBreakOnNonIdle; }
+	bool ShouldBreakOnNonIdle( void ) { return m_bBreakOnNonIdle; }
+
+	bool IsPlayingBack() const			{ return m_bIsPlayingBack; }
+	bool InvolvesActor( CEntity *pActor );
+
+	CChoreoScene *GetScene() { return m_pScene; }
 
 public:
 	DECLARE_DEFAULTHEADER(CancelPlayback, void, ());
 	DECLARE_DEFAULTHEADER(StartPlayback, void, ());
 	DECLARE_DEFAULTHEADER(EstimateLength, float, ());
+	DECLARE_DEFAULTHEADER(FindNamedActor_I, CBaseEntity *, (int index));
 
 public:
 	DECLARE_SENDPROP(bool, m_bMultiplayer);
@@ -36,7 +44,8 @@ public:
 	DECLARE_DATAMAP(bool, m_bBreakOnNonIdle);
 	DECLARE_DATAMAP_OFFSET(CRecipientFilter *, m_pRecipientFilter);
 	DECLARE_DATAMAP_OFFSET(CChoreoScene *, m_pScene);
-
+	DECLARE_DATAMAP_OFFSET(bool, m_bIsPlayingBack);
+	DECLARE_DATAMAP(string_t, m_iszSceneFile);
 
 };
 
@@ -55,6 +64,9 @@ SH_DECL_MANUALHOOK0(EstimateLength, 0, 0, 0, float);
 DECLARE_HOOK(EstimateLength, CE_CSceneEntity);
 DECLARE_DEFAULTHANDLER(CE_CSceneEntity, EstimateLength, float, (), ());
 
+SH_DECL_MANUALHOOK1(FindNamedActor_I, 0, 0, 0, CBaseEntity *, int);
+DECLARE_HOOK(FindNamedActor_I, CE_CSceneEntity);
+DECLARE_DEFAULTHANDLER(CE_CSceneEntity, FindNamedActor_I, CBaseEntity *, (int index), (index));
 
 
 //Sendprops
@@ -64,6 +76,8 @@ DEFINE_PROP(m_bMultiplayer,CE_CSceneEntity);
 DEFINE_PROP(m_bBreakOnNonIdle,CE_CSceneEntity);
 DEFINE_PROP(m_pRecipientFilter,CE_CSceneEntity);
 DEFINE_PROP(m_pScene,CE_CSceneEntity);
+DEFINE_PROP(m_bIsPlayingBack,CE_CSceneEntity);
+DEFINE_PROP(m_iszSceneFile,CE_CSceneEntity);
 
 
 
@@ -80,7 +94,6 @@ public:
 
 public:
 	DECLARE_DATAMAP(char *, m_szInstanceFilename);
-	DECLARE_DATAMAP(string_t, m_iszSceneFile);
 	DECLARE_DATAMAP(CFakeHandle, m_hOwner);
 	DECLARE_DATAMAP(bool, m_bHadOwner);
 	DECLARE_DATAMAP(float, m_flPostSpeakDelay);
@@ -94,7 +107,6 @@ CE_LINK_ENTITY_TO_CLASS(CInstancedSceneEntity, CE_CInstancedSceneEntity);
 
 //DataMap
 DEFINE_PROP(m_szInstanceFilename,CE_CInstancedSceneEntity);
-DEFINE_PROP(m_iszSceneFile,CE_CInstancedSceneEntity);
 DEFINE_PROP(m_hOwner,CE_CInstancedSceneEntity);
 DEFINE_PROP(m_bHadOwner,CE_CInstancedSceneEntity);
 DEFINE_PROP(m_bIsBackground,CE_CInstancedSceneEntity);
@@ -207,6 +219,23 @@ void CE_CSceneEntity::SetBackground( bool bIsBackground )
 	}
 }
 
+bool CE_CSceneEntity::InvolvesActor( CEntity *pActor )
+{
+ 	if ( GetScene() != NULL )
+		return false;	
+
+	int i;
+	for ( i = 0 ; i < GetScene()->GetNumActors(); i++ )
+	{
+		CFlex *pTestActor = (CFlex *)CEntity::Instance(FindNamedActor_I( i ));
+		if ( !pTestActor )
+			continue;
+
+		if ( pTestActor == pActor )
+			return true;
+	}
+	return false;
+}
 
 
 //-----------------------------------------------------------------------------
@@ -225,6 +254,118 @@ float GetSceneDuration( char const *pszScene )
 	}
 
 	return (float)msecs * 0.001f;
+}
+
+
+class CE_CSceneManager : public CEntity
+{
+public:
+	DECLARE_CLASS( CE_CSceneManager, CEntity );
+
+public:
+	bool			IsRunningScriptedScene( CFlex *pActor, bool bIgnoreInstancedScenes );
+	void			RemoveActorFromScenes( CFlex *pActor, bool bInstancedOnly, bool bNonIdleOnly, const char *pszThisSceneOnly );
+
+private:
+	DECLARE_DATAMAP(CUtlVector< CEFakeHandle< CE_CSceneEntity > >	, m_ActiveScenes);
+
+
+};
+
+CE_LINK_ENTITY_TO_CLASS(CSceneManager, CE_CSceneManager);
+
+//DataMap
+DEFINE_PROP(m_ActiveScenes,CE_CSceneManager);
+
+
+
+CE_CSceneManager *GetSceneManager()
+{
+	// Create it if it doesn't exist
+	static CEFakeHandle< CE_CSceneManager >	s_SceneManager;
+	if ( s_SceneManager == NULL )
+	{
+		CE_CSceneManager *cent = ( CE_CSceneManager * )CreateEntityByName( "scene_manager" );
+		Assert( cent );
+		if ( cent )
+		{
+			cent->Spawn();
+			s_SceneManager.Set(cent->BaseEntity());
+		}
+	}
+
+	Assert( s_SceneManager );
+	return s_SceneManager;
+}
+
+bool IsRunningScriptedScene( CFlex *pActor, bool bIgnoreInstancedScenes )
+{
+	return GetSceneManager()->IsRunningScriptedScene( pActor, bIgnoreInstancedScenes );
+}
+
+void RemoveActorFromScriptedScenes( CFlex *pActor, bool instancedscenesonly, bool nonidlescenesonly, const char *pszThisSceneOnly )
+{
+	GetSceneManager()->RemoveActorFromScenes( pActor, instancedscenesonly, nonidlescenesonly, pszThisSceneOnly );
+}
+
+
+
+
+bool CE_CSceneManager::IsRunningScriptedScene( CFlex *pActor, bool bIgnoreInstancedScenes )
+{
+	int c = m_ActiveScenes->Count();
+	for ( int i = 0; i < c; i++ )
+	{
+		CE_CSceneEntity *pScene = m_ActiveScenes->Element(i).Get();
+		if ( !pScene ||
+			 !pScene->IsPlayingBack() ||
+			 ( bIgnoreInstancedScenes && dynamic_cast<CE_CInstancedSceneEntity *>(pScene) != NULL )
+			)
+		{
+			continue;
+		}
+		
+		if ( pScene->InvolvesActor( pActor ) )
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void CE_CSceneManager::RemoveActorFromScenes( CFlex *pActor, bool bInstancedOnly, bool bNonIdleOnly, const char *pszThisSceneOnly )
+{
+	int c = m_ActiveScenes->Count();
+	for ( int i = 0; i < c; i++ )
+	{
+		CE_CSceneEntity *pScene = m_ActiveScenes->Element(i).Get();
+		if ( !pScene )
+		{
+			continue;
+		}
+		
+		// If only stopping instanced scenes, then skip it if it can't cast to an instanced scene
+		if ( bInstancedOnly && 
+			( dynamic_cast< CE_CInstancedSceneEntity * >( pScene ) == NULL ) )
+		{
+			continue;
+		}
+
+		if ( bNonIdleOnly && !pScene->ShouldBreakOnNonIdle() )
+			continue;
+
+		if ( pScene->InvolvesActor( pActor ) )
+		{
+			if ( pszThisSceneOnly && pszThisSceneOnly[0] )
+			{
+				string_t str = pScene->m_iszSceneFile;
+				if ( Q_strcmp( pszThisSceneOnly, STRING(str) ) )
+					continue;
+			}
+
+			pScene->CancelPlayback();
+		}
+	}
 }
 
 

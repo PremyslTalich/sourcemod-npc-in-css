@@ -80,6 +80,7 @@ public:
 	void SetEventIndexForSequence( mstudioseqdesc_t &seqdesc );
 	string_t AllocPooledString( const char * pszValue );
 	void PrecacheInstancedScene( char const *pszScene );
+	const char *ActivityList_NameForIndex( int activityIndex );
 
 public: //CAI_HintManager
 	CEntity *CAI_HintManager_FindHint(CBaseEntity *pNPC, const Vector &position, const CHintCriteria &hintCriteria );

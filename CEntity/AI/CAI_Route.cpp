@@ -1,5 +1,7 @@
 
 #include "CAI_Route.h"
+#include "ai_routedist.h"
+
 
 AI_Waypoint_t CAI_Path::gm_InvalidWaypoint( Vector(0,0,0), 0, NAV_NONE, 0, 0 );
 
@@ -470,3 +472,42 @@ void CAI_Path::PrependWaypoint( const Vector &newPoint, Navigation_t navType, un
 	AssertRouteValid( m_Waypoints.GetFirst() );
 }
 
+float CAI_Path::GetPathDistanceToGoal( const Vector &startPos )
+{
+	AI_Waypoint_t *pCurrent = GetCurWaypoint();
+	if ( pCurrent )
+	{
+		return ( GetPathLength() + ComputePathDistance(pCurrent->NavType(), startPos, pCurrent->GetPos()) );
+	}
+	return 0;
+}
+
+float CAI_Path::GetPathLength()
+{
+	AI_Waypoint_t *pLast = m_Waypoints.GetLast();
+	if ( pLast && pLast->flPathDistGoal == -1 )
+	{
+		ComputeRouteGoalDistances( pLast );
+	}
+	AI_Waypoint_t *pCurrent = GetCurWaypoint();
+	return ( ( pCurrent  ) ? pCurrent->flPathDistGoal : 0 );
+}
+
+void CAI_Path::ComputeRouteGoalDistances(AI_Waypoint_t *pGoalWaypoint)
+{
+	// The goal distance is the distance from any waypoint to the goal waypoint
+
+	// Backup through the list and calculate distance to goal
+	AI_Waypoint_t *pPrev;
+	AI_Waypoint_t *pCurWaypoint = pGoalWaypoint;
+	pCurWaypoint->flPathDistGoal = 0;
+	while (pCurWaypoint->GetPrev())
+	{
+		pPrev = pCurWaypoint->GetPrev();
+
+		float flWaypointDist = ComputePathDistance(pCurWaypoint->NavType(), pPrev->GetPos(), pCurWaypoint->GetPos());
+		pPrev->flPathDistGoal = pCurWaypoint->flPathDistGoal + flWaypointDist;
+		
+		pCurWaypoint = pPrev;
+	}
+}

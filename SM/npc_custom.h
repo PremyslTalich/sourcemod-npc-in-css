@@ -20,7 +20,7 @@ public:
 	CE_NPC_Custom();
 	~CE_NPC_Custom();
 
-	void PostInit();
+	void CE_PostInit();
 
 	void Spawn();
 

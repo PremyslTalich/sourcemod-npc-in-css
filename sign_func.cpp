@@ -47,6 +47,7 @@ extern CUtlVector<IValveGameSystem*> *s_GameSystems;
 extern CCheckClient *g_CheckClient;
 extern CFlexSceneFileManager *g_FlexSceneFileManager;
 
+
 void InitDefaultAIRelationships();
 
 SH_DECL_MANUALHOOK0(GameRules_FAllowNPCsHook, 0, 0, 0, bool);
@@ -85,6 +86,11 @@ static HelperSystem g_helpersystem("HelperSystem");
 string_t AllocPooledString( const char * pszValue )
 {
 	return g_helpfunc.AllocPooledString(pszValue);
+}
+
+string_t FindPooledString( const char *pszValue )
+{
+	return NULL_STRING;
 }
 
 HelperFunction::HelperFunction()
@@ -163,28 +169,8 @@ void HelperFunction::Shutdown()
 	SH_REMOVE_MANUALHOOK_MEMFUNC(OnLadderHook, g_CGameMovement, &g_helpfunc, &HelperFunction::OnLadder, false);
 }
 
-#define FindValveGameSystem(ptr, bclass, systemname) \
-	META_CONPRINTF("[%s] Getting Valve System %s - ",g_Monster.GetLogTag(),#ptr);\
-	ptr = NULL;\
-	for(int i=0;i<s_GameSystems->Count();i++)\
-	{\
-		IValveGameSystem *vsystem = s_GameSystems->Element(i);\
-		if(vsystem)\
-		{\
-			char const *name = vsystem->Name();\
-			if(strcmp(name, systemname) == 0)\
-			{\
-				ptr = (bclass)(vsystem);\
-			}\
-		}\
-	}\
-	if(ptr == NULL) {\
-		META_CONPRINT("Fail\n");\
-		g_pSM->LogError(myself,"Unable getting Valve System %s", systemname);\
-		return false;\
-	}\
-	META_CONPRINT("Success\n");\
 
+extern bool Get_g_pResponseSystem();
 
 bool HelperFunction::FindAllValveGameSystem()
 {
@@ -195,6 +181,8 @@ bool HelperFunction::FindAllValveGameSystem()
 	FindValveGameSystem(g_SoundEmitterSystem, CValveBaseGameSystem *, "CSoundEmitterSystem");
 
 	FindValveGameSystem(g_FlexSceneFileManager, CFlexSceneFileManager *, "CFlexSceneFileManager");
+
+	bool ret = Get_g_pResponseSystem();
 
 	return true;
 }
@@ -1608,6 +1596,23 @@ string_t HelperFunction::AllocPooledString( const char * pszValue )
 	typedef string_t (*_func)(const char * );
     _func thisfunc = (_func)func;
     return thisfunc(pszValue);
+}
+
+const char *HelperFunction::ActivityList_NameForIndex( int activityIndex )
+{
+	static void *func = NULL;
+	if(!func)
+	{
+		if(!g_pGameConf->GetMemSig("ActivityList_NameForIndex", &func))
+		{
+			assert(0);
+			return NULL;
+		}
+	}
+
+	typedef const char *(*_func)(int );
+    _func thisfunc = (_func)func;
+    return thisfunc(activityIndex);
 }
 
 void HelperFunction::PrecacheInstancedScene( char const *pszScene )

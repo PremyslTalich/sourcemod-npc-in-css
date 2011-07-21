@@ -179,6 +179,9 @@ class CEntity;
 class CECollisionProperty;
 class CAI_NPC;
 class CE_CSkyCamera;
+class IResponseSystem;
+
+#define CONCEPT_WEIGHT 5.0f
 
 #define VPHYSICS_MAX_OBJECT_LIST_COUNT	1024
 
@@ -200,6 +203,17 @@ enum EntityEvent_t
 	ENTITY_EVENT_WATER_UNTOUCH,			// No data needed
 	ENTITY_EVENT_PARENT_CHANGED,		// No data needed
 };
+
+
+struct ResponseContext_t
+{
+	DECLARE_SIMPLE_DATADESC();
+
+	string_t		m_iszName;
+	string_t		m_iszValue;
+	float			m_fExpirationTime;		// when to expire context (0 == never)
+};
+
 
 
 typedef void (CEntity::*BASEPTR)(void);
@@ -260,6 +274,7 @@ class CCombatCharacter;
 class CAnimating;
 
 
+
 class CEntity // : public CBaseEntity  - almost.
 {
 public: // CEntity
@@ -270,8 +285,8 @@ public: // CEntity
 
 	virtual ~CEntity();
 
-	virtual void Init(edict_t *pEdict, CBaseEntity *pBaseEntity);
-	virtual void PostInit() {}
+	virtual void CE_Init(edict_t *pEdict, CBaseEntity *pBaseEntity);
+	virtual void CE_PostInit() {}
 
 	void InitHooks();
 	void InitProps();
@@ -343,6 +358,7 @@ public: // CEntity
 
 	static const trace_t *GetTouchTrace( void );
 
+	static float GetSoundDuration( const char *soundname, char const *actormodel );
 
 public: // CBaseEntity virtuals
 	virtual bool IsCustomEntity() { return false; }
@@ -422,6 +438,7 @@ public: // CBaseEntity virtuals
 	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
 	virtual bool CanBeSeenBy( CBaseEntity *pNPC );
 	virtual bool IsViewable();
+	virtual IResponseSystem *GetResponseSystem();
 
 public:
 	void SetLocalOrigin(const Vector& origin);
@@ -702,6 +719,10 @@ public: // custom
 	int			GetNextThinkTick( const char *szContext = NULL );
 
 	void		GenderExpandString( char const *in, char *out, int maxlen );
+	
+	void		AddContext( const char *nameandvalue );
+	int			FindContextByName( const char *name ) const;
+	const char *GetContextName( int index ) const;
 
 private:
 	bool		NameMatchesComplex( const char *pszNameOrWildcard );
@@ -783,6 +804,7 @@ public: // All the internal hook implementations for the above virtuals
 	DECLARE_DEFAULTHEADER(SetTransmit, void, ( CCheckTransmitInfo *pInfo, bool bAlways ));
 	DECLARE_DEFAULTHEADER(CanBeSeenBy, bool, ( CBaseEntity *pNPC ));
 	DECLARE_DEFAULTHEADER(IsViewable, bool, ());
+	DECLARE_DEFAULTHEADER(GetResponseSystem, IResponseSystem *, ());
 
 public:
 	DECLARE_DEFAULTHEADER_DETOUR(SetLocalOrigin, void, (const Vector& origin));
@@ -857,7 +879,7 @@ protected: //Datamaps
 	DECLARE_DATAMAP(float, m_flMoveDoneTime);
 	DECLARE_DATAMAP(float, m_flLocalTime);
 	DECLARE_DATAMAP(CUtlVector< thinkfunc_t >, m_aThinkFunctions);
-
+	DECLARE_DATAMAP(CUtlVector< ResponseContext_t >, m_ResponseContexts);
 
 public:
 	DECLARE_DATAMAP(char, m_lifeState);

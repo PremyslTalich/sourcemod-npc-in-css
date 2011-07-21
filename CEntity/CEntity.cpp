@@ -29,7 +29,7 @@
 #include "CE_recipientfilter.h"
 #include "groundlink.h"
 #include "CSkyCamera.h"
-
+#include "soundchars.h"
 
 
 IHookTracker *IHookTracker::m_Head = NULL;
@@ -38,6 +38,15 @@ IDetourTracker *IDetourTracker::m_Head = NULL;
 ISigOffsetTracker *ISigOffsetTracker::m_Head = NULL;
 
 ISaveRestoreOps *eventFuncs = NULL;
+
+BEGIN_SIMPLE_DATADESC( ResponseContext_t )
+
+	DEFINE_FIELD( m_iszName,			FIELD_STRING ),
+	DEFINE_FIELD( m_iszValue,			FIELD_STRING ),
+	DEFINE_FIELD( m_fExpirationTime,	FIELD_TIME ),
+
+END_DATADESC()
+
 
 SH_DECL_MANUALHOOK3_void(Teleport, 0, 0, 0, const Vector *, const QAngle *, const Vector *);
 SH_DECL_MANUALHOOK0_void(UpdateOnRemove, 0, 0, 0);
@@ -115,6 +124,7 @@ SH_DECL_MANUALHOOK0(UpdateTransmitState, 0, 0, 0, int);
 SH_DECL_MANUALHOOK2_void(SetTransmit, 0, 0, 0, CCheckTransmitInfo *, bool);
 SH_DECL_MANUALHOOK1(CanBeSeenBy, 0, 0, 0, bool, CBaseEntity *);
 SH_DECL_MANUALHOOK0(IsViewable, 0, 0, 0, bool);
+SH_DECL_MANUALHOOK0(GetResponseSystem, 0, 0, 0, IResponseSystem *);
 
 
 
@@ -194,6 +204,7 @@ DECLARE_HOOK(UpdateTransmitState, CEntity);
 DECLARE_HOOK(SetTransmit, CEntity);
 DECLARE_HOOK(CanBeSeenBy, CEntity);
 DECLARE_HOOK(IsViewable, CEntity);
+DECLARE_HOOK(GetResponseSystem, CEntity);
 
 
 DECLARE_DEFAULTHANDLER_void(CEntity, Teleport, (const Vector *origin, const QAngle* angles, const Vector *velocity), (origin, angles, velocity));
@@ -262,6 +273,9 @@ DECLARE_DEFAULTHANDLER(CEntity,UpdateTransmitState, int, (), ());
 DECLARE_DEFAULTHANDLER_void(CEntity,SetTransmit, (CCheckTransmitInfo *pInfo, bool bAlways), (pInfo, bAlways));
 DECLARE_DEFAULTHANDLER(CEntity,CanBeSeenBy, bool, (CBaseEntity *pNPC), (pNPC));
 DECLARE_DEFAULTHANDLER(CEntity,IsViewable, bool, (), ());
+DECLARE_DEFAULTHANDLER(CEntity,GetResponseSystem, IResponseSystem *, (), ());
+
+
 
 //Sendprops
 DEFINE_PROP(m_iTeamNum, CEntity);
@@ -333,6 +347,7 @@ DEFINE_PROP(m_flMoveDoneTime, CEntity);
 DEFINE_PROP(m_flLocalTime, CEntity);
 DEFINE_PROP(m_aThinkFunctions, CEntity);
 DEFINE_PROP(m_pLink, CEntity);
+DEFINE_PROP(m_ResponseContexts, CEntity);
 
 
 
@@ -551,7 +566,7 @@ CEntity::~CEntity()
 
 }
 
-void CEntity::Init(edict_t *pEdict, CBaseEntity *pBaseEntity)
+void CEntity::CE_Init(edict_t *pEdict, CBaseEntity *pBaseEntity)
 {
 	m_pEntity = pBaseEntity;
 	m_pEdict = pEdict;
@@ -2366,3 +2381,123 @@ void CEntity::EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int 
 		flVolume, iSoundlevel, iFlags, iPitch, pOrigin, pDirection, &dummy, bUpdatePositions, soundtime );
 }
 
+extern ConVar *ai_LOS_mode;
+bool CEntity::CBaseEntity_FVisible( const Vector &vecTarget, int traceMask, CBaseEntity **ppBlocker )
+{
+	trace_t tr;
+	Vector vecLookerOrigin = EyePosition();// look through the caller's 'eyes'
+
+	if ( ai_LOS_mode->GetBool() )
+	{
+		UTIL_TraceLine( vecLookerOrigin, vecTarget, traceMask, BaseEntity(), COLLISION_GROUP_NONE, &tr);
+	}
+	else
+	{
+		// If we're doing an LOS search, include NPCs.
+		if ( traceMask == MASK_BLOCKLOS )
+		{
+			traceMask = MASK_BLOCKLOS_AND_NPCS;
+		}
+
+		// Player sees through nodraw and blocklos
+		if ( IsPlayer() )
+		{
+			traceMask |= CONTENTS_IGNORE_NODRAW_OPAQUE;
+			traceMask &= ~CONTENTS_BLOCKLOS;
+		}
+
+		// Use the custom LOS trace filter
+		CTraceFilterLOS traceFilter( BaseEntity(), COLLISION_GROUP_NONE );
+		UTIL_TraceLine( vecLookerOrigin, vecTarget, traceMask, &traceFilter, &tr );
+	}
+
+	if (tr.fraction != 1.0)
+	{
+		if (ppBlocker)
+		{
+			*ppBlocker = tr.m_pEnt;
+		}
+		return false;// Line of sight is not established
+	}
+
+	return true;// line of sight is valid.
+}
+
+static const char *UTIL_TranslateSoundName( const char *soundname, const char *actormodel )
+{
+	Assert( soundname );
+
+	if ( Q_stristr( soundname, ".wav" ) || Q_stristr( soundname, ".mp3" ) )
+	{
+		if ( Q_stristr( soundname, ".wav" ) )
+		{
+			//WaveTrace( soundname, "UTIL_TranslateSoundName" );
+		}
+		return soundname;
+	}
+
+	return soundemitterbase->GetWavFileForSound( soundname, actormodel );
+}
+
+float CEntity::GetSoundDuration( const char *soundname, char const *actormodel )
+{
+	return enginesound->GetSoundDuration( PSkipSoundChars( UTIL_TranslateSoundName( soundname, actormodel ) ) );
+}
+
+void CEntity::AddContext( const char *contextName )
+{
+	char key[ 128 ];
+	char value[ 128 ];
+	float duration;
+
+	const char *p = contextName;
+	while ( p )
+	{
+		duration = 0.0f;
+		p = SplitContext( p, key, sizeof( key ), value, sizeof( value ), &duration );
+		if ( duration )
+		{
+			duration += gpGlobals->curtime;
+		}
+
+		int iIndex = FindContextByName( key );
+		if ( iIndex != -1 )
+		{
+			// Set the existing context to the new value
+			m_ResponseContexts->Element(iIndex).m_iszValue = AllocPooledString( value );
+			m_ResponseContexts->Element(iIndex).m_fExpirationTime = duration;
+			continue;
+		}
+
+		ResponseContext_t newContext;
+		newContext.m_iszName = AllocPooledString( key );
+		newContext.m_iszValue = AllocPooledString( value );
+		newContext.m_fExpirationTime = duration;
+
+		m_ResponseContexts->AddToTail( newContext );
+	}
+}
+
+
+int CEntity::FindContextByName( const char *name ) const
+{
+	int c = m_ResponseContexts.ptr->Count();
+	for ( int i = 0; i < c; i++ )
+	{
+		if ( FStrEq( name, GetContextName( i ) ) )
+			return i;
+	}
+
+	return -1;
+}
+
+const char *CEntity::GetContextName( int index ) const
+{
+	if ( index < 0 || index >= m_ResponseContexts.ptr->Count() )
+	{
+		Assert( 0 );
+		return "";
+	}
+
+	return  m_ResponseContexts.ptr->Element(index).m_iszName.ToCStr();
+}

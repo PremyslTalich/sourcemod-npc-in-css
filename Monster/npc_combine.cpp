@@ -3132,11 +3132,13 @@ void CNPC_Combine::OnEndMoveAndShoot()
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-WeaponProficiency_t CNPC_Combine::CalcWeaponProficiency( CBaseCombatWeapon *pWeapon )
+WeaponProficiency_t CNPC_Combine::CalcWeaponProficiency( CBaseEntity *pWeapon )
 {
-	if( FClassnameIs( pWeapon, "weapon_ar2" ) )
+	//CE_TODO
+	CEntity *cent = CEntity::Instance(pWeapon);
+	if( FClassnameIs( cent, "weapon_ar2" ) )
 	{
-		if( hl2_episodic.GetBool() )
+		if( hl2_episodic->GetBool() )
 		{
 			return WEAPON_PROFICIENCY_VERY_GOOD;
 		}
@@ -3145,7 +3147,7 @@ WeaponProficiency_t CNPC_Combine::CalcWeaponProficiency( CBaseCombatWeapon *pWea
 			return WEAPON_PROFICIENCY_GOOD;
 		}
 	}
-	else if( FClassnameIs( pWeapon, "weapon_shotgun" )	)
+	else if( FClassnameIs( cent, "weapon_shotgun" )	)
 	{
 		if( m_nSkin != COMBINE_SKIN_SHOTGUNNER )
 		{
@@ -3154,7 +3156,7 @@ WeaponProficiency_t CNPC_Combine::CalcWeaponProficiency( CBaseCombatWeapon *pWea
 
 		return WEAPON_PROFICIENCY_PERFECT;
 	}
-	else if( FClassnameIs( pWeapon, "weapon_smg1" ) )
+	else if( FClassnameIs( cent, "weapon_smg1" ) )
 	{
 		return WEAPON_PROFICIENCY_GOOD;
 	}
@@ -3166,7 +3168,7 @@ WeaponProficiency_t CNPC_Combine::CalcWeaponProficiency( CBaseCombatWeapon *pWea
 //-----------------------------------------------------------------------------
 bool CNPC_Combine::HasShotgun()
 {
-	if( GetActiveWeapon() && GetActiveWeapon()->m_iClassname == s_iszShotgunClassname )
+	if( GetActiveWeapon() && *(GetActiveWeapon()->m_iClassname) == s_iszShotgunClassname )
 	{
 		return true;
 	}
@@ -3179,7 +3181,7 @@ bool CNPC_Combine::HasShotgun()
 //-----------------------------------------------------------------------------
 bool CNPC_Combine::ActiveWeaponIsFullyLoaded()
 {
-	CBaseCombatWeapon *pWeapon = GetActiveWeapon();
+	CCombatWeapon *pWeapon = GetActiveWeapon();
 
 	if( !pWeapon )
 		return false;
@@ -3199,12 +3201,13 @@ bool CNPC_Combine::ActiveWeaponIsFullyLoaded()
 // Output :	 true  - if sub-class has a response for the interaction
 //			 false - if sub-class has no response
 //-----------------------------------------------------------------------------
-bool CNPC_Combine::HandleInteraction(int interactionType, void *data, CBaseCombatCharacter *sourceEnt)
+bool CNPC_Combine::HandleInteraction(int interactionType, void *data, CBaseEntity *sourceEnt)
 {
 	if ( interactionType == g_interactionTurretStillStanding )
 	{
+		CCombatCharacter *cent = (CCombatCharacter *)CEntity::Instance(sourceEnt);
 		// A turret that I've kicked recently is still standing 5 seconds later. 
-		if ( sourceEnt == GetEnemy() )
+		if ( cent == GetEnemy() )
 		{
 			// It's still my enemy. Time to grenade it.
 			Vector forward, up;

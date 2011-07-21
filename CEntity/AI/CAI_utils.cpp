@@ -229,3 +229,19 @@ bool FBoxVisible( CEntity *pLooker, CEntity *pTarget, Vector &vecTargetOrigin, f
 
 
 
+void CAI_ShotRegulator::Reset( bool bStartShooting )
+{
+	m_bDisabled = false;
+	m_nBurstShotsRemaining = enginerandom->RandomInt( m_nMinBurstShots, m_nMaxBurstShots );
+	if ( bStartShooting )
+	{
+		m_flNextShotTime = gpGlobals->curtime;
+		m_bInRestInterval = false;
+	}
+	else
+	{
+		m_flNextShotTime = gpGlobals->curtime + enginerandom->RandomFloat( m_flMinRestInterval, m_flMaxRestInterval );
+		m_bInRestInterval = true;
+	}
+}
+

@@ -106,8 +106,8 @@ public:
 	void 					VacateStrategySlot( CEntity *pEnemy, int slot);
 	bool					IsStrategySlotRangeOccupied( CEntity *pEnemy, int slotIDStart, int slotIDEnd );
 	
-	CBaseEntity	*			SquadMemberInRange( const Vector &vecLocation, float flDist );
-	CBaseEntity *			NearestSquadMember( CAI_BaseNPC *pMember );
+	CAI_NPC	*				SquadMemberInRange( const Vector &vecLocation, float flDist );
+	CAI_NPC *				NearestSquadMember( CAI_NPC *pMember );
 	int						GetVisibleSquadMembers( CAI_BaseNPC *pMember );
 	CAI_NPC *				GetSquadMemberNearestTo( const Vector &vecLocation );
 	bool					SquadIsMember( CEntity *pMember );

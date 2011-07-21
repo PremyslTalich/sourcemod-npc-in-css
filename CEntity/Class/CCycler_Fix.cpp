@@ -3,9 +3,9 @@
 
 #define	MIN_PHYSICS_FLINCH_DAMAGE	5.0f
 
-void CE_Cycler_Fix::PostInit()
+void CE_Cycler_Fix::CE_PostInit()
 {
-	BaseClass::PostInit();
+	BaseClass::CE_PostInit();
 	*(m_pfnThink) = NULL;
 }
 

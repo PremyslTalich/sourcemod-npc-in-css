@@ -79,9 +79,9 @@ void CE_NPC_Custom::EndCallSpFunction()
 	}
 }
 
-void CE_NPC_Custom::PostInit()
+void CE_NPC_Custom::CE_PostInit()
 {
-	BaseClass::PostInit();
+	BaseClass::CE_PostInit();
 
 	sm_npc = g_CustomNPCManager.FindCustomNPC(GetClassname());
 	if(sm_npc == NULL)

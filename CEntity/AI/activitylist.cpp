@@ -9,3 +9,8 @@ Activity ActivityList_RegisterPrivateActivity( const char *pszActivityName )
 	return g_helpfunc.ActivityList_RegisterPrivateActivity(pszActivityName);
 }
 
+const char *ActivityList_NameForIndex( int activityIndex )
+{
+	return g_helpfunc.ActivityList_NameForIndex(activityIndex);
+}
+

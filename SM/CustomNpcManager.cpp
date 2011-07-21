@@ -230,7 +230,7 @@ int CustomNPCManager::AddCustomNPC(IPluginContext *pContext, unsigned int data_s
 	sp_npc->current_pNPC = NULL;
 
 	DECLARE_SP_FUNCTION(Init);
-	DECLARE_SP_FUNCTION(PostInit);
+	DECLARE_SP_FUNCTION(CE_PostInit);
 	DECLARE_SP_FUNCTION(Spawn);
 	DECLARE_SP_FUNCTION(Teleport);
 	DECLARE_SP_FUNCTION(UpdateOnRemove);

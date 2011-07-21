@@ -41,13 +41,17 @@ ConVar *ai_spread_pattern_focus_time = NULL;
 
 ConVar *ai_lead_time = NULL;
 
-
 ConVar *scene_clamplookat = NULL;
 ConVar *scene_showfaceto = NULL;
 ConVar *flex_maxawaytime = NULL;
 ConVar *flex_minawaytime = NULL;
 ConVar *flex_maxplayertime = NULL;
 ConVar *flex_minplayertime = NULL;
+
+ConVar *ai_find_lateral_los = NULL;
+
+ConVar *npc_sentences = NULL;
+
 
 void cmd1_CommandCallback(const CCommand &command)
 {
@@ -101,8 +105,10 @@ void cmd1_CommandCallback(const CCommand &command)
 		cent->DispatchKeyValue("DamageRadius","0");
 		cent->DispatchKeyValue("Damage","100");*/
 
-		CEntity *cent = CreateEntityByName("npc_turret_floor");
+		//CEntity *cent = CreateEntityByName("npc_turret_floor");
 
+		CEntity *cent = CreateEntityByName("npc_combine");
+		
 		CBaseEntity *cbase = cent->BaseEntity();
 
 		CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);
@@ -162,7 +168,7 @@ void monster_dump_CommandCallback(const CCommand &command)
 
 bool CommandInitialize()
 {
-#if 0
+#if 1
 	new ConCommand("e5",cmd1_CommandCallback, "", FCVAR_GAMEDLL);
 	new ConCommand("e6",cmd2_CommandCallback, "", 0);
 	new ConCommand("pp",monster_dump_CommandCallback, "", 0);
@@ -215,6 +221,9 @@ bool CommandInitialize()
 	GET_CONVAR(flex_minawaytime);
 	GET_CONVAR(flex_maxplayertime);
 	GET_CONVAR(flex_minplayertime);
+
+	GET_CONVAR(ai_find_lateral_los);
+	GET_CONVAR(npc_sentences);
 
 	return true;
 }

@@ -260,3 +260,64 @@ bool CEAI_Enemies::ShouldDiscardMemory( AI_EnemyInfo_t *pMemory )
 }
 
 
+bool CEAI_Enemies::HasEludedMe( CBaseEntity *pEnemy )
+{
+	AI_EnemyInfo_t *pMemory = Find( pEnemy );
+	if ( pMemory )
+		return pMemory->bEludedMe;
+	return false;
+}
+
+const Vector &CEAI_Enemies::LastSeenPosition( CBaseEntity *pEnemy )
+{
+	AI_EnemyInfo_t *pMemory = Find( pEnemy, true );
+	if ( pMemory )
+	{
+		m_vecDefaultLSP = pMemory->vLastSeenLocation;
+	}
+	else
+	{
+		DevWarning( 2,"Asking LastSeenPosition for enemy that's not in my memory!!\n");
+	}
+	return m_vecDefaultLSP;
+}
+
+float CEAI_Enemies::TimeAtFirstHand( CBaseEntity *pEnemy )
+{
+	// I've never seen something that doesn't exist
+	if (!pEnemy)
+		return 0;
+
+	AI_EnemyInfo_t *pMemory = Find( pEnemy, true );
+	if ( pMemory )
+		return pMemory->timeAtFirstHand;
+
+	if ( pEnemy != AI_UNKNOWN_ENEMY )
+		DevWarning( 2,"Asking TimeAtFirstHand for enemy that's not in my memory!!\n");
+	return AI_INVALID_TIME;
+}
+
+float CEAI_Enemies::FirstTimeSeen( CBaseEntity *pEnemy)
+{
+	// I've never seen something that doesn't exist
+	if (!pEnemy)
+		return 0;
+
+	AI_EnemyInfo_t *pMemory = Find( pEnemy, true );
+	if ( pMemory )
+		return pMemory->timeFirstSeen;
+
+	if ( pEnemy != AI_UNKNOWN_ENEMY )
+		DevWarning( 2,"Asking FirstTimeSeen for enemy that's not in my memory!!\n");
+	return AI_INVALID_TIME;
+}
+
+AI_EnemyInfo_t *CEAI_Enemies::GetDangerMemory()
+{
+	CMemMap::IndexType_t i = m_Map.Find( NULL );
+	if ( i == m_Map.InvalidIndex() )
+		return NULL;
+	Assert(m_Map[i]->bDangerMemory == true);
+	return m_Map[i];
+}
+

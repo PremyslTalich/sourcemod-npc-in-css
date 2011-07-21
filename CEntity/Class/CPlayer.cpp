@@ -53,6 +53,10 @@ SH_DECL_MANUALHOOK1_void(ForceDropOfCarriedPhysObjects, 0, 0, 0, CBaseEntity *);
 DECLARE_HOOK(ForceDropOfCarriedPhysObjects, Hooked_CPlayer);
 DECLARE_DEFAULTHANDLER_void(Hooked_CPlayer, ForceDropOfCarriedPhysObjects, (CBaseEntity *pOnlyIfHoldingThis), (pOnlyIfHoldingThis));
 
+SH_DECL_MANUALHOOK1_void(ModifyOrAppendPlayerCriteria, 0, 0, 0, AI_CriteriaSet&);
+DECLARE_HOOK(ModifyOrAppendPlayerCriteria, Hooked_CPlayer);
+DECLARE_DEFAULTHANDLER_void(Hooked_CPlayer, ModifyOrAppendPlayerCriteria, (AI_CriteriaSet& set), (set));
+
 
 
 
