@@ -424,6 +424,7 @@ public:
 	bool		HasCondition( int iCondition, bool bUseIgnoreConditions );
 	void		ClearCondition( int iCondition );
 	void		ClearConditions( int *pConditions, int nConditions );
+	bool		HasInterruptCondition( int iCondition );
 
 	const Vector &		GetEnemyLKP() const;
 	float				GetEnemyLastTimeSeen() const;
@@ -682,6 +683,16 @@ public:
 	float				GetLastDamageTime() const { return m_flLastDamageTime; }
 	float				GetLastPlayerDamageTime() const { return m_flLastPlayerDamageTime; }
 	float				GetLastEnemyTime() const { return m_flLastEnemyTime; }
+	
+	void				ForceDecisionThink()  { m_flNextDecisionTime = 0; SetEfficiency( AIE_NORMAL ); }
+	bool				DidChooseEnemy() const	{ return !m_bSkippedChooseEnemy; }
+	float				GetTimeEnemyAcquired()	{ return m_flTimeEnemyAcquired; }
+	
+	inline void	ForceCrouch( void );
+	inline void	ClearForceCrouch( void );
+	
+	bool				HasConditionsToInterruptSchedule( int nLocalScheduleID );
+	
 
 protected:
 	void				ChainStartTask( int task, float taskData = 0 )	{ Task_t tempTask = { task, taskData }; StartTask( (const Task_t *)&tempTask ); }
@@ -807,8 +818,8 @@ public:
 	virtual const char *GetSchedulingErrorName();
 	virtual bool IsCurTaskContinuousMove();
 	virtual	bool IsValidEnemy( CBaseEntity *pEnemy );
-	virtual	bool IsValidCover( const Vector &vLocation, CAI_Hint const *pHint );
-	virtual	bool IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint );
+	virtual	bool IsValidCover( const Vector &vLocation, CBaseEntity const *pHint );
+	virtual	bool IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint );
 	virtual float GetMaxTacticalLateralMovement();
 	virtual bool ShouldIgnoreSound( CSound *pSound );
 	virtual void OnSeeEntity( CBaseEntity *pEntity );
@@ -888,6 +899,11 @@ public:
 	virtual const char *GetSquadSlotDebugName( int iSquadSlot );
 	virtual void OnEndMoveAndShoot( void );
 	virtual bool TestShootPosition(const Vector &vecShootPos, const Vector &targetPos );
+	virtual void ClearAttackConditions( void );
+	virtual void OnListened();
+	virtual void SpeakSentence( int sentenceType );
+	virtual Activity GetCoverActivity( CBaseEntity* pHint );
+	virtual bool IsCoverPosition( const Vector &vecThreat, const Vector &vecPosition );
 
 public: // sign
 	void CallNPCThink();
@@ -1057,8 +1073,8 @@ public:
 	DECLARE_DEFAULTHEADER(GetSchedulingErrorName, const char *,());
 	DECLARE_DEFAULTHEADER(IsCurTaskContinuousMove, bool,());
 	DECLARE_DEFAULTHEADER(IsValidEnemy, bool,( CBaseEntity *pEnemy ));
-	DECLARE_DEFAULTHEADER(IsValidCover, bool,( const Vector &vLocation, CAI_Hint const *pHint ));
-	DECLARE_DEFAULTHEADER(IsValidShootPosition, bool,( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint ));
+	DECLARE_DEFAULTHEADER(IsValidCover, bool,( const Vector &vLocation, CBaseEntity const *pHint ));
+	DECLARE_DEFAULTHEADER(IsValidShootPosition, bool,( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint ));
 	DECLARE_DEFAULTHEADER(GetMaxTacticalLateralMovement, float,());
 	DECLARE_DEFAULTHEADER(ShouldIgnoreSound, bool,( CSound *pSound ));
 	DECLARE_DEFAULTHEADER(OnSeeEntity, void,( CBaseEntity *pEntity ));
@@ -1138,6 +1154,11 @@ public:
 	DECLARE_DEFAULTHEADER(GetSquadSlotDebugName, const char*, ( int iSquadSlot ));
 	DECLARE_DEFAULTHEADER(OnEndMoveAndShoot, void,( void ));
 	DECLARE_DEFAULTHEADER(TestShootPosition, bool, (const Vector &vecShootPos, const Vector &targetPos ));
+	DECLARE_DEFAULTHEADER(ClearAttackConditions, void, ( void ));
+	DECLARE_DEFAULTHEADER(OnListened, void, ());
+	DECLARE_DEFAULTHEADER(SpeakSentence, void, ( int sentenceType ));
+	DECLARE_DEFAULTHEADER(GetCoverActivity,Activity,( CBaseEntity* pHint ));
+	DECLARE_DEFAULTHEADER(IsCoverPosition, bool, ( const Vector &vecThreat, const Vector &vecPosition ));
 
 
 public:
@@ -1235,6 +1256,12 @@ protected:
 	DECLARE_DATAMAP(bool, m_bForceCrouch);
 	DECLARE_DATAMAP_OFFSET(CAI_ScheduleBits, m_ConditionsPreIgnore);
 	DECLARE_DATAMAP(float, m_flLastEnemyTime);
+	DECLARE_DATAMAP(float, m_flNextDecisionTime);
+	DECLARE_DATAMAP(bool, m_bSkippedChooseEnemy);
+	DECLARE_DATAMAP(float, m_flTimeEnemyAcquired);
+
+
+
 
 	friend class CAI_SchedulesManager;
 	friend class CEAI_ScriptedSequence;
@@ -1280,6 +1307,26 @@ inline void CAI_NPC::ResetScheduleCurTaskIndex()
 	m_ScheduleState->bTaskRanAutomovement = false;
 	m_ScheduleState->bTaskUpdatedYaw = false;
 }
+
+inline void	CAI_NPC::ForceCrouch( void )
+{
+	m_bForceCrouch = true;
+	Crouch();
+}
+
+inline void	CAI_NPC::ClearForceCrouch( void )
+{
+	m_bForceCrouch = false;
+
+	if ( IsCrouching() )
+	{
+		Stand();
+	}
+}
+
+
+
+
 
 inline const QAngle &CAI_Component::GetLocalAngles( void ) const
 {

@@ -40,7 +40,14 @@ public:
 	virtual void	Operator_HandleAnimEvent( animevent_t *pEvent, CBaseEntity *pOperator );
 	virtual void	WeaponSound( WeaponSound_t sound_type, float soundtime = 0.0f );
 	virtual int		GetMaxClip2( void ) const;
+	virtual void	Operator_ForceNPCFire( CBaseEntity  *pOperator, bool bSecondary );
 
+	virtual void	Equip( CBaseEntity *pOwner );
+	virtual	int		WeaponRangeAttack1Condition( float flDot, float flDist );
+	virtual	int		WeaponRangeAttack2Condition( float flDot, float flDist );
+	virtual	int		WeaponMeleeAttack1Condition( float flDot, float flDist );
+	virtual	int		WeaponMeleeAttack2Condition( float flDot, float flDist );
+	
 public:
 	DECLARE_DEFAULTHEADER(Drop, void, (const Vector &vecVelocity));
 	DECLARE_DEFAULTHEADER(GetMaxClip1, int, () const);
@@ -60,6 +67,14 @@ public:
 	DECLARE_DEFAULTHEADER(Operator_HandleAnimEvent, void, (animevent_t *pEvent, CBaseEntity *pOperator));
 	DECLARE_DEFAULTHEADER(WeaponSound, void, (WeaponSound_t sound_type, float soundtime));
 	DECLARE_DEFAULTHEADER(GetMaxClip2, int, () const);
+	DECLARE_DEFAULTHEADER(Operator_ForceNPCFire, void, (CBaseEntity  *pOperator, bool bSecondary));
+
+	DECLARE_DEFAULTHEADER(Equip, void, ( CBaseEntity *pOwner ));
+	DECLARE_DEFAULTHEADER(WeaponRangeAttack1Condition, int, ( float flDot, float flDist ));
+	DECLARE_DEFAULTHEADER(WeaponRangeAttack2Condition, int, ( float flDot, float flDist ));
+	DECLARE_DEFAULTHEADER(WeaponMeleeAttack1Condition, int, ( float flDot, float flDist ));
+	DECLARE_DEFAULTHEADER(WeaponMeleeAttack2Condition, int, ( float flDot, float flDist ));
+
 };
 
 class CCombatWeapon : public CItem<Template_CCombatWeapon>
@@ -88,6 +103,7 @@ public:
 	int			Clip2() const { return m_iClip2; }
 	int			GetSubType( void ) { return m_iSubType; }
 
+
 public:
 	static const	WeaponProficiencyInfo_t *GetDefaultProficiencyValues();
 
@@ -108,6 +124,8 @@ protected: //Datamaps
 	DECLARE_DATAMAP(bool, m_bRemoveable);
 	DECLARE_DATAMAP(IPhysicsConstraint *, m_pConstraint);
 	DECLARE_DATAMAP(int, m_iSubType);
+	DECLARE_DATAMAP(float, m_fMaxRange1);
+
 
 };
 

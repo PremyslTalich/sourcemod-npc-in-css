@@ -214,6 +214,32 @@ struct ResponseContext_t
 	float			m_fExpirationTime;		// when to expire context (0 == never)
 };
 
+struct hl_constraint_info_t
+{
+	hl_constraint_info_t() 
+	{ 
+		pObjects[0] = pObjects[1] = NULL;
+		pGroup = NULL;
+		anchorPosition[0].Init();
+		anchorPosition[1].Init();
+		swapped = false; 
+		massScale[0] = massScale[1] = 1.0f;
+	}
+	Vector			anchorPosition[2];
+	IPhysicsObject	*pObjects[2];
+	IPhysicsConstraintGroup *pGroup;
+	float			massScale[2];
+	bool			swapped;
+};
+
+struct constraint_anchor_t
+{
+	Vector		localOrigin;
+	EHANDLE		hEntity;
+	int			parentAttachment;
+	string_t	name;
+	float		massScale;
+};
 
 
 typedef void (CEntity::*BASEPTR)(void);
@@ -723,6 +749,13 @@ public: // custom
 	void		AddContext( const char *nameandvalue );
 	int			FindContextByName( const char *name ) const;
 	const char *GetContextName( int index ) const;
+
+	void FireBullets( int cShots, const Vector &vecSrc, const Vector &vecDirShooting, 
+		const Vector &vecSpread, float flDistance, int iAmmoType, int iTracerFreq = 4, 
+		int firingEntID = -1, int attachmentID = -1, float iDamage = 0.0f, 
+		CBaseEntity *pAttacker = NULL, bool bFirstShotAccurate = false );
+
+
 
 private:
 	bool		NameMatchesComplex( const char *pszNameOrWildcard );

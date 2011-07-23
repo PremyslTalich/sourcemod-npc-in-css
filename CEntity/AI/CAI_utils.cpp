@@ -79,7 +79,33 @@ void CAI_ShotRegulator::SetBurstShotCountRange( int minShotsPerBurst, int maxSho
 	m_nMaxBurstShots = maxShotsPerBurst;
 }
 
+void CAI_ShotRegulator::GetBurstShotCountRange( int *pMinShotsPerBurst, int *pMaxShotsPerBurst ) const
+{
+	*pMinShotsPerBurst = m_nMinBurstShots;
+	*pMaxShotsPerBurst = m_nMaxBurstShots;
+}
 
+void CAI_ShotRegulator::GetRestInterval( float *pMinRestInterval, float *pMaxRestInterval ) const
+{
+	*pMinRestInterval = m_flMinRestInterval;
+	*pMaxRestInterval = m_flMaxRestInterval;
+}
+
+void CAI_ShotRegulator::GetBurstInterval( float *pMinBurstInterval, float *pMaxBurstInterval ) const
+{
+	*pMinBurstInterval = m_flMinBurstInterval;
+	*pMaxBurstInterval = m_flMaxBurstInterval;
+}
+
+int CAI_ShotRegulator::GetBurstShotsRemaining() const				
+{ 
+	return m_nBurstShotsRemaining; 
+}
+
+void CAI_ShotRegulator::SetBurstShotsRemaining( int shots )	
+{
+	m_nBurstShotsRemaining = shots;
+}
 
 
 

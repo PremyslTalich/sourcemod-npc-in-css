@@ -188,8 +188,8 @@ protected:
 	virtual void	OnMovementComplete();
 	virtual bool	FValidateHintType( CBaseEntity *cbase );
 	
-	bool			IsValidCover( const Vector &vLocation, CAI_Hint const *pHint );
-	bool			IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint );
+	bool			IsValidCover( const Vector &vLocation, CBaseEntity const *pHint );
+	bool			IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint );
 	bool 			FindCoverFromEnemyAtFollowTarget( float coverRadius, Vector *pResult );
 	
 	bool			ShouldAlwaysThink();

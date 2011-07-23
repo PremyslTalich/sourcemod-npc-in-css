@@ -8,6 +8,8 @@
 #include "CAI_Blended_Movement.h"
 #include "CAI_behavior_follow.h"
 #include "CInfoTarget_Fix.h"
+#include "CAI_behavior_assault.h"
+
 
 
 #define	ANTLION_FOLLOW_DISTANCE	350
@@ -234,7 +236,7 @@ private:
 	Vector	m_vecSaveSpitVelocity;	// Saved when we start to attack and used if we failed to get a clear shot once we release
 
 	CAI_AntlionFollowBehavior	m_FollowBehavior;
-	//CAI_AssaultBehavior			m_AssaultBehavior;
+	CAI_AssaultBehavior			m_AssaultBehavior;
 
 	AntlionMoveState_e	m_MoveState;
 

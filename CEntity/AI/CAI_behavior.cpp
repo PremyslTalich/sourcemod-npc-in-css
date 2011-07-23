@@ -212,7 +212,7 @@ CBaseEntity *CAI_BehaviorBase::BestEnemy( void )
 
 //-------------------------------------
 
-bool CAI_BehaviorBase::IsValidCover( const Vector &vLocation, CAI_Hint const *pHint )
+bool CAI_BehaviorBase::IsValidCover( const Vector &vLocation, CBaseEntity const *pHint )
 {
 	Assert( m_pBackBridge != NULL );
 	
@@ -221,7 +221,7 @@ bool CAI_BehaviorBase::IsValidCover( const Vector &vLocation, CAI_Hint const *pH
 
 //-------------------------------------
 
-bool CAI_BehaviorBase::IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint )
+bool CAI_BehaviorBase::IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint )
 {
 	Assert( m_pBackBridge != NULL );
 	

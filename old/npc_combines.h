@@ -22,6 +22,8 @@ public:
 #if HL2_EPISODIC
 	DECLARE_DATADESC();
 #endif
+	
+	CNPC_CombineS();
 
 public: 
 	void		Spawn( void );

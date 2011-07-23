@@ -147,6 +147,21 @@ CNPC_Antlion::CNPC_Antlion( void )
 	m_vecLastJumpAttempt.Init();
 	m_vecSavedJump.Init();
 	m_vecHeardSound.Init();
+
+
+	m_iContext = 0;
+	m_vecSaveSpitVelocity.Init();
+	m_MoveState = ANTLION_MOVE_FREE;
+	m_flSuppressFollowTime = 0.0f;
+	m_strParentSpawner = NULL_STRING;
+	m_flEludeDistance = 0.0f;
+	m_bLeapAttack = false;
+	m_flTimeDrown = 0.0f;
+	m_flTimeDrownSplash = 0.0f;
+	m_nSustainedDamage = 0;
+	m_flLastDamageTime = 0.0f;
+	m_flZapDuration = 0.0f;
+
 }
 
 
@@ -857,11 +872,13 @@ Vector VecCheckThrowTolerance( CBaseEntity *pEdict, const Vector &vecSpot1, Vect
 	float time = vecGrenadeVel.Length( ) / flSpeed;
 	vecGrenadeVel = vecGrenadeVel * (1.0 / time);
 
-	// adjust upward toss to compensate for gravity loss
-	vecGrenadeVel.z += flGravity * time * 0.5;
+	float v = 0.4f;
 
-	Vector vecApex = vecSpot1 + (vecSpot2 - vecSpot1) * 0.5;
-	vecApex.z += 0.5 * flGravity * (time * 0.5) * (time * 0.5);
+	// adjust upward toss to compensate for gravity loss
+	vecGrenadeVel.z += flGravity * time * v;
+
+	Vector vecApex = vecSpot1 + (vecSpot2 - vecSpot1) * v;
+	vecApex.z += v * flGravity * (time * v) * (time * v);
 
 
 	trace_t tr;
@@ -970,8 +987,8 @@ void CNPC_Antlion::HandleAnimEvent( animevent_t *pEvent )
 					vTarget = GetEnemy()->BodyTarget( vSpitPos, true );
 				}
 				
-				vTarget[2] += enginerandom->RandomFloat( -10.0f, 10.0f );
-				
+				vTarget[2] += enginerandom->RandomFloat( 0.0f, 32.0f );
+
 				// Try and spit at our target
 				Vector	vecToss;				
 				if ( GetSpitVector( vSpitPos, vTarget, &vecToss ) == false )
@@ -2277,11 +2294,11 @@ int CNPC_Antlion::SelectSchedule( void )
 		}
 	}
 
-	/*if( m_AssaultBehavior.CanSelectSchedule() )
+	if( m_AssaultBehavior.CanSelectSchedule() )
 	{
 		DeferSchedulingToBehavior( &m_AssaultBehavior );
 		return BaseClass::SelectSchedule();
-	}*/
+	}
 
 	//Otherwise do basic state schedule selection
 	switch ( m_NPCState )
@@ -4086,7 +4103,7 @@ void CNPC_Antlion::SetFollowTarget( CEntity *pTarget )
 bool CNPC_Antlion::CreateBehaviors( void )
 {
 	AddBehavior( &m_FollowBehavior );
-	//AddBehavior( &m_AssaultBehavior );
+	AddBehavior( &m_AssaultBehavior );
 
 	return BaseClass::CreateBehaviors();
 }

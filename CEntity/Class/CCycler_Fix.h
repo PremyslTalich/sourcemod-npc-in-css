@@ -1,7 +1,6 @@
 #ifndef _INCLUDE_CCYCLER_FIX_H_
 #define _INCLUDE_CCYCLER_FIX_H_
 
-#include "CEntityManager.h"
 #include "CEntity.h"
 #include "CAI_NPC.h"
 

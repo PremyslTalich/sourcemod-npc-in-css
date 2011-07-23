@@ -5,6 +5,8 @@
 #include "CE_recipientfilter.h"
 #include "ammodef.h"
 #include "vphysics/constraints.h"
+#include "CAI_NPC.h"
+
 
 
 CE_LINK_ENTITY_TO_CLASS(CBaseCombatWeapon, CCombatWeapon);
@@ -72,6 +74,31 @@ SH_DECL_MANUALHOOK0(GetMaxClip2, 0, 0, 0, int);
 DECLARE_HOOK(GetMaxClip2, Template_CCombatWeapon);
 DECLARE_DEFAULTHANDLER(Template_CCombatWeapon, GetMaxClip2, int, () const, ());
 
+SH_DECL_MANUALHOOK2_void(Operator_ForceNPCFire, 0, 0, 0, CBaseEntity *, bool );
+DECLARE_HOOK(Operator_ForceNPCFire, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER_void(Template_CCombatWeapon, Operator_ForceNPCFire, (CBaseEntity  *pOperator, bool bSecondary), (pOperator, bSecondary));
+
+SH_DECL_MANUALHOOK1_void(Equip, 0, 0, 0, CBaseEntity *);
+DECLARE_HOOK(Equip, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER_void(Template_CCombatWeapon, Equip, (CBaseEntity *pOwner), (pOwner));
+
+SH_DECL_MANUALHOOK2(WeaponRangeAttack1Condition, 0, 0, 0, int, float, float);
+DECLARE_HOOK(WeaponRangeAttack1Condition, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER(Template_CCombatWeapon, WeaponRangeAttack1Condition, int, (float flDot, float flDist), (flDot, flDist));
+
+SH_DECL_MANUALHOOK2(WeaponRangeAttack2Condition, 0, 0, 0, int, float, float);
+DECLARE_HOOK(WeaponRangeAttack2Condition, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER(Template_CCombatWeapon, WeaponRangeAttack2Condition, int, (float flDot, float flDist), (flDot, flDist));
+
+SH_DECL_MANUALHOOK2(WeaponMeleeAttack1Condition, 0, 0, 0, int, float, float);
+DECLARE_HOOK(WeaponMeleeAttack1Condition, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER(Template_CCombatWeapon, WeaponMeleeAttack1Condition, int, (float flDot, float flDist), (flDot, flDist));
+
+SH_DECL_MANUALHOOK2(WeaponMeleeAttack2Condition, 0, 0, 0, int, float, float);
+DECLARE_HOOK(WeaponMeleeAttack2Condition, Template_CCombatWeapon);
+DECLARE_DEFAULTHANDLER(Template_CCombatWeapon, WeaponMeleeAttack2Condition, int, (float flDot, float flDist), (flDot, flDist));
+
+
 
 // Sendprops
 DEFINE_PROP(m_iPrimaryAmmoType, CCombatWeapon);
@@ -83,6 +110,7 @@ DEFINE_PROP(m_iClip2, CCombatWeapon);
 DEFINE_PROP(m_bRemoveable, CCombatWeapon);
 DEFINE_PROP(m_pConstraint, CCombatWeapon);
 DEFINE_PROP(m_iSubType, CCombatWeapon);
+DEFINE_PROP(m_fMaxRange1, CCombatWeapon);
 
 
 BEGIN_DATADESC( CCombatWeapon )
@@ -191,3 +219,4 @@ const WeaponProficiencyInfo_t *CCombatWeapon::GetDefaultProficiencyValues()
 
 	return g_BaseWeaponProficiencyTable;
 }
+

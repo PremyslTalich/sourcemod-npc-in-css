@@ -2040,7 +2040,7 @@ bool CAI_FollowBehavior::FValidateHintType( CBaseEntity *cbase )
 
 //-------------------------------------
 
-bool CAI_FollowBehavior::IsValidCover( const Vector &vLocation, CAI_Hint const *pHint )
+bool CAI_FollowBehavior::IsValidCover( const Vector &vLocation, CBaseEntity const *pHint )
 {
 	if ( (vLocation - m_FollowNavGoal.position).LengthSqr() > Square( m_FollowNavGoal.coverTolerance + 0.1 ) )
 		return false;
@@ -2049,7 +2049,7 @@ bool CAI_FollowBehavior::IsValidCover( const Vector &vLocation, CAI_Hint const *
 
 //-------------------------------------
 
-bool CAI_FollowBehavior::IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint )
+bool CAI_FollowBehavior::IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint )
 {
 	if ( (vLocation - m_FollowNavGoal.position).LengthSqr() > Square( m_FollowNavGoal.enemyLOSTolerance + 0.1 ) )
 		return false;

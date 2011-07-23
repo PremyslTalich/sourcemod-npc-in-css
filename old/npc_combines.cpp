@@ -23,13 +23,20 @@ extern ConVar sk_plr_num_shotgun_pellets;
 ConVar	combine_spawn_health( "combine_spawn_health", "1" );
 
 
-LINK_ENTITY_TO_CUSTOM_CLASS( npc_combine_s, cycler, CNPC_CombineS );
+//LINK_ENTITY_TO_CUSTOM_CLASS( npc_combine_s, cycler, CNPC_CombineS );
+LINK_ENTITY_TO_CUSTOM_CLASS( npc_combine_s, generic_actor, CNPC_CombineS );
 
 
 #define AE_SOLDIER_BLOCK_PHYSICS		20 // trying to block an incoming physics object
 
 extern Activity ACT_WALK_EASY;
 extern Activity ACT_WALK_MARCH;
+
+
+CNPC_CombineS::CNPC_CombineS()
+{
+	m_fIsBlocking = false;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -74,6 +81,12 @@ void CNPC_CombineS::Spawn( void )
 //-----------------------------------------------------------------------------
 void CNPC_CombineS::Precache()
 {
+	//SetModelName( MAKE_STRING( "models/player/t_arctic.mdl" ) );
+
+	//SetModelName( MAKE_STRING( "models/hl1/npc/hgrunt/hgrunt.mdl" ) );
+
+	//SetModelName( MAKE_STRING( "models/combine_super_soldier.mdl" ) );
+
 	const char *pModelName = STRING( GetModelName() );
 
 	if( !Q_stricmp( pModelName, "models/combine_super_soldier.mdl" ) )
@@ -119,8 +132,7 @@ void CNPC_CombineS::DeathSound( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 void CNPC_CombineS::ClearAttackConditions( )
 {
-	//CE_TODO
-	/*bool fCanRangeAttack2 = HasCondition( COND_CAN_RANGE_ATTACK2 );
+	bool fCanRangeAttack2 = HasCondition( COND_CAN_RANGE_ATTACK2 );
 
 	// Call the base class.
 	BaseClass::ClearAttackConditions();
@@ -130,7 +142,7 @@ void CNPC_CombineS::ClearAttackConditions( )
 		// We don't allow the base class to clear this condition because we
 		// don't sense for it every frame.
 		SetCondition( COND_CAN_RANGE_ATTACK2 );
-	}*/
+	}
 }
 
 void CNPC_CombineS::PrescheduleThink( void )
@@ -235,8 +247,7 @@ void CNPC_CombineS::OnChangeActivity( Activity eNewActivity )
 
 void CNPC_CombineS::OnListened()
 {
-	//CE_TODO
-/*	BaseClass::OnListened();
+	BaseClass::OnListened();
 
 	if ( HasCondition( COND_HEAR_DANGER ) && HasCondition( COND_HEAR_PHYSICS_DANGER ) )
 	{
@@ -252,7 +263,7 @@ void CNPC_CombineS::OnListened()
 	{
 		DevMsg("Ignore danger in %s\n", GetCurSchedule()->GetName() );
 	}
-#endif*/
+#endif
 }
 
 //-----------------------------------------------------------------------------

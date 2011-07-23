@@ -227,7 +227,7 @@ void CNPC_Combine::InputStopPatrolling( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CNPC_Combine::InputAssault( inputdata_t &inputdata )
 {
-	//m_AssaultBehavior.SetParameters( AllocPooledString(inputdata.value.String()), CUE_DONT_WAIT, RALLY_POINT_SELECT_DEFAULT );
+	m_AssaultBehavior.SetParameters( AllocPooledString(inputdata.value.String()), CUE_DONT_WAIT, RALLY_POINT_SELECT_DEFAULT );
 }
 
 //-----------------------------------------------------------------------------
@@ -349,8 +349,8 @@ bool CNPC_Combine::CreateBehaviors()
 {
 	//AddBehavior( &m_RappelBehavior );
 	//AddBehavior( &m_ActBusyBehavior );
-	//AddBehavior( &m_AssaultBehavior );
-	//AddBehavior( &m_StandoffBehavior );
+	AddBehavior( &m_AssaultBehavior );
+	AddBehavior( &m_StandoffBehavior );
 	AddBehavior( &m_FollowBehavior );
 	//AddBehavior( &m_FuncTankBehavior );
 
@@ -1311,7 +1311,7 @@ Activity CNPC_Combine::NPC_TranslateActivity( Activity eNewActivity )
 		}
 	}
 
-	/*if ( m_AssaultBehavior.IsRunning() )
+	if ( m_AssaultBehavior.IsRunning() )
 	{
 		switch ( eNewActivity )
 		{
@@ -1330,7 +1330,7 @@ Activity CNPC_Combine::NPC_TranslateActivity( Activity eNewActivity )
 		default:
 			break;
 		}
-	}*/
+	}
 
 	return BaseClass::NPC_TranslateActivity( eNewActivity );
 }
@@ -1854,7 +1854,7 @@ int CNPC_Combine::SelectSchedule( void )
 			}
 
 			// Don't patrol if I'm in the middle of an assault, because I'll never return to the assault. 
-			//if ( !m_AssaultBehavior.HasAssaultCue() )
+			if ( !m_AssaultBehavior.HasAssaultCue() )
 			{
 				if( m_bShouldPatrol || HasCondition( COND_COMBINE_SHOULD_PATROL ) )
 					return SCHED_COMBINE_PATROL;
@@ -1903,7 +1903,8 @@ int CNPC_Combine::SelectFailSchedule( int failedSchedule, int failedTask, AI_Tas
 //-----------------------------------------------------------------------------
 bool CNPC_Combine::ShouldChargePlayer()
 {
-	return GetEnemy() && GetEnemy()->IsPlayer() && !IsLimitingHintGroups();
+	//return GetEnemy() && GetEnemy()->IsPlayer() && PlayerHasMegaPhysCannon() && !IsLimitingHintGroups();
+	return false;
 }
 
 
@@ -2120,7 +2121,7 @@ int CNPC_Combine::TranslateSchedule( int scheduleType )
 			{
 				return TranslateSchedule( SCHED_TAKE_COVER_FROM_ENEMY );
 			}
-			else/* if ( !m_AssaultBehavior.HasAssaultCue() )*/
+			else if ( !m_AssaultBehavior.HasAssaultCue() )
 			{
 				// Don't patrol if I'm in the middle of an assault, because 
 				// I'll never return to the assault. 
@@ -3146,6 +3147,7 @@ void CNPC_Combine::OnEndMoveAndShoot()
 //-----------------------------------------------------------------------------
 WeaponProficiency_t CNPC_Combine::CalcWeaponProficiency( CBaseEntity *pWeapon )
 {
+	return WEAPON_PROFICIENCY_VERY_GOOD;
 	//CE_TODO
 	CEntity *cent = CEntity::Instance(pWeapon);
 	if( FClassnameIs( cent, "weapon_ar2" ) )

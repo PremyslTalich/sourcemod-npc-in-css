@@ -13,8 +13,8 @@
 #include "CAI_NPC.h"
 #include "CAI_basehumanoid.h"
 #include "CAI_Behavior.h"
-//#include "ai_behavior_assault.h"
-//#include "ai_behavior_standoff.h"
+#include "CAI_behavior_assault.h"
+#include "CAI_behavior_standoff.h"
 #include "CAI_behavior_follow.h"
 //#include "ai_behavior_functank.h"
 //#include "ai_behavior_rappel.h"
@@ -28,15 +28,23 @@
 #define SF_COMBINE_NO_GRENADEDROP ( 1 << 17 )
 #define SF_COMBINE_NO_AR2DROP ( 1 << 18 )
 
+
+class CGenericActor_Fix : public CAI_BaseActor
+{
+public:
+	CE_DECLARE_CLASS( CGenericActor_Fix, CAI_BaseActor );
+
+};
+
 //=========================================================
 //	>> CNPC_Combine
 //=========================================================
-class CNPC_Combine : public CAI_BaseActor
+class CNPC_Combine : public CGenericActor_Fix /*CAI_BaseActor*/
 {
 public:
 	DECLARE_DATADESC();
 	DEFINE_CUSTOM_AI;
-	CE_DECLARE_CLASS( CNPC_Combine, CAI_BaseActor );
+	CE_DECLARE_CLASS( CNPC_Combine, CGenericActor_Fix );
 
 public:
 	CNPC_Combine();
@@ -240,7 +248,7 @@ private:
 	void StartTaskChaseEnemyContinuously( const Task_t *pTask );
 	void RunTaskChaseEnemyContinuously( const Task_t *pTask );
 
-	/*class CCombineStandoffBehavior : public CAI_ComponentWithOuter<CNPC_Combine, CAI_StandoffBehavior>
+	class CCombineStandoffBehavior : public CAI_ComponentWithOuter<CNPC_Combine, CAI_StandoffBehavior>
 	{
 		typedef CAI_ComponentWithOuter<CNPC_Combine, CAI_StandoffBehavior> BaseClass;
 
@@ -251,7 +259,7 @@ private:
 				result = BaseClass::SelectScheduleAttack();
 			return result;
 		}
-	};*/
+	};
 
 	// Rappel
 	//virtual bool IsWaitingToRappel( void ) { return m_RappelBehavior.IsWaitingToRappel(); }
@@ -279,8 +287,8 @@ private:
 	CAI_Sentence< CNPC_Combine > m_Sentences;
 
 	int			m_iNumGrenades;
-	//CAI_AssaultBehavior			m_AssaultBehavior;
-	//CCombineStandoffBehavior	m_StandoffBehavior;
+	CAI_AssaultBehavior			m_AssaultBehavior;
+	CCombineStandoffBehavior	m_StandoffBehavior;
 	CAI_FollowBehavior			m_FollowBehavior;
 	//CAI_FuncTankBehavior		m_FuncTankBehavior;
 	//CAI_RappelBehavior			m_RappelBehavior;

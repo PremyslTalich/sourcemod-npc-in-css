@@ -221,7 +221,7 @@ DECLARE_DEFAULTHANDLER_void(CEntity,SetParent,(CBaseEntity *pParentEntity, int i
 DECLARE_DEFAULTHANDLER_void(CEntity,DecalTrace, (trace_t *pTrace, char const *decalName) ,(pTrace, decalName));
 DECLARE_DEFAULTHANDLER_void(CEntity,Event_Killed, (const CTakeDamageInfo &info), (info));
 DECLARE_DEFAULTHANDLER_void(CEntity,TraceAttack, (const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr), (info, vecDir, ptr));
-DECLARE_DEFAULTHANDLER(CEntity,BodyTarget, Vector, (const Vector &posSrc, bool bNoisy),(posSrc, bNoisy));
+DECLARE_DEFAULTHANDLER_SPECIAL(CEntity,BodyTarget, Vector, (const Vector &posSrc, bool bNoisy),(posSrc, bNoisy), vec3_origin);
 DECLARE_DEFAULTHANDLER(CEntity,IsAlive, bool, (),());
 DECLARE_DEFAULTHANDLER_SPECIAL(CEntity,WorldSpaceCenter, const Vector &, () const,(), vec3_origin);
 DECLARE_DEFAULTHANDLER_void(CEntity,PhysicsSimulate, (),());
@@ -229,16 +229,16 @@ DECLARE_DEFAULTHANDLER(CEntity, BloodColor, int, (), ());
 DECLARE_DEFAULTHANDLER_void(CEntity, StopLoopingSounds, (), ());
 DECLARE_DEFAULTHANDLER_void(CEntity, SetOwnerEntity, (CBaseEntity* pOwner), (pOwner));
 DECLARE_DEFAULTHANDLER_void(CEntity, Activate, (), ());
-DECLARE_DEFAULTHANDLER(CEntity, HeadTarget, Vector, (const Vector &posSrc), (posSrc));
+DECLARE_DEFAULTHANDLER_SPECIAL(CEntity, HeadTarget, Vector, (const Vector &posSrc), (posSrc), vec3_origin);
 DECLARE_DEFAULTHANDLER(CEntity, GetAutoAimRadius, float, (), ());
 DECLARE_DEFAULTHANDLER(CEntity, PhysicsSolidMaskForEntity, unsigned int, () const, ());
 DECLARE_DEFAULTHANDLER(CEntity, CanStandOn, bool, (CBaseEntity *pSurface) const, (pSurface));
 DECLARE_DEFAULTHANDLER(CEntity, IsMoving, bool, (), ());
-DECLARE_DEFAULTHANDLER(CEntity, GetSmoothedVelocity, Vector, (), ());
+DECLARE_DEFAULTHANDLER_SPECIAL(CEntity, GetSmoothedVelocity, Vector, (), (), vec3_origin);
 DECLARE_DEFAULTHANDLER(CEntity, FVisible_Entity, bool, (CBaseEntity *pEntity, int traceMask, CBaseEntity **ppBlocker), (pEntity,  traceMask, ppBlocker));
 DECLARE_DEFAULTHANDLER(CEntity, FVisible_Vector, bool, (const Vector &vecTarget, int traceMask, CBaseEntity **ppBlocker), (vecTarget,  traceMask, ppBlocker));
 DECLARE_DEFAULTHANDLER(CEntity, EarPosition, Vector, () const, ());
-DECLARE_DEFAULTHANDLER(CEntity, GetAutoAimCenter, Vector, (), ());
+DECLARE_DEFAULTHANDLER_SPECIAL(CEntity, GetAutoAimCenter, Vector, (), (), vec3_origin);
 DECLARE_DEFAULTHANDLER(CEntity, EyePosition, Vector, (), ());
 DECLARE_DEFAULTHANDLER_void(CEntity, OnRestore, (), ());
 DECLARE_DEFAULTHANDLER_void(CEntity, ImpactTrace, (trace_t *pTrace, int iDamageType, const char *pCustomImpactName), (pTrace, iDamageType, pCustomImpactName));
@@ -588,12 +588,12 @@ void CEntity::CE_Init(edict_t *pEdict, CBaseEntity *pBaseEntity)
 
 void CEntity::Destroy()
 {
-	pEntityData[entindex_non_network()] = NULL;
+	int index = entindex_non_network();
+	ClearAllFlags();
 	delete col_ptr;
 	col_ptr = NULL;
-	ClearAllFlags();
 	delete this;
-
+	pEntityData[index] = NULL;
 }
 
 CBaseEntity * CEntity::BaseEntity()
@@ -2500,4 +2500,24 @@ const char *CEntity::GetContextName( int index ) const
 	}
 
 	return  m_ResponseContexts.ptr->Element(index).m_iszName.ToCStr();
+}
+
+void CEntity::FireBullets( int cShots, const Vector &vecSrc, 
+	const Vector &vecDirShooting, const Vector &vecSpread, float flDistance, 
+	int iAmmoType, int iTracerFreq, int firingEntID, int attachmentID,
+	float iDamage, CBaseEntity *pAttacker, bool bFirstShotAccurate )
+{
+	FireBulletsInfo_t info;
+	info.m_iShots = cShots;
+	info.m_vecSrc = vecSrc;
+	info.m_vecDirShooting = vecDirShooting;
+	info.m_vecSpread = vecSpread;
+	info.m_flDistance = flDistance;
+	info.m_iAmmoType = iAmmoType;
+	info.m_iTracerFreq = iTracerFreq;
+	info.m_iDamage = iDamage;
+	info.m_pAttacker = pAttacker;
+	info.m_nFlags = bFirstShotAccurate ? FIRE_BULLETS_FIRST_SHOT_ACCURATE : 0;
+
+	FireBullets( info );
 }

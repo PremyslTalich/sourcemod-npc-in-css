@@ -600,6 +600,15 @@ bool CE_AI_Hint::IsInNodeFOV( CEntity *pOther )
 	return false;
 }
 
+CAI_Node *CE_AI_Hint::GetNode( void )
+{
+	if ( m_NodeData->nNodeID != NO_NODE )
+	{
+		return g_pBigAINet->GetNode( m_NodeData->nNodeID, false );
+	}
+	return NULL;
+}
+
 
 
 

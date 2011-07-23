@@ -120,8 +120,8 @@ public:
 	bool BridgeFValidateHintType( CBaseEntity *pHint, bool *pResult );
 	bool BridgeIsValidEnemy( CBaseEntity *pEnemy );
 	CBaseEntity *BridgeBestEnemy();
-	bool BridgeIsValidCover( const Vector &vLocation, CAI_Hint const *pHint );
-	bool BridgeIsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint );
+	bool BridgeIsValidCover( const Vector &vLocation, CBaseEntity const *pHint );
+	bool BridgeIsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint );
 	float BridgeGetMaxTacticalLateralMovement( void );
 	bool BridgeShouldIgnoreSound( CSound *pSound );
 	void BridgeOnSeeEntity( CBaseEntity *pEntity );
@@ -209,8 +209,8 @@ protected:
 
 	virtual	bool IsValidEnemy( CBaseEntity *pEnemy );
 	virtual CBaseEntity *BestEnemy();
-	virtual	bool IsValidCover( const Vector &vLocation, CAI_Hint const *pHint );
-	virtual	bool IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint );
+	virtual	bool IsValidCover( const Vector &vLocation, CBaseEntity const *pHint );
+	virtual	bool IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint );
 	virtual float GetMaxTacticalLateralMovement( void );
 	virtual bool ShouldIgnoreSound( CSound *pSound );
 	virtual void OnSeeEntity( CBaseEntity *pEntity );
@@ -352,8 +352,8 @@ public:
 	virtual Activity 	 BackBridge_NPC_TranslateActivity( Activity activity ) = 0;
 	virtual bool		 BackBridge_IsValidEnemy(CBaseEntity *pEnemy) = 0;
 	virtual CBaseEntity* BackBridge_BestEnemy(void) = 0;
-	virtual bool		 BackBridge_IsValidCover( const Vector &vLocation, CAI_Hint const *pHint ) = 0;
-	virtual bool		 BackBridge_IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint ) = 0;
+	virtual bool		 BackBridge_IsValidCover( const Vector &vLocation, CBaseEntity const *pHint ) = 0;
+	virtual bool		 BackBridge_IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint ) = 0;
 	virtual float		 BackBridge_GetMaxTacticalLateralMovement( void ) = 0;
 	virtual bool		 BackBridge_ShouldIgnoreSound( CSound *pSound ) = 0;
 	virtual void		 BackBridge_OnSeeEntity( CBaseEntity *pEntity ) = 0;
@@ -457,8 +457,8 @@ public:
 
 	bool			IsValidEnemy(CBaseEntity *pEnemy);
 	CBaseEntity*	BestEnemy(void);
-	bool			IsValidCover( const Vector &vLocation, CAI_Hint const *pHint );
-	bool			IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint );
+	bool			IsValidCover( const Vector &vLocation, CBaseEntity const *pHint );
+	bool			IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint );
 	float			GetMaxTacticalLateralMovement( void );
 	bool			ShouldIgnoreSound( CSound *pSound );
 	void			OnSeeEntity( CBaseEntity *pEntity );
@@ -512,8 +512,8 @@ private:
 	Activity		BackBridge_NPC_TranslateActivity( Activity activity );
 	bool			BackBridge_IsValidEnemy(CBaseEntity *pEnemy);
 	CBaseEntity*	BackBridge_BestEnemy(void);
-	bool			BackBridge_IsValidCover( const Vector &vLocation, CAI_Hint const *pHint );
-	bool			BackBridge_IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint );
+	bool			BackBridge_IsValidCover( const Vector &vLocation, CBaseEntity const *pHint );
+	bool			BackBridge_IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint );
 	float			BackBridge_GetMaxTacticalLateralMovement( void );
 	bool			BackBridge_ShouldIgnoreSound( CSound *pSound );
 	void			BackBridge_OnSeeEntity( CBaseEntity *pEntity );
@@ -718,14 +718,14 @@ inline CBaseEntity *CAI_BehaviorBase::BridgeBestEnemy()
 
 //-------------------------------------
 
-inline bool CAI_BehaviorBase::BridgeIsValidCover( const Vector &vLocation, CAI_Hint const *pHint )
+inline bool CAI_BehaviorBase::BridgeIsValidCover( const Vector &vLocation, CBaseEntity const *pHint )
 {
 	return IsValidCover( vLocation, pHint );
 }
 
 //-------------------------------------
 
-inline bool CAI_BehaviorBase::BridgeIsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint )
+inline bool CAI_BehaviorBase::BridgeIsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint )
 {
 	return IsValidShootPosition( vLocation, pNode, pHint );
 }
@@ -1310,7 +1310,7 @@ inline CBaseEntity *CAI_BehaviorHost<BASE_NPC>::BackBridge_BestEnemy(void)
 //-------------------------------------
 
 template <class BASE_NPC>
-inline bool CAI_BehaviorHost<BASE_NPC>::BackBridge_IsValidCover( const Vector &vLocation, CAI_Hint const *pHint )
+inline bool CAI_BehaviorHost<BASE_NPC>::BackBridge_IsValidCover( const Vector &vLocation, CBaseEntity const *pHint )
 {
 	return BaseClass::IsValidCover( vLocation, pHint );
 }
@@ -1318,7 +1318,7 @@ inline bool CAI_BehaviorHost<BASE_NPC>::BackBridge_IsValidCover( const Vector &v
 //-------------------------------------
 
 template <class BASE_NPC>
-inline bool CAI_BehaviorHost<BASE_NPC>::BackBridge_IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint )
+inline bool CAI_BehaviorHost<BASE_NPC>::BackBridge_IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint )
 {
 	return BaseClass::IsValidShootPosition( vLocation, pNode, pHint );
 }
@@ -1551,7 +1551,7 @@ inline void CAI_BehaviorHost<BASE_NPC>::OnRestore()
 //-------------------------------------
 
 template <class BASE_NPC>
-inline bool CAI_BehaviorHost<BASE_NPC>::IsValidCover( const Vector &vLocation, CAI_Hint const *pHint )
+inline bool CAI_BehaviorHost<BASE_NPC>::IsValidCover( const Vector &vLocation, CBaseEntity const *pHint )
 {
 	if ( m_pCurBehavior )
 		return m_pCurBehavior->BridgeIsValidCover( vLocation, pHint );
@@ -1562,7 +1562,7 @@ inline bool CAI_BehaviorHost<BASE_NPC>::IsValidCover( const Vector &vLocation, C
 //-------------------------------------
 
 template <class BASE_NPC>
-inline bool CAI_BehaviorHost<BASE_NPC>::IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint )
+inline bool CAI_BehaviorHost<BASE_NPC>::IsValidShootPosition( const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint )
 {
 	if ( m_pCurBehavior )
 		return m_pCurBehavior->BridgeIsValidShootPosition( vLocation, pNode, pHint );

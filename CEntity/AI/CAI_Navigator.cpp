@@ -1675,3 +1675,13 @@ float CAI_Navigator::GetPathDistanceToGoal()
 	return GetPath()->GetPathDistanceToGoal(GetAbsOrigin());
 }
 
+void CAI_Navigator::SetArrivalDirection( const QAngle &goalAngle ) 
+{ 
+	Vector goalDirection;
+
+	AngleVectors( goalAngle, &goalDirection );
+
+	GetPath()->SetGoalDirection( goalDirection );
+}
+
+

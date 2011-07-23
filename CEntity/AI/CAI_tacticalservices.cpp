@@ -165,4 +165,98 @@ bool CAI_TacticalServices::TestLateralLos( const Vector &vecCheckStart, const Ve
 	return false;
 }
 
+bool CAI_TacticalServices::FindLateralCover( const Vector &vecThreat, float flMinDist, Vector *pResult )
+{
+	return FindLateralCover( vecThreat, flMinDist, COVER_CHECKS * COVER_DELTA, COVER_CHECKS, pResult );
+}
+
+bool CAI_TacticalServices::FindLateralCover( const Vector &vecThreat, float flMinDist, float distToCheck, int numChecksPerDir, Vector *pResult )
+{
+	return FindLateralCover( GetAbsOrigin(), vecThreat, flMinDist, distToCheck, numChecksPerDir, pResult );
+}
+
+extern ConVar *ai_find_lateral_cover;
+bool CAI_TacticalServices::FindLateralCover( const Vector &vNearPos, const Vector &vecThreat, float flMinDist, float distToCheck, int numChecksPerDir, Vector *pResult )
+{
+	MARK_TASK_EXPENSIVE();
+
+	Vector	vecLeftTest;
+	Vector	vecRightTest;
+	Vector	vecStepRight;
+	Vector  vecCheckStart;
+	int		i;
+
+	if ( TestLateralCover( vecThreat, vNearPos, flMinDist ) )
+	{
+		*pResult = GetLocalOrigin();
+		return true;
+	}
+
+	if( !ai_find_lateral_cover->GetBool() )
+	{
+		// Force the NPC to use the nodegraph to find cover. NOTE: We let the above code run
+		// to detect the case where the NPC may already be standing in cover, but we don't 
+		// make any additional lateral checks.
+		return false;
+	}
+
+	Vector right =  vecThreat - vNearPos;
+	float temp;
+
+	right.z = 0;
+	VectorNormalize( right );
+	temp = right.x;
+	right.x = -right.y;
+	right.y = temp;
+
+	vecStepRight = right * (distToCheck / (float)numChecksPerDir);
+	vecStepRight.z = 0;
+
+	vecLeftTest = vecRightTest = vNearPos;
+ 	vecCheckStart = vecThreat;
+
+	for ( i = 0 ; i < numChecksPerDir ; i++ )
+	{
+		vecLeftTest = vecLeftTest - vecStepRight;
+		vecRightTest = vecRightTest + vecStepRight;
+
+		if (TestLateralCover( vecCheckStart, vecLeftTest, flMinDist ))
+		{
+			*pResult = vecLeftTest;
+			return true;
+		}
+
+		if (TestLateralCover( vecCheckStart, vecRightTest, flMinDist ))
+		{
+			*pResult = vecRightTest;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
+bool CAI_TacticalServices::TestLateralCover( const Vector &vecCheckStart, const Vector &vecCheckEnd, float flMinDist )
+{
+	trace_t	tr;
+
+	if ( (vecCheckStart - vecCheckEnd).LengthSqr() > Square(flMinDist) )
+	{
+		if (GetOuter()->IsCoverPosition(vecCheckStart, vecCheckEnd + GetOuter()->GetViewOffset()))
+		{
+			if ( GetOuter()->IsValidCover ( vecCheckEnd, NULL ) )
+			{
+				AIMoveTrace_t moveTrace;
+				GetOuter()->GetMoveProbe()->MoveLimit( NAV_GROUND, GetLocalOrigin(), vecCheckEnd, MASK_NPCSOLID, NULL, &moveTrace );
+				if (moveTrace.fStatus == AIMR_OK)
+				{
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
 

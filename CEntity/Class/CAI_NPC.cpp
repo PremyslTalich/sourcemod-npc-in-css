@@ -523,13 +523,13 @@ SH_DECL_MANUALHOOK1(IsValidEnemy, 0, 0, 0, bool, CBaseEntity *);
 DECLARE_HOOK(IsValidEnemy, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, IsValidEnemy, bool, (CBaseEntity *pEnemy), (pEnemy));
 
-SH_DECL_MANUALHOOK2(IsValidCover, 0, 0, 0, bool, const Vector &, CAI_Hint const *);
+SH_DECL_MANUALHOOK2(IsValidCover, 0, 0, 0, bool, const Vector &, CBaseEntity const *);
 DECLARE_HOOK(IsValidCover, CAI_NPC);
-DECLARE_DEFAULTHANDLER(CAI_NPC, IsValidCover, bool, (const Vector &vLocation, CAI_Hint const *pHint), (vLocation, pHint));
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsValidCover, bool, (const Vector &vLocation, CBaseEntity const *pHint), (vLocation, pHint));
 
-SH_DECL_MANUALHOOK3(IsValidShootPosition, 0, 0, 0, bool, const Vector &, CAI_Node *, CAI_Hint const *);
+SH_DECL_MANUALHOOK3(IsValidShootPosition, 0, 0, 0, bool, const Vector &, CAI_Node *, CBaseEntity const *);
 DECLARE_HOOK(IsValidShootPosition, CAI_NPC);
-DECLARE_DEFAULTHANDLER(CAI_NPC, IsValidShootPosition, bool, (const Vector &vLocation, CAI_Node *pNode, CAI_Hint const *pHint), (vLocation, pNode, pHint));
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsValidShootPosition, bool, (const Vector &vLocation, CAI_Node *pNode, CBaseEntity const *pHint), (vLocation, pNode, pHint));
 
 SH_DECL_MANUALHOOK0(GetMaxTacticalLateralMovement, 0, 0, 0, float);
 DECLARE_HOOK(GetMaxTacticalLateralMovement, CAI_NPC);
@@ -847,6 +847,27 @@ SH_DECL_MANUALHOOK2(TestShootPosition, 0, 0, 0, bool, const Vector &, const Vect
 DECLARE_HOOK(TestShootPosition, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, TestShootPosition, bool, (const Vector &vecShootPos, const Vector &targetPos), (vecShootPos, targetPos));
 
+SH_DECL_MANUALHOOK0_void(ClearAttackConditions, 0, 0, 0);
+DECLARE_HOOK(ClearAttackConditions, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, ClearAttackConditions, (), ());
+
+SH_DECL_MANUALHOOK0_void(OnListened, 0, 0, 0);
+DECLARE_HOOK(OnListened, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, OnListened, (), ());
+
+SH_DECL_MANUALHOOK1_void(SpeakSentence, 0, 0, 0, int);
+DECLARE_HOOK(SpeakSentence, CAI_NPC);
+DECLARE_DEFAULTHANDLER_void(CAI_NPC, SpeakSentence, (int sentenceType), (sentenceType));
+
+SH_DECL_MANUALHOOK1(GetCoverActivity, 0, 0, 0, Activity, CBaseEntity* );
+DECLARE_HOOK(GetCoverActivity, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, GetCoverActivity, Activity, (CBaseEntity* pHint), (pHint));
+
+SH_DECL_MANUALHOOK2(IsCoverPosition, 0, 0, 0, bool, const Vector &, const Vector & );
+DECLARE_HOOK(IsCoverPosition, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, IsCoverPosition, bool, (const Vector &vecThreat, const Vector &vecPosition), (vecThreat, vecPosition));
+
+
 
 
 //Datamaps
@@ -925,6 +946,10 @@ DEFINE_PROP(m_bCrouchDesired, CAI_NPC);
 DEFINE_PROP(m_bForceCrouch, CAI_NPC);
 DEFINE_PROP(m_ConditionsPreIgnore, CAI_NPC);
 DEFINE_PROP(m_flLastEnemyTime, CAI_NPC);
+DEFINE_PROP(m_flNextDecisionTime, CAI_NPC);
+DEFINE_PROP(m_bSkippedChooseEnemy, CAI_NPC);
+DEFINE_PROP(m_flTimeEnemyAcquired, CAI_NPC);
+
 
 
 
@@ -1048,6 +1073,24 @@ void CAI_NPC::ClearConditions( int *pConditions, int nConditions )
 		m_Conditions->Clear( interrupt );
 	}
 }
+
+bool CAI_NPC::HasInterruptCondition( int iCondition )
+{
+	if( !GetCurSchedule() )
+	{
+		return false;
+	}
+
+	int interrupt = InterruptFromCondition( iCondition );
+	
+	if ( interrupt == -1 )
+	{
+		Assert(0);
+		return false;
+	}
+	return ( m_Conditions->IsBitSet( interrupt ) && GetCurSchedule()->HasInterrupt( interrupt ) );
+}
+
 
 bool CAI_NPC::AutoMovement(CEntity *pTarget, AIMoveTrace_t *pTraceResult)
 {
@@ -2526,6 +2569,21 @@ const char *CAI_NPC::GetActivityName(int actID)
 	}
 
 	return name;
+}
+
+bool CAI_NPC::HasConditionsToInterruptSchedule( int nLocalScheduleID )
+{
+	CAI_Schedule *pSchedule = GetSchedule( nLocalScheduleID );
+	if ( !pSchedule )
+		return false;
+
+	CAI_ScheduleBits bitsMask;
+	pSchedule->GetInterruptMask( &bitsMask );
+
+	CAI_ScheduleBits bitsOut;
+	m_Conditions->And( bitsMask, &bitsOut );
+	
+	return !bitsOut.IsAllClear();
 }
 
 

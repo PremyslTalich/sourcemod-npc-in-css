@@ -183,6 +183,7 @@ private:
 
 class CAI_NPC;
 class CE_AI_Hint;
+class CAI_Node;
 
 //-----------------------------------------------------------------------------
 // CAI_HintManager
@@ -371,6 +372,8 @@ public:
 
 	bool				HintMatchesCriteria( CAI_NPC *pNPC, const CHintCriteria &hintCriteria, const Vector &position, float *flNearestDistance, bool bIgnoreLock = false, bool bIgnoreHintType = false );
 	bool				IsInNodeFOV( CEntity *pOther );
+	
+	CAI_Node			*GetNode( void );
 
 public:
 	DECLARE_DATAMAP(HintNodeData, m_NodeData);

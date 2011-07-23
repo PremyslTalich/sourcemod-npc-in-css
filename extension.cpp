@@ -171,7 +171,7 @@ bool Monster::SDK_OnLoad(char *error, size_t maxlength, bool late)
 	serverdll_addr = (unsigned long)dll;
 
 	//0EB829DE 
-	//META_CONPRINTF("%p\n",reinterpret_cast<void *>(0x0EAE91F0  -serverdll_addr));
+	//META_CONPRINTF("%p\n",reinterpret_cast<void *>(0x000AAD60 +serverdll_addr));
 	//META_CONPRINTF("%p\n",reinterpret_cast<void *>(0x000D5090 +serverdll_addr));
 
 	const char *game_foler = g_pSM->GetGameFolderName();

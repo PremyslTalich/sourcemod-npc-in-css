@@ -34,7 +34,6 @@ CAI_Expresser::CAI_Expresser( CBaseEntity *pOuter )
 	m_flLastTimeAcceptedSpeak(0.0f),
 	m_pOuter( pOuter )
 {
-
 }
 
 CAI_Expresser::~CAI_Expresser()
@@ -46,7 +45,6 @@ CAI_Expresser::~CAI_Expresser()
 	{
 		if ( pSemaphore->GetOwner() == GetOuter()->BaseEntity() )
 			pSemaphore->Release();
-
 	}
 }
 

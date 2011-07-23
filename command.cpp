@@ -1,6 +1,7 @@
 
 #include "CAI_NPC.h"
 #include "eventqueue.h"
+#include "CCombatWeapon.h"
 
 ConVar *sv_gravity = NULL;
 ConVar *phys_pushscale = NULL;
@@ -52,6 +53,7 @@ ConVar *ai_find_lateral_los = NULL;
 
 ConVar *npc_sentences = NULL;
 
+ConVar *ai_find_lateral_cover = NULL;
 
 void cmd1_CommandCallback(const CCommand &command)
 {
@@ -60,7 +62,19 @@ void cmd1_CommandCallback(const CCommand &command)
 	{
 		Vector vec(501.0f,22.7f,70.21f);
 
-		g_pEffects->MuzzleFlash(vec,vec3_angle, 1.0, 1);
+		CEntity *cent = CreateEntityByName("generic_actor");
+
+		cent->DispatchKeyValue("model","models/combine_soldier.mdl");
+		cent->DispatchKeyValue("additionalequipment","weapon_ak47");
+
+		CBaseEntity *cbase = cent->BaseEntity();
+
+		CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);
+		
+		cent->Teleport(&vec, NULL,NULL);
+
+		hc->CapabilitiesAdd(bits_CAP_USE_WEAPONS);
+		cent->Spawn();
 
 	} else {
 		Vector vec(501.0f,22.7f,70.21f);
@@ -87,7 +101,7 @@ void cmd1_CommandCallback(const CCommand &command)
 
 		//CEntity *cent = CreateEntityByName("npc_stalker");
 
-		//CEntity *cent = CreateEntityByName("npc_antlion");
+		CEntity *cent = CreateEntityByName("npc_antlion");
 
 		//CEntity *cent = CreateEntityByName("npc_vortigaunt");
 
@@ -109,19 +123,27 @@ void cmd1_CommandCallback(const CCommand &command)
 
 		//CEntity *cent = CreateEntityByName("npc_combine");
 			
-		CEntity *cent = CreateEntityByName("npc_combine_s");
+		//CEntity *cent = CreateEntityByName("npc_combine_s");
 
-		cent->DispatchKeyValue("additionalequipment","weapon_ak47");
+		//cent->DispatchKeyValue("additionalequipment","weapon_ak47");
+		//cent->DispatchKeyValue("tacticalvariant","1");
+
 		CBaseEntity *cbase = cent->BaseEntity();
 
 		CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);
 		
+		//hc->AddSpawnFlags(( 1 << 18 ));
+
 		cent->Teleport(&vec, NULL,NULL);
 
 		//cent->AddSpawnFlags(4096);
 
 		cent->Spawn();
-		cent->Activate();
+		//cent->Activate();
+
+
+		//hc->GetSequenceKeyValues( 0 );
+		
 
 		//g_CEventQueue->AddEvent( cbase, "SelfDestruct", 0.5f, cbase,cbase );
 
@@ -133,17 +155,44 @@ void cmd1_CommandCallback(const CCommand &command)
 	}
 }
 
+
 void cmd2_CommandCallback(const CCommand &command)
 {
 	Vector vec(501.0f,22.7f,70.21f);
-	CEntity *cent = CreateEntityByName("npc_antlion");
 
-	CBaseEntity *cbase = cent->BaseEntity();
-	CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);
+	CEntity *parent = NULL;
+	for(int i=0;i<=10;i++)
+	{
+		CEntity *cent = CreateEntityByName("npc_manhack");
+
+		CBaseEntity *cbase = cent->BaseEntity();
+		CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);
+
+		cent->Teleport(&vec, NULL,NULL);
+
+		cent->Spawn();
 	
-	cent->Teleport(&vec, NULL,NULL);
+		if(parent)
+		{
+			hl_constraint_info_t info;
+			info.pObjects[0] = cent->VPhysicsGetObject();	
+			info.massScale[0] = info.massScale[1] = 1.0f;
+			info.pObjects[1] = parent->VPhysicsGetObject();
+			info.massScale[1] = 1.0f;
 
-	cent->Spawn();
+			constraint_fixedparams_t fixed;
+			fixed.Defaults();
+			fixed.InitWithCurrentObjectState( info.pObjects[0], info.pObjects[1] );
+			fixed.constraint.Defaults();
+
+			physenv->CreateFixedConstraint( info.pObjects[0], info.pObjects[1],NULL, fixed );
+		}
+
+		parent = cent;
+
+		vec.z += 25.0f;
+
+	}
 
 	/*for (int i=0;i<ENTITY_ARRAY_SIZE;i++)
 	{
@@ -227,6 +276,9 @@ bool CommandInitialize()
 
 	GET_CONVAR(ai_find_lateral_los);
 	GET_CONVAR(npc_sentences);
+
+	GET_CONVAR(ai_find_lateral_cover);
+
 
 	return true;
 }
