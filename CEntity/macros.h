@@ -202,8 +202,8 @@ name##SigOffsetTracker name##SigOffsetTrackerObj;
 #define PROP_SEND 0
 #define PROP_DATA 1
 
-#define DECLARE_SENDPROP(typeof, name) DECLARE_PROP(typeof, name, PROP_SEND)
-#define DECLARE_DATAMAP(typeof, name) DECLARE_PROP(typeof, name, PROP_DATA)
+#define DECLARE_SENDPROP(typeof, name) DECLARE_PROP_SEND(typeof, name)
+#define DECLARE_DATAMAP(typeof, name) DECLARE_PROP(typeof, name)
 
 #define DECLARE_DATAMAP_OFFSET(typeof, name) DECLARE_PROP_OFFSET(typeof, name)
 
@@ -211,12 +211,32 @@ name##SigOffsetTracker name##SigOffsetTrackerObj;
 
 #define DEFINE_PROP(name, cl)	cl::name##PropTracker cl::name##PropTrackerObj;
 
+template <typename T>
+class Redirect;
+
+
 
 template <typename T>
-class Redirect
+class Redirect_Send
 {
 public:
-	Redirect& operator =(const T& input)
+	Redirect_Send& operator =(const Redirect<T>& input)
+	{
+		Assert(0);
+		*ptr = *(input.ptr);
+		if(pEdict)
+			pEdict->StateChanged(offset);
+		return *this;
+	}
+	Redirect_Send& operator =(const Redirect_Send& input)
+	{
+		Assert(0);
+		*ptr = *(input.ptr);
+		if(pEdict)
+			pEdict->StateChanged(offset);
+		return *this;
+	}
+	Redirect_Send& operator =(const T& input)
 	{
 		*ptr = input;
 		if(pEdict)
@@ -242,6 +262,50 @@ public:
 
 public:
 	edict_t *pEdict;
+	T* ptr;
+	unsigned int offset;
+};
+
+
+template <typename T>
+class Redirect
+{
+public:
+	Redirect& operator =(const Redirect_Send<T>& input)
+	{
+		Assert(0);
+		*ptr = *(input.ptr);
+		return *this;
+	}
+	Redirect& operator =(const Redirect& input)
+	{
+		Assert(0);
+		*ptr = *(input.ptr);
+		return *this;
+	}
+	Redirect& operator =(const T& input)
+	{
+		*ptr = input;
+		return *this;
+	}
+	operator T& () const
+	{
+		return *ptr;
+	}
+	operator T* () const
+	{
+		return ptr;
+	}
+	T* operator->() 
+	{
+		return ptr;
+	}
+	T& operator [] (unsigned i)
+	{
+		return ptr[i];
+	}
+
+public:
 	T* ptr;
 	unsigned int offset;
 };
@@ -292,10 +356,10 @@ public:
 
 
 template<>
-class Redirect <CFakeHandle>
+class Redirect_Send <CFakeHandle>
 {
 public:
-	Redirect& operator =(const CFakeHandle& input)
+	Redirect_Send& operator =(const CFakeHandle& input)
 	{
 		*ptr = input;
 		if(pEdict)
@@ -333,6 +397,50 @@ public:
 
 public:
 	edict_t *pEdict;
+	CFakeHandle* ptr;
+	unsigned int offset;
+};
+
+
+template<>
+class Redirect <CFakeHandle>
+{
+public:
+	Redirect& operator =(const CFakeHandle& input)
+	{
+		*ptr = input;
+		return *this;
+	}
+	bool operator ==(const CEntity *lhs)
+	{
+		return (*ptr == lhs);
+	}
+	bool operator !=(const CEntity *lhs)
+	{
+		return (*ptr != lhs);
+	}
+	operator CFakeHandle& () const
+	{
+		return *ptr;
+	}
+	operator CFakeHandle* () const
+	{
+		return ptr;
+	}
+	operator CEntity* () const
+	{
+		return ptr->Get();
+	}
+	CEntity* operator->() 
+	{
+		return CEntityLookup::Instance(*ptr);
+	}
+	bool operator == (void *rhs )
+	{
+		return (ptr == rhs);
+	}
+
+public:
 	CFakeHandle* ptr;
 	unsigned int offset;
 };
@@ -383,8 +491,9 @@ public:
 	IPropTracker *m_Next;
 };
 
-#define DECLARE_PROP(typeof, name, search) \
-Redirect<typeof> name; \
+
+#define DECLARE_PROP_SEND(typeof, name) \
+Redirect_Send<typeof> name; \
 friend class name##PropTracker; \
 class name##PropTracker : public IPropTracker \
 { \
@@ -402,14 +511,7 @@ public: \
 			pThisType->name.pEdict = NULL;\
 			if (!lookup) \
 			{ \
-				if (search == PROP_SEND) \
-				{ \
-					found = GetSendPropOffset(pEnt->edict()->GetNetworkable()->GetServerClass()->GetName(), #name, offset); \
-				} \
-				else \
-				{ \
-					found = GetDataMapOffset(pEnt->BaseEntity(), #name, offset); \
-				} \
+				found = GetSendPropOffset(pEnt->edict()->GetNetworkable()->GetServerClass()->GetName(), #name, offset); \
 				if (!found) \
 				{ \
 					g_pSM->LogError(myself,"[CENTITY] Failed lookup of prop %s on entity", #name); \
@@ -418,8 +520,52 @@ public: \
 			} \
 			if (found) \
 			{ \
-				if (search == PROP_SEND) \
-					pThisType->name.pEdict = pEnt->edict();\
+				pThisType->name.pEdict = pEnt->edict();\
+				pThisType->name.offset = offset; \
+				pThisType->name.ptr = (typeof *)(((uint8_t *)(pEnt->BaseEntity())) + offset); \
+			} \
+			else \
+			{ \
+				pThisType->name.ptr = NULL; \
+			} \
+		} \
+	} \
+private: \
+	unsigned int offset; \
+	bool lookup; \
+	bool found; \
+}; \
+static name##PropTracker name##PropTrackerObj;
+
+
+
+#define DECLARE_PROP(typeof, name) \
+Redirect<typeof> name; \
+friend class name##PropTracker; \
+class name##PropTracker : public IPropTracker \
+{ \
+public: \
+	name##PropTracker() \
+	{ \
+		lookup = false; \
+		found = false; \
+	} \
+	void InitProp(CEntity *pEnt) \
+	{ \
+		ThisClass *pThisType = dynamic_cast<ThisClass *>(pEnt); \
+		if (pThisType) \
+		{ \
+			if (!lookup) \
+			{ \
+				found = GetDataMapOffset(pEnt->BaseEntity(), #name, offset); \
+				if (!found) \
+				{ \
+					g_pSM->LogError(myself,"[CENTITY] Failed lookup of prop %s on entity", #name); \
+				} \
+				lookup = true; \
+			} \
+			if (found) \
+			{ \
 				pThisType->name.offset = offset; \
 				pThisType->name.ptr = (typeof *)(((uint8_t *)(pEnt->BaseEntity())) + offset); \
 			} \
@@ -456,7 +602,6 @@ public: \
 		ThisClass *pThisType = dynamic_cast<ThisClass *>(pEnt); \
 		if (pThisType) \
 		{ \
-			pThisType->name.pEdict = NULL;\
 			if(!lookup) \
 			{ \
 				found = g_pGameConf->GetOffset(#name, &offset); \
