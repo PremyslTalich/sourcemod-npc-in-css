@@ -49,9 +49,8 @@ public:
 	void LinkEntityToClass(IEntityFactory_CE *pFactory, const char *className);
 	void LinkEntityToClass(IEntityFactory_CE *pFactory, const char *className, const char *replaceName);
 
-	virtual IServerNetworkable *Create(const char *pClassName);
+	CEntity *CBaseEntityPostConstructor(CBaseEntity *pEntity, const char * szClassname);
 	void RemoveEdict(edict_t *e);
-	//virtual IEntityFactory *FindFactory(const char *pClassName);
 
 	void PrintDump();
 
@@ -63,6 +62,7 @@ private:
 	KTrie<IEntityFactory_CE *> pFactoryTrie;
 	KTrie<const char *> pSwapTrie;
 	KTrie<bool> pHookedTrie;
+	KTrie<IEntityFactory_CE *> pCacheTrie;
 	IEntityFactoryDictionary_CE *pDict;
 	bool m_bEnabled;
 

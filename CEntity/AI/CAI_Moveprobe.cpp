@@ -6,6 +6,12 @@
 #include "CPhysicsProp.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 #undef LOCAL_STEP_SIZE
 // FIXME: this should be based in their hull width
 #define	LOCAL_STEP_SIZE	16.0 // 8 // 16

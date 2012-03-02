@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ?1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -91,6 +91,8 @@ private:
 	};
 
 	CUtlRBTree< CritEntry_t, short > m_Lookup;
+
+	friend class AI_Response;
 };
 
 #pragma pack(1)

@@ -7,6 +7,13 @@
 #include "CPhysBox.h"
 #include "CPhysicsProp.h"
 #include "eventqueue.h"
+#include "ladder.h"
+
+
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
 
 
 CE_LINK_ENTITY_TO_CLASS(CBasePlayer, CPlayer);
@@ -98,10 +105,29 @@ void CPlayer::Spawn()
 	SetArmorValue(0);
 }
 
+void CPlayer::FixHL2Ladder()
+{
+	m_bOnLadder = false;
+	CFuncLadder *ladder = (CFuncLadder *)g_helpfunc.FindEntityByClassname((CBaseEntity *)NULL, "func_useableladder");
+	while(ladder) {
+		if(ladder->IsPlayerOnLadder(this))
+		{
+			m_bOnLadder = true;
+			break;
+		}
+		ladder = (CFuncLadder*)g_helpfunc.FindEntityByClassname(ladder, "func_useableladder");
+	}
+}
+
+void CPlayer::PreThink()
+{
+	FixHL2Ladder();
+	BaseClass::PreThink();
+}
+
 void CPlayer::PostThink()
 {
 	BaseClass::PostThink();
-	m_bOnLadder = false;
 }
 
 void CPlayer::ViewPunch( const QAngle &angleOffset )

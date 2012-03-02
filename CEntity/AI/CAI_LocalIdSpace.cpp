@@ -4,6 +4,12 @@
 #include "stringregistry.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CAI_GlobalNamespace::CAI_GlobalNamespace()
  :	m_pSymbols( new CStringRegistry ),
  	m_NextGlobalBase( GLOBAL_IDS_BASE )

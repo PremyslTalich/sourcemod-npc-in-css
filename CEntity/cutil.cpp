@@ -30,6 +30,12 @@
 
 
 
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
+
 int ENTINDEX( CBaseEntity *pEnt )
 {
 	CEntity *cent = CEntity::Instance(pEnt);
@@ -2196,3 +2202,33 @@ void SENTENCEG_PlaySentenceIndex( edict_t *entity, int iSentenceIndex, float vol
 		CEntity::EmitSentenceByIndex( filter, ENTINDEX(entity), CHAN_VOICE, iSentenceIndex, volume, soundlevel, flags, pitch );
 	}
 }
+
+
+
+#define EXTRACT_VOID_FUNCTIONPTR(x)		(*(void **)(&(x)))
+
+void *UTIL_FunctionFromName( datamap_t *pMap, const char *pName )
+{
+	while ( pMap )
+	{
+		for ( int i = 0; i < pMap->dataNumFields; i++ )
+		{
+			Assert( sizeof(pMap->dataDesc[i].inputFunc) == sizeof(void *) );
+
+			if ( pMap->dataDesc[i].flags & FTYPEDESC_FUNCTIONTABLE )
+			{
+				if ( FStrEq( pName, pMap->dataDesc[i].fieldName ) )
+				{
+					return EXTRACT_VOID_FUNCTIONPTR(pMap->dataDesc[i].inputFunc);
+				}
+			}
+		}
+		pMap = pMap->baseMap;
+	}
+
+	Msg( "Failed to find function %s\n", pName );
+
+	return NULL;
+}
+
+

@@ -11,6 +11,7 @@ abstract_class IGameSystem
 {
 public:
 	virtual bool SDKInit() =0;
+	virtual void SDKInitPost() =0;
 	virtual void SDKShutdown() =0;
 	virtual void LevelInitPreEntity() =0;
 	virtual void LevelInitPostEntity() =0;
@@ -20,12 +21,13 @@ public:
 
 public:
 	static void Add(IGameSystem* pSys);
-	static void SDKInitAllSystems();
+	static bool SDKInitAllSystems();
+	static void SDKInitPostAllSystems();
 	static void LevelInitPreEntityAllSystems();
 	static void LevelInitPostEntityAllSystems();
 	static void LevelShutdownPreEntityAllSystems();
 	static void LevelShutdownPostEntityAllSystems();
-	static void SDKShutdownAllSystem();
+	static void SDKShutdownAllSystems();
 	static void InitAllSystems();
 	static void HookValveSystem();
 
@@ -39,6 +41,7 @@ class CBaseGameSystem : public IGameSystem
 public:
 	CBaseGameSystem(const char *name);
 	virtual bool SDKInit() { return true; }
+	virtual void SDKInitPost() {}
 	virtual void SDKShutdown() {}
 	virtual void LevelInitPreEntity() {}
 	virtual void LevelInitPostEntity() {}
@@ -71,6 +74,8 @@ public:
 	virtual void LevelInitPreEntity() = 0;
 	// entities are created / spawned / precached here
 	virtual void LevelInitPostEntity() = 0;
+
+	virtual void LevelShutdownPreClearSteamAPIContext() =0;
 
 	virtual void LevelShutdownPreEntity() = 0;
 	// Entities are deleted / released here...
@@ -141,6 +146,7 @@ public:
 	// Level init, shutdown
 	virtual void LevelInitPreEntity() {}
 	virtual void LevelInitPostEntity() {}
+	virtual void LevelShutdownPreClearSteamAPIContext() { }
 	virtual void LevelShutdownPreEntity() {}
 	virtual void LevelShutdownPostEntity() {}
 
@@ -173,6 +179,60 @@ public:
 private:
 	char const *m_pszName;
 };
+
+
+
+class IValveGameSystemPerFrame : public IValveGameSystem
+{
+public:
+	// destructor, cleans up automagically....
+	virtual ~IValveGameSystemPerFrame();
+
+	// Called each frame before entities think
+	virtual void FrameUpdatePreEntityThink() = 0;
+	// called after entities think
+	virtual void FrameUpdatePostEntityThink() = 0;
+	virtual void PreClientUpdate() = 0;
+};
+
+class CValveBaseGameSystemPerFrame : public IValveGameSystemPerFrame
+{
+public:
+	virtual char const *Name() { return "unnamed"; }
+
+	// Init, shutdown
+	// return true on success. false to abort DLL init!
+	virtual bool Init() { return true; }
+	virtual void PostInit() {}
+	virtual void Shutdown() {}
+
+	// Level init, shutdown
+	virtual void LevelInitPreEntity() {}
+	virtual void LevelInitPostEntity() {}
+	virtual void LevelShutdownPreEntity() {}
+	virtual void LevelShutdownPostEntity() {}
+
+	virtual void OnSave() {}
+	virtual void OnRestore() {}
+	virtual void SafeRemoveIfDesired() {}
+
+	virtual bool	IsPerFrame() { return true; }
+
+	// Called each frame before entities think
+	virtual void FrameUpdatePreEntityThink() { }
+	// called after entities think
+	virtual void FrameUpdatePostEntityThink() { }
+	virtual void PreClientUpdate() { }
+};
+
+
+
+
+
+
+
+
+
 
 
 

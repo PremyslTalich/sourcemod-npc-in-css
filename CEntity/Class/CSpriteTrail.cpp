@@ -1,6 +1,12 @@
 
 #include "CSpriteTrail.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CE_LINK_ENTITY_TO_CLASS(CSpriteTrail, CE_CSpriteTrail);
 
 DEFINE_PROP(m_flLifeTime, CE_CSpriteTrail);

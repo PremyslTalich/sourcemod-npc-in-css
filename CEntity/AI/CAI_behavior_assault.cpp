@@ -10,6 +10,12 @@
 #include "CAI_Squad.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CE_LINK_ENTITY_TO_CLASS(CRallyPoint, CE_CRallyPoint);
 
 DEFINE_PROP(m_flAssaultDelay, CE_CRallyPoint);

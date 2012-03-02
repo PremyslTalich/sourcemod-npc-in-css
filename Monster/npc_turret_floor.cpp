@@ -152,13 +152,6 @@ CNPC_FloorTurret::CNPC_FloorTurret( void ) :
 	m_vecGoalAngles.Init();
 
 	m_vecEnemyLKP = vec3_invalid;
-
-	m_muzzleToWorldTick = 0;
-	m_flDestructStartTime = 0.0f;
-	m_iKeySkin = 0;
-	m_flKnockOverFailedTime = 0.0f;
-	m_flLastPhysicsInfluenceTime = 0.0f;
-	m_bHackedByAlyx = false;
 }
 
 //-----------------------------------------------------------------------------

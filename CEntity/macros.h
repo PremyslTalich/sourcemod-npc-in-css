@@ -119,6 +119,53 @@ public: \
 }; \
 name##cl##HookTracker name##cl##HookTrackerObj;
 
+
+#define DECLARE_HOOK_SUBCLASS(name, cl, c2) \
+class name##cl##HookTracker : public IHookTracker \
+{ \
+public: \
+	void ReconfigureHook(IGameConfig *pConfig) \
+	{ \
+		int offset; \
+		if (!pConfig->GetOffset(#name, &offset)) \
+		{ \
+			g_pSM->LogError(myself, "[CENTITY] Failed to retrieve offset %s from gamedata file", #name); \
+			m_bShouldHook = false; \
+		} else { \
+			SH_MANUALHOOK_RECONFIGURE(name, offset, 0, 0); \
+			m_bShouldHook = true; \
+		} \
+	} \
+	void AddHook(CEntity *pEnt) \
+	{ \
+		cl *pThisType = dynamic_cast<cl *>(pEnt); \
+		if (pThisType && m_bShouldHook) \
+		{ \
+			c2 *pThisSubType = dynamic_cast<c2 *>(pEnt->BaseEntity()); \
+			if(pThisSubType) \
+			{ \
+				SH_ADD_MANUALVPHOOK(name, pThisSubType, SH_STATIC(Static_##name), false); \
+			} \
+		} \
+	} \
+	void ClearFlag(CEntity *pEnt) \
+	{ \
+		cl *pThisType = dynamic_cast<cl *>(pEnt); \
+		if (pThisType) \
+		{ \
+			c2 *pThisSubType = dynamic_cast<c2 *>(pEnt->BaseEntity()); \
+			if(pThisSubType) \
+			{ \
+				pThisType->m_bIn##name = false; \
+			} \
+		} \
+	} \
+}; \
+name##cl##HookTracker name##cl##HookTrackerObj;
+
+
+
+
 class IDetourTracker
 {
 public:
@@ -635,6 +682,9 @@ ret type::name params \
 	SET_META_RESULT(MRES_IGNORED); \
 	SH_GLOB_SHPTR->DoRecall(); \
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr()); \
+	if(thisptr != (void *)BaseEntity()) { \
+		RETURN_META_VALUE(MRES_SUPERCEDE, SH_MCALL(BaseEntity(), name) paramscall); \
+	} \
 	RETURN_META_VALUE(MRES_SUPERCEDE, (thisptr->*(__SoureceHook_FHM_GetRecallMFP##name(thisptr))) paramscall); \
 } \
 ret type::Internal##name params \
@@ -661,6 +711,9 @@ ret type::name params \
 	SET_META_RESULT(MRES_IGNORED); \
 	SH_GLOB_SHPTR->DoRecall(); \
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr()); \
+	if(thisptr != (void *)BaseEntity()) { \
+		RETURN_META_VALUE(MRES_SUPERCEDE, SH_MCALL(BaseEntity(), name) paramscall); \
+	} \
 	RETURN_META_VALUE(MRES_SUPERCEDE, (thisptr->*(__SoureceHook_FHM_GetRecallMFP##name(thisptr))) paramscall); \
 } \
 ret type::Internal##name params \
@@ -678,6 +731,36 @@ ret type::Internal##name params \
 	return retvalue; \
 }
 
+
+#define DECLARE_DEFAULTHANDLER_REFERENCE(type, name, ret, params, paramscall) \
+ret type::name params \
+{ \
+	if (!m_bIn##name) \
+		return SH_MCALL(BaseEntity(), name) paramscall; \
+	SET_META_RESULT(MRES_IGNORED); \
+	SH_GLOB_SHPTR->DoRecall(); \
+	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr()); \
+	if(thisptr != (void *)BaseEntity()) { \
+		RETURN_META_VALUE(MRES_SUPERCEDE, SH_MCALL(BaseEntity(), name) paramscall); \
+	} \
+	RETURN_META_VALUE(MRES_SUPERCEDE, (thisptr->*(__SoureceHook_FHM_GetRecallMFP##name(thisptr))) paramscall); \
+} \
+ret type::Internal##name params \
+{ \
+	SET_META_RESULT(MRES_SUPERCEDE); \
+	type *pEnt = (type *)CEntity::Instance(META_IFACEPTR(CBaseEntity)); \
+	if (!pEnt) \
+		RETURN_META_NOREF(MRES_IGNORED, ret); \
+	int __index = pEnt->entindex_non_network(); \
+	pEnt->m_bIn##name = true; \
+	ret retvalue = pEnt->name paramscall; \
+	pEnt = (type *)CEntity::Instance(__index); \
+	if (pEnt) \
+		pEnt->m_bIn##name = false; \
+	return retvalue; \
+}
+
+
 #define DECLARE_DEFAULTHANDLER_void(type, name, params, paramscall) \
 void type::name params \
 { \
@@ -689,8 +772,12 @@ void type::name params \
 	SET_META_RESULT(MRES_IGNORED); \
 	SH_GLOB_SHPTR->DoRecall(); \
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr()); \
+	if(thisptr != (void *)BaseEntity()) { \
+		SH_MCALL(BaseEntity(), name) paramscall; \
+		RETURN_META(MRES_SUPERCEDE); \
+	} \
 	(thisptr->*(__SoureceHook_FHM_GetRecallMFP##name(thisptr))) paramscall; \
-	SET_META_RESULT(MRES_SUPERCEDE); \
+	RETURN_META(MRES_SUPERCEDE); \
 } \
 void type::Internal##name params \
 { \
@@ -705,6 +792,88 @@ void type::Internal##name params \
 	if (pEnt) \
 		pEnt->m_bIn##name = false; \
 }
+
+
+#define DECLARE_DEFAULTHANDLER_SUBCLASS(type1, type2, name, ret, params, paramscall) \
+ret type1::name params \
+{ \
+	type2 *pointer = dynamic_cast<type2*>(BaseEntity()); \
+	if (!m_bIn##name) { \
+		return SH_MCALL(pointer, name) paramscall; \
+	} \
+	SET_META_RESULT(MRES_IGNORED); \
+	SH_GLOB_SHPTR->DoRecall(); \
+	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr()); \
+	if(thisptr != (void *)pointer) { \
+		RETURN_META_VALUE(MRES_SUPERCEDE, SH_MCALL(pointer, name) paramscall); \
+	} \
+	RETURN_META_VALUE(MRES_SUPERCEDE, (thisptr->*(__SoureceHook_FHM_GetRecallMFP##name(thisptr))) paramscall); \
+} \
+ret Static_##name params \
+{ \
+	SET_META_RESULT(MRES_SUPERCEDE); \
+	type2 *pointer = META_IFACEPTR(type2); \
+	CBaseEntity *cbase = dynamic_cast<CBaseEntity*>(pointer); \
+	Assert(cbase); \
+	if(!cbase) \
+		RETURN_META_VALUE(MRES_IGNORED, (ret)0); \
+	type1 *pEnt = dynamic_cast<type1 *>(CEntity::Instance(cbase)); \
+	Assert(pEnt); \
+	if(!pEnt) \
+		RETURN_META_VALUE(MRES_IGNORED, (ret)0); \
+	int __index = pEnt->entindex_non_network(); \
+	pEnt->m_bIn##name = true; \
+	ret retvalue = pEnt->name paramscall; \
+	pEnt = (type1 *)CEntity::Instance(__index); \
+	if (pEnt) \
+		pEnt->m_bIn##name = false; \
+	return retvalue; \
+}
+
+
+#define DECLARE_DEFAULTHANDLER_SUBCLASS_void(type1, type2, name, params, paramscall) \
+void type1::name params \
+{ \
+	type2 *pointer = dynamic_cast<type2*>(BaseEntity()); \
+	if (!m_bIn##name) { \
+		SH_MCALL(pointer, name) paramscall; \
+		return; \
+	} \
+	SET_META_RESULT(MRES_IGNORED); \
+	SH_GLOB_SHPTR->DoRecall(); \
+	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr()); \
+	if(thisptr != (void *)pointer) { \
+		SH_MCALL(pointer, name) paramscall; \
+		RETURN_META(MRES_SUPERCEDE); \
+	} \
+	(thisptr->*(__SoureceHook_FHM_GetRecallMFP##name(thisptr))) paramscall; \
+	RETURN_META(MRES_SUPERCEDE); \
+} \
+void Static_##name params \
+{ \
+	SET_META_RESULT(MRES_SUPERCEDE); \
+	type2 *pointer = META_IFACEPTR(type2); \
+	CBaseEntity *cbase = dynamic_cast<CBaseEntity*>(pointer); \
+	Assert(cbase); \
+	if(!cbase) { \
+		SET_META_RESULT(MRES_IGNORED); \
+		return; \
+	} \
+	type1 *pEnt = dynamic_cast<type1 *>(CEntity::Instance(cbase)); \
+	Assert(pEnt); \
+	if(!pEnt) { \
+		SET_META_RESULT(MRES_IGNORED); \
+		return; \
+	} \
+	int __index = pEnt->entindex_non_network(); \
+	pEnt->m_bIn##name = true; \
+	pEnt->name paramscall; \
+	pEnt = (type1 *)CEntity::Instance(__index); \
+	if (pEnt) \
+		pEnt->m_bIn##name = false; \
+	return; \
+}
+
 
 #define DECLARE_DEFAULTHANDLER_DETOUR_void(type, name, params, paramscall) \
 void type::name params \
@@ -740,13 +909,6 @@ ret type::Internal##name params \
 ret (type::* type::name##_Actual) params = NULL;
 
 
-//#define DUMP_FUNCTION() META_CONPRINTF("%s\n",__FUNCTION__)
-
-#define DUMP_FUNCTION()
-
-
-
-
 
 #define RegisterHook(name, hook)\
 	if(!g_pGameConf->GetOffset(name, &offset))\
@@ -754,6 +916,14 @@ ret (type::* type::name##_Actual) params = NULL;
 		return false;\
 	}\
 	SH_MANUALHOOK_RECONFIGURE(hook, offset, 0, 0);
+
+#define RegisterHookNORET(name, hook)\
+	if(!g_pGameConf->GetOffset(name, &offset))\
+	{\
+		return;\
+	}\
+	SH_MANUALHOOK_RECONFIGURE(hook, offset, 0, 0);
+
 
 #define _GET_VARIABLE(name, type, ret)\
 	char *name##_addr = NULL;\

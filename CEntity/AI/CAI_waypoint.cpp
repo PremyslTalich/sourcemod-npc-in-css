@@ -4,6 +4,12 @@
 #include "CAI_node.h"
 #include "ai_waypoint.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 #define	WAYPOINT_POOL_SIZE 512
 
 

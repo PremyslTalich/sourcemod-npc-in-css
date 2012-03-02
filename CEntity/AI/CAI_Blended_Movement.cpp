@@ -7,6 +7,12 @@
 //-------------------------------------
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 extern ConVar *ai_path_adjust_speed_on_immediate_turns;
 extern ConVar *ai_path_insert_pause_at_obstruction;
 extern ConVar *ai_path_insert_pause_at_est_end;

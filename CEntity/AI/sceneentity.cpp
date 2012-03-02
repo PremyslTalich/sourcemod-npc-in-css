@@ -8,6 +8,12 @@
 #include "choreoscene.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 class CE_CSceneEntity : public CEntity
 {
 public:
@@ -39,12 +45,11 @@ public:
 
 public:
 	DECLARE_SENDPROP(bool, m_bMultiplayer);
-
+	DECLARE_SENDPROP(bool, m_bIsPlayingBack);
 public:
 	DECLARE_DATAMAP(bool, m_bBreakOnNonIdle);
 	DECLARE_DATAMAP_OFFSET(CRecipientFilter *, m_pRecipientFilter);
 	DECLARE_DATAMAP_OFFSET(CChoreoScene *, m_pScene);
-	DECLARE_DATAMAP_OFFSET(bool, m_bIsPlayingBack);
 	DECLARE_DATAMAP(string_t, m_iszSceneFile);
 
 };
@@ -71,12 +76,12 @@ DECLARE_DEFAULTHANDLER(CE_CSceneEntity, FindNamedActor_I, CBaseEntity *, (int in
 
 //Sendprops
 DEFINE_PROP(m_bMultiplayer,CE_CSceneEntity);
+DEFINE_PROP(m_bIsPlayingBack,CE_CSceneEntity);
 
 //DataMap
 DEFINE_PROP(m_bBreakOnNonIdle,CE_CSceneEntity);
 DEFINE_PROP(m_pRecipientFilter,CE_CSceneEntity);
 DEFINE_PROP(m_pScene,CE_CSceneEntity);
-DEFINE_PROP(m_bIsPlayingBack,CE_CSceneEntity);
 DEFINE_PROP(m_iszSceneFile,CE_CSceneEntity);
 
 
@@ -93,7 +98,7 @@ public:
 	virtual void SetPreDelay( float flDelay ) { m_flPreDelay = flDelay; }
 
 public:
-	DECLARE_DATAMAP(char *, m_szInstanceFilename);
+	DECLARE_DATAMAP(char, m_szInstanceFilename); //  size 128
 	DECLARE_DATAMAP(CFakeHandle, m_hOwner);
 	DECLARE_DATAMAP(bool, m_bHadOwner);
 	DECLARE_DATAMAP(float, m_flPostSpeakDelay);

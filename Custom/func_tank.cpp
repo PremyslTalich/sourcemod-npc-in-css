@@ -1486,7 +1486,7 @@ void CFuncTank::Think( void )
 					// !!!BUGBUG - this only works in cases where the player can see the gun whilst standing in the control 
 					// volume. (This works just fine for all func_tanks mounted on combine walls and small barriers)
 					variant_t emptyVariant;
-					AcceptInput( "Use", pPlayer, pPlayer, emptyVariant, USE_TOGGLE );
+					CustomAcceptInput( "Use", pPlayer, pPlayer, emptyVariant, USE_TOGGLE );
 				}
 				else
 				{

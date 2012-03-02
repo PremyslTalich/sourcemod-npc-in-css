@@ -81,6 +81,13 @@ CNPC_Bullseye::~CNPC_Bullseye( void )
 	g_BullseyeList.RemoveFromList( this );
 }
 
+void CNPC_Bullseye::PostConstructor()
+{
+	BaseClass::PostConstructor();
+	m_iHealth		= sk_bullseye_health.GetFloat();
+	m_flFieldOfView = _m_flFieldOfView;
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose: 

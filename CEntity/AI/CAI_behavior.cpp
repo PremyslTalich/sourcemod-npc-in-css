@@ -10,6 +10,12 @@
 #include "isaverestore.h"
 #include "CAI_behavior.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 bool g_bBehaviorHost_PreventBaseClassGatherConditions;
 
 BEGIN_DATADESC_NO_BASE( CAI_BehaviorBase )

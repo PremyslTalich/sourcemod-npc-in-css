@@ -176,12 +176,10 @@ enum
 
 //=========================================================
 //=========================================================
-class CEFastZombie : public CE_BaseZombie
+class CFastZombie : public CNPC_BaseZombie
 {
 public:
-	CE_DECLARE_CLASS( CEFastZombie, CE_BaseZombie );
-
-	CEFastZombie();
+	CE_DECLARE_CLASS( CFastZombie, CNPC_BaseZombie );
 
 	void Spawn( void );
 	void Precache( void );
@@ -296,11 +294,11 @@ public:
 };
 
 
-LINK_ENTITY_TO_CUSTOM_CLASS( npc_fastzombie, cycler, CEFastZombie );
-LINK_ENTITY_TO_CUSTOM_CLASS( npc_fastzombie_torso, cycler, CEFastZombie );
+LINK_ENTITY_TO_CUSTOM_CLASS( npc_fastzombie, cycler, CFastZombie );
+LINK_ENTITY_TO_CUSTOM_CLASS( npc_fastzombie_torso, cycler, CFastZombie );
 
 
-BEGIN_DATADESC( CEFastZombie )
+BEGIN_DATADESC( CFastZombie )
 
 	DEFINE_FIELD( m_flDistFactor, FIELD_FLOAT ),
 	DEFINE_FIELD( m_iClimbCount, FIELD_CHARACTER ),
@@ -327,7 +325,7 @@ BEGIN_DATADESC( CEFastZombie )
 END_DATADESC()
 
 
-const char *CEFastZombie::pMoanSounds[] =
+const char *CFastZombie::pMoanSounds[] =
 {
 	"NPC_FastZombie.Moan1",
 };
@@ -338,31 +336,12 @@ const char *CEFastZombie::pMoanSounds[] =
 static const char *s_pLegsModel = "models/gibs/fast_zombie_legs.mdl";
 
 
-
-CEFastZombie::CEFastZombie()
-{
-	m_flDistFactor = 0.0f;
-	m_iClimbCount = 0;
-	m_fIsNavJumping = false;
-	m_fIsAttackJumping = false;
-	m_fHitApex = false;
-	m_flJumpDist = 0.0f;
-	m_fHasScreamed = false;
-	m_flNextMeleeAttack = 0.0f;
-	m_fJustJumped = false;
-	m_flJumpStartAltitude = 0.0f;
-	m_flTimeUpdateSound = 0.0f;
-
-	m_pLayer2 = NULL;
-}
-
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //
 //
 //-----------------------------------------------------------------------------
-void CEFastZombie::Precache( void )
+void CFastZombie::Precache( void )
 {
 	PrecacheModel("models/zombie/fast.mdl");
 
@@ -395,7 +374,7 @@ void CEFastZombie::Precache( void )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-void CEFastZombie::OnScheduleChange( void )
+void CFastZombie::OnScheduleChange( void )
 {
 	if ( m_flNextMeleeAttack > gpGlobals->curtime + 1 )
 	{
@@ -409,7 +388,7 @@ void CEFastZombie::OnScheduleChange( void )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-int CEFastZombie::SelectSchedule ( void )
+int CFastZombie::SelectSchedule ( void )
 {
 	if ( HasCondition( COND_ZOMBIE_RELEASECRAB ) )
 	{
@@ -456,7 +435,7 @@ int CEFastZombie::SelectSchedule ( void )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CEFastZombie::PrescheduleThink( void )
+void CFastZombie::PrescheduleThink( void )
 {
 	BaseClass::PrescheduleThink();
 
@@ -528,7 +507,7 @@ void CEFastZombie::PrescheduleThink( void )
 //
 //
 //-----------------------------------------------------------------------------
-void CEFastZombie::SoundInit( void )
+void CFastZombie::SoundInit( void )
 {
 	if( !m_pMoanSound )
 	{
@@ -556,7 +535,7 @@ void CEFastZombie::SoundInit( void )
 //-----------------------------------------------------------------------------
 // Purpose: Make the zombie sound calm.
 //-----------------------------------------------------------------------------
-void CEFastZombie::SetIdleSoundState( void )
+void CFastZombie::SetIdleSoundState( void )
 {
 	// Main looping sound
 	if ( m_pMoanSound )
@@ -577,7 +556,7 @@ void CEFastZombie::SetIdleSoundState( void )
 //-----------------------------------------------------------------------------
 // Purpose: Make the zombie sound pizzled
 //-----------------------------------------------------------------------------
-void CEFastZombie::SetAngrySoundState( void )
+void CFastZombie::SetAngrySoundState( void )
 {
 	if (( !m_pMoanSound ) || ( !m_pLayer2 ))
 	{
@@ -600,7 +579,7 @@ void CEFastZombie::SetAngrySoundState( void )
 //
 //
 //-----------------------------------------------------------------------------
-void CEFastZombie::Spawn( void )
+void CFastZombie::Spawn( void )
 {
 	Precache();
 
@@ -645,7 +624,7 @@ void CEFastZombie::Spawn( void )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CEFastZombie::PostNPCInit( void )
+void CFastZombie::PostNPCInit( void )
 {
 	SoundInit();
 
@@ -655,12 +634,12 @@ void CEFastZombie::PostNPCInit( void )
 //-----------------------------------------------------------------------------
 // Purpose: Returns the classname (ie "npc_headcrab") to spawn when our headcrab bails.
 //-----------------------------------------------------------------------------
-const char *CEFastZombie::GetHeadcrabClassname( void )
+const char *CFastZombie::GetHeadcrabClassname( void )
 {
 	return "npc_headcrab_fast";
 }
 
-const char *CEFastZombie::GetHeadcrabModel( void )
+const char *CFastZombie::GetHeadcrabModel( void )
 {
 	return "models/headcrab.mdl";
 }
@@ -668,7 +647,7 @@ const char *CEFastZombie::GetHeadcrabModel( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-float CEFastZombie::MaxYawSpeed( void )
+float CFastZombie::MaxYawSpeed( void )
 {
 	switch( GetActivity() )
 	{
@@ -698,7 +677,7 @@ float CEFastZombie::MaxYawSpeed( void )
 //
 //
 //-----------------------------------------------------------------------------
-void CEFastZombie::SetZombieModel( void )
+void CFastZombie::SetZombieModel( void )
 {
 	Hull_t lastHull = GetHullType();
 
@@ -735,12 +714,12 @@ void CEFastZombie::SetZombieModel( void )
 //-----------------------------------------------------------------------------
 // Purpose: Returns the model to use for our legs ragdoll when we are blown in twain.
 //-----------------------------------------------------------------------------
-const char *CEFastZombie::GetLegsModel( void )
+const char *CFastZombie::GetLegsModel( void )
 {
 	return s_pLegsModel;
 }
 
-const char *CEFastZombie::GetTorsoModel( void )
+const char *CFastZombie::GetTorsoModel( void )
 {
 	return "models/gibs/fast_zombie_torso.mdl";
 }
@@ -751,7 +730,7 @@ const char *CEFastZombie::GetTorsoModel( void )
 //
 //
 //-----------------------------------------------------------------------------
-int CEFastZombie::MeleeAttack1Conditions( float flDot, float flDist )
+int CFastZombie::MeleeAttack1Conditions( float flDot, float flDist )
 {
 	if ( !GetEnemy() )
 	{
@@ -783,7 +762,7 @@ int CEFastZombie::MeleeAttack1Conditions( float flDot, float flDist )
 //-----------------------------------------------------------------------------
 // Purpose: Returns a moan sound for this class of zombie.
 //-----------------------------------------------------------------------------
-const char *CEFastZombie::GetMoanSound( int nSound )
+const char *CFastZombie::GetMoanSound( int nSound )
 {
 	return pMoanSounds[ nSound % ARRAYSIZE( pMoanSounds ) ];
 }
@@ -791,7 +770,7 @@ const char *CEFastZombie::GetMoanSound( int nSound )
 //-----------------------------------------------------------------------------
 // Purpose: Sound of a footstep
 //-----------------------------------------------------------------------------
-void CEFastZombie::FootstepSound( bool fRightFoot )
+void CFastZombie::FootstepSound( bool fRightFoot )
 {
 	if( fRightFoot )
 	{
@@ -806,7 +785,7 @@ void CEFastZombie::FootstepSound( bool fRightFoot )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random attack hit sound
 //-----------------------------------------------------------------------------
-void CEFastZombie::AttackHitSound( void )
+void CFastZombie::AttackHitSound( void )
 {
 	EmitSound( "NPC_FastZombie.AttackHit" );
 }
@@ -814,7 +793,7 @@ void CEFastZombie::AttackHitSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random attack miss sound
 //-----------------------------------------------------------------------------
-void CEFastZombie::AttackMissSound( void )
+void CFastZombie::AttackMissSound( void )
 {
 	// Play a random attack miss sound
 	EmitSound( "NPC_FastZombie.AttackMiss" );
@@ -823,7 +802,7 @@ void CEFastZombie::AttackMissSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random attack sound.
 //-----------------------------------------------------------------------------
-void CEFastZombie::LeapAttackSound( void )
+void CFastZombie::LeapAttackSound( void )
 {
 	EmitSound( "NPC_FastZombie.LeapAttack" );
 }
@@ -831,7 +810,7 @@ void CEFastZombie::LeapAttackSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random attack sound.
 //-----------------------------------------------------------------------------
-void CEFastZombie::AttackSound( void )
+void CFastZombie::AttackSound( void )
 {
 	EmitSound( "NPC_FastZombie.Attack" );
 }
@@ -839,7 +818,7 @@ void CEFastZombie::AttackSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random idle sound.
 //-----------------------------------------------------------------------------
-void CEFastZombie::IdleSound( void )
+void CFastZombie::IdleSound( void )
 {
 	EmitSound( "NPC_FastZombie.Idle" );
 }
@@ -847,7 +826,7 @@ void CEFastZombie::IdleSound( void )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random pain sound.
 //-----------------------------------------------------------------------------
-void CEFastZombie::PainSound( const CTakeDamageInfo &info )
+void CFastZombie::PainSound( const CTakeDamageInfo &info )
 {
 	if ( m_pLayer2 )
 		g_SoundController->SoundPlayEnvelope( m_pLayer2, SOUNDCTRL_CHANGE_VOLUME, envFastZombieVolumePain, ARRAYSIZE(envFastZombieVolumePain) );
@@ -857,7 +836,7 @@ void CEFastZombie::PainSound( const CTakeDamageInfo &info )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CEFastZombie::DeathSound( const CTakeDamageInfo &info ) 
+void CFastZombie::DeathSound( const CTakeDamageInfo &info ) 
 {
 	EmitSound( "NPC_FastZombie.Die" );
 }
@@ -865,7 +844,7 @@ void CEFastZombie::DeathSound( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 // Purpose: Play a random alert sound.
 //-----------------------------------------------------------------------------
-void CEFastZombie::AlertSound( void )
+void CFastZombie::AlertSound( void )
 {
 }
 
@@ -874,7 +853,7 @@ void CEFastZombie::AlertSound( void )
 //-----------------------------------------------------------------------------
 #define FASTZOMBIE_MINLEAP			200
 #define FASTZOMBIE_MAXLEAP			300
-float CEFastZombie::InnateRange1MaxRange( void ) 
+float CFastZombie::InnateRange1MaxRange( void ) 
 { 
 	return FASTZOMBIE_MAXLEAP; 
 }
@@ -885,7 +864,7 @@ float CEFastZombie::InnateRange1MaxRange( void )
 //
 //
 //-----------------------------------------------------------------------------
-int CEFastZombie::RangeAttack1Conditions( float flDot, float flDist )
+int CFastZombie::RangeAttack1Conditions( float flDot, float flDist )
 {
 
 	if (GetEnemy() == NULL)
@@ -974,7 +953,7 @@ int CEFastZombie::RangeAttack1Conditions( float flDot, float flDist )
 //
 //
 //-----------------------------------------------------------------------------
-void CEFastZombie::HandleAnimEvent( animevent_t *pEvent )
+void CFastZombie::HandleAnimEvent( animevent_t *pEvent )
 {
 	if ( pEvent->event == AE_FASTZOMBIE_CLIMB_LEFT || pEvent->event == AE_FASTZOMBIE_CLIMB_RIGHT )
 	{
@@ -1077,7 +1056,7 @@ void CEFastZombie::HandleAnimEvent( animevent_t *pEvent )
 //
 //
 //-----------------------------------------------------------------------------
-void CEFastZombie::LeapAttack( void )
+void CFastZombie::LeapAttack( void )
 {
 	SetGroundEntity( NULL );
 
@@ -1149,7 +1128,7 @@ void CEFastZombie::LeapAttack( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEFastZombie::StartTask( const Task_t *pTask )
+void CFastZombie::StartTask( const Task_t *pTask )
 {
 	switch( pTask->iTask )
 	{
@@ -1271,7 +1250,7 @@ void CEFastZombie::StartTask( const Task_t *pTask )
 		// Make melee attacks impossible until we land!
 		m_flNextMeleeAttack = gpGlobals->curtime + 60;
 
-		SetTouch( &CEFastZombie::LeapAttackTouch );
+		SetTouch( &CFastZombie::LeapAttackTouch );
 		break;
 
 	case TASK_FASTZOMBIE_DO_ATTACK:
@@ -1287,7 +1266,7 @@ void CEFastZombie::StartTask( const Task_t *pTask )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEFastZombie::RunTask( const Task_t *pTask )
+void CFastZombie::RunTask( const Task_t *pTask )
 {
 	switch( pTask->iTask )
 	{
@@ -1320,7 +1299,7 @@ void CEFastZombie::RunTask( const Task_t *pTask )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-int CEFastZombie::TranslateSchedule( int scheduleType )
+int CFastZombie::TranslateSchedule( int scheduleType )
 {
 	switch( scheduleType )
 	{
@@ -1381,7 +1360,7 @@ int CEFastZombie::TranslateSchedule( int scheduleType )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-Activity CEFastZombie::NPC_TranslateActivity( Activity baseAct )
+Activity CFastZombie::NPC_TranslateActivity( Activity baseAct )
 {
 	if ( baseAct == ACT_CLIMB_DOWN )
 		return ACT_CLIMB_UP;
@@ -1391,7 +1370,7 @@ Activity CEFastZombie::NPC_TranslateActivity( Activity baseAct )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-void CEFastZombie::LeapAttackTouch( CEntity *pOther )
+void CFastZombie::LeapAttackTouch( CEntity *pOther )
 {
 	if ( !pOther->IsSolid() )
 	{
@@ -1416,7 +1395,7 @@ void CEFastZombie::LeapAttackTouch( CEntity *pOther )
 //-----------------------------------------------------------------------------
 // Purpose: Lets us know if we touch the player while we're climbing.
 //-----------------------------------------------------------------------------
-void CEFastZombie::ClimbTouch( CEntity *pOther )
+void CFastZombie::ClimbTouch( CEntity *pOther )
 {
 	if ( pOther->IsPlayer() )
 	{
@@ -1458,7 +1437,7 @@ void CEFastZombie::ClimbTouch( CEntity *pOther )
 //-----------------------------------------------------------------------------
 // Purpose: Shuts down our looping sounds.
 //-----------------------------------------------------------------------------
-void CEFastZombie::StopLoopingSounds( void )
+void CFastZombie::StopLoopingSounds( void )
 {
 	if ( m_pMoanSound )
 	{
@@ -1481,7 +1460,7 @@ void CEFastZombie::StopLoopingSounds( void )
 //-----------------------------------------------------------------------------
 // Purpose: Fast zombie cannot range attack when he's a torso!
 //-----------------------------------------------------------------------------
-void CEFastZombie::BecomeTorso( const Vector &vecTorsoForce, const Vector &vecLegsForce )
+void CFastZombie::BecomeTorso( const Vector &vecTorsoForce, const Vector &vecLegsForce )
 {
 	CapabilitiesRemove( bits_CAP_INNATE_RANGE_ATTACK1 );
 	CapabilitiesRemove( bits_CAP_MOVE_JUMP );
@@ -1497,7 +1476,7 @@ void CEFastZombie::BecomeTorso( const Vector &vecTorsoForce, const Vector &vecLe
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-bool CEFastZombie::IsJumpLegal(const Vector &startPos, const Vector &apex, const Vector &endPos) const
+bool CFastZombie::IsJumpLegal(const Vector &startPos, const Vector &apex, const Vector &endPos) const
 {
 	const float MAX_JUMP_RISE		= 220.0f;
 	const float MAX_JUMP_DISTANCE	= 512.0f;
@@ -1516,7 +1495,7 @@ bool CEFastZombie::IsJumpLegal(const Vector &startPos, const Vector &apex, const
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
-bool CEFastZombie::MovementCost( int moveType, const Vector &vecStart, const Vector &vecEnd, float *pCost )
+bool CFastZombie::MovementCost( int moveType, const Vector &vecStart, const Vector &vecEnd, float *pCost )
 {
 	float delta = vecEnd.z - vecStart.z;
 
@@ -1538,7 +1517,7 @@ bool CEFastZombie::MovementCost( int moveType, const Vector &vecStart, const Vec
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
-bool CEFastZombie::ShouldFailNav( bool bMovementFailed )
+bool CFastZombie::ShouldFailNav( bool bMovementFailed )
 {
 	if ( !BaseClass::ShouldFailNav( bMovementFailed ) )
 	{
@@ -1559,7 +1538,7 @@ bool CEFastZombie::ShouldFailNav( bool bMovementFailed )
 // Purpose: Notifier that lets us know when the fast
 //			zombie has hit the apex of a navigational jump.
 //---------------------------------------------------------
-void CEFastZombie::OnNavJumpHitApex( void )
+void CFastZombie::OnNavJumpHitApex( void )
 {
 	m_fHitApex = true;	// stop subsequent notifications
 }
@@ -1569,7 +1548,7 @@ void CEFastZombie::OnNavJumpHitApex( void )
 //			and out of his climb state and his navigation
 //			jump state.
 //---------------------------------------------------------
-void CEFastZombie::OnChangeActivity( Activity NewActivity )
+void CFastZombie::OnChangeActivity( Activity NewActivity )
 {
 	if ( NewActivity == ACT_FASTZOMBIE_FRENZY )
 	{
@@ -1612,7 +1591,7 @@ void CEFastZombie::OnChangeActivity( Activity NewActivity )
 		if ( m_pMoanSound )
 			g_SoundController->SoundChangeVolume( m_pMoanSound, 0.0, 0.2 );
 
-		SetTouch( &CEFastZombie::ClimbTouch );
+		SetTouch( &CFastZombie::ClimbTouch );
 	}
 	else if ( GetActivity() == ACT_CLIMB_DISMOUNT || ( GetActivity() == ACT_CLIMB_UP && NewActivity != ACT_CLIMB_DISMOUNT ) )
 	{
@@ -1630,7 +1609,7 @@ void CEFastZombie::OnChangeActivity( Activity NewActivity )
 //=========================================================
 // 
 //=========================================================
-int CEFastZombie::SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFailureCode_t taskFailCode )
+int CFastZombie::SelectFailSchedule( int failedSchedule, int failedTask, AI_TaskFailureCode_t taskFailCode )
 {
 	if ( m_fJustJumped )
 	{
@@ -1646,7 +1625,7 @@ int CEFastZombie::SelectFailSchedule( int failedSchedule, int failedTask, AI_Tas
 // Purpose: Do some record keeping for jumps made for 
 //			navigational purposes (i.e., not attack jumps)
 //=========================================================
-void CEFastZombie::BeginNavJump( void )
+void CFastZombie::BeginNavJump( void )
 {
 	m_fIsNavJumping = true;
 	m_fHitApex = false;
@@ -1657,7 +1636,7 @@ void CEFastZombie::BeginNavJump( void )
 //=========================================================
 // 
 //=========================================================
-void CEFastZombie::EndNavJump( void )
+void CFastZombie::EndNavJump( void )
 {
 	m_fIsNavJumping = false;
 	m_fHitApex = false;
@@ -1666,7 +1645,7 @@ void CEFastZombie::EndNavJump( void )
 //=========================================================
 // 
 //=========================================================
-void CEFastZombie::BeginAttackJump( void )
+void CFastZombie::BeginAttackJump( void )
 {
 	// Set this to true. A little bit later if we fail to pathfind, we check
 	// this value to see if we just jumped. If so, we assume we've jumped 
@@ -1679,14 +1658,14 @@ void CEFastZombie::BeginAttackJump( void )
 //=========================================================
 // 
 //=========================================================
-void CEFastZombie::EndAttackJump( void )
+void CFastZombie::EndAttackJump( void )
 {
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEFastZombie::BuildScheduleTestBits( void )
+void CFastZombie::BuildScheduleTestBits( void )
 {
 	// FIXME: This is probably the desired call to make, but it opts into an untested base class path, we'll need to
 	//		  revisit this and figure out if we want that. -- jdw
@@ -1708,7 +1687,7 @@ void CEFastZombie::BuildScheduleTestBits( void )
 //=========================================================
 // 
 //=========================================================
-void CEFastZombie::OnStateChange( NPC_STATE OldState, NPC_STATE NewState )
+void CFastZombie::OnStateChange( NPC_STATE OldState, NPC_STATE NewState )
 {
 	if( NewState == NPC_STATE_COMBAT )
 	{
@@ -1730,7 +1709,7 @@ void CEFastZombie::OnStateChange( NPC_STATE OldState, NPC_STATE NewState )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CEFastZombie::Event_Killed( const CTakeDamageInfo &info )
+void CFastZombie::Event_Killed( const CTakeDamageInfo &info )
 {
 	// Shut up my screaming sounds.
 	CPASAttenuationFilter filter( this );
@@ -1741,7 +1720,7 @@ void CEFastZombie::Event_Killed( const CTakeDamageInfo &info )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-bool CEFastZombie::ShouldBecomeTorso( const CTakeDamageInfo &info, float flDamageThreshold )
+bool CFastZombie::ShouldBecomeTorso( const CTakeDamageInfo &info, float flDamageThreshold )
 {
 	if( m_fIsTorso )
 	{
@@ -1765,7 +1744,7 @@ bool CEFastZombie::ShouldBecomeTorso( const CTakeDamageInfo &info, float flDamag
 
 //-----------------------------------------------------------------------------
 
-AI_BEGIN_CUSTOM_NPC( npc_fastzombie, CEFastZombie )
+AI_BEGIN_CUSTOM_NPC( npc_fastzombie, CFastZombie )
 
 	DECLARE_ACTIVITY( ACT_FASTZOMBIE_LEAP_SOAR )
 	DECLARE_ACTIVITY( ACT_FASTZOMBIE_LEAP_STRIKE )

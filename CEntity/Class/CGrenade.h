@@ -10,7 +10,7 @@ class CE_Grenade : public CAnimating
 public:
 	CE_DECLARE_CLASS( CE_Grenade, CAnimating );
 
-	void CE_PostInit();
+	void PostConstructor();
 
 	CCombatCharacter *GetThrower( void );
 	void DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );

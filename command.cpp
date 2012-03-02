@@ -60,21 +60,7 @@ void cmd1_CommandCallback(const CCommand &command)
 	int client = g_Monster.GetCommandClient();
 	if(client)
 	{
-		Vector vec(501.0f,22.7f,70.21f);
-
-		CEntity *cent = CreateEntityByName("generic_actor");
-
-		cent->DispatchKeyValue("model","models/combine_soldier.mdl");
-		cent->DispatchKeyValue("additionalequipment","weapon_ak47");
-
-		CBaseEntity *cbase = cent->BaseEntity();
-
-		CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);
 		
-		cent->Teleport(&vec, NULL,NULL);
-
-		hc->CapabilitiesAdd(bits_CAP_USE_WEAPONS);
-		cent->Spawn();
 
 	} else {
 		Vector vec(501.0f,22.7f,70.21f);
@@ -93,7 +79,7 @@ void cmd1_CommandCallback(const CCommand &command)
 		//CEntity *cent = CreateEntityByName("npc_fastzombie");
 		//CEntity cent = CreateEntityByName("npc_fastzombie_torso");
 		//CEntity *cent = CreateEntityByName("npc_zombie_torso");
-		//CEntity *cent = CreateEntityByName("npc_zombie");
+		CEntity *cent = CreateEntityByName("npc_zombie");
 		//CEntity *cent = CreateEntityByName("npc_poisonzombie");
 		
 		//CEntity *cent = CreateEntityByName("npc_manhack");
@@ -101,7 +87,7 @@ void cmd1_CommandCallback(const CCommand &command)
 
 		//CEntity *cent = CreateEntityByName("npc_stalker");
 
-		CEntity *cent = CreateEntityByName("npc_antlion");
+		//CEntity *cent = CreateEntityByName("npc_antlion");
 
 		//CEntity *cent = CreateEntityByName("npc_vortigaunt");
 
@@ -111,13 +97,13 @@ void cmd1_CommandCallback(const CCommand &command)
 		
 		/*CEntity *cent = CreateEntityByName("env_headcrabcanister");
 	
-		cent->DispatchKeyValue("HeadcrabType", "0");
-		cent->DispatchKeyValue("HeadcrabCount", "10");
+		cent->CustomDispatchKeyValue("HeadcrabType", "0");
+		cent->CustomDispatchKeyValue("HeadcrabCount", "10");
 		
-		cent->DispatchKeyValue("SmokeLifetime","60");
-		cent->DispatchKeyValue("SkyboxCannisterCount","1");
-		cent->DispatchKeyValue("DamageRadius","0");
-		cent->DispatchKeyValue("Damage","100");*/
+		cent->CustomDispatchKeyValue("SmokeLifetime","60");
+		cent->CustomDispatchKeyValue("SkyboxCannisterCount","1");
+		cent->CustomDispatchKeyValue("DamageRadius","0");
+		cent->CustomDispatchKeyValue("Damage","100");*/
 
 		//CEntity *cent = CreateEntityByName("npc_turret_floor");
 
@@ -139,7 +125,7 @@ void cmd1_CommandCallback(const CCommand &command)
 		//cent->AddSpawnFlags(4096);
 
 		cent->Spawn();
-		//cent->Activate();
+		cent->Activate();
 
 
 		//hc->GetSequenceKeyValues( 0 );
@@ -155,54 +141,20 @@ void cmd1_CommandCallback(const CCommand &command)
 	}
 }
 
-
 void cmd2_CommandCallback(const CCommand &command)
 {
-	Vector vec(501.0f,22.7f,70.21f);
-
-	CEntity *parent = NULL;
-	for(int i=0;i<=10;i++)
+	char str[200];
+	FILE *fp;
+	fp = fopen("pp.txt", "r");
+	while(fgets(str,sizeof(str),fp) != NULL)
 	{
-		CEntity *cent = CreateEntityByName("npc_manhack");
-
-		CBaseEntity *cbase = cent->BaseEntity();
-		CAI_NPC *hc = dynamic_cast<CAI_NPC *>(cent);
-
-		cent->Teleport(&vec, NULL,NULL);
-
-		cent->Spawn();
-	
-		if(parent)
-		{
-			hl_constraint_info_t info;
-			info.pObjects[0] = cent->VPhysicsGetObject();	
-			info.massScale[0] = info.massScale[1] = 1.0f;
-			info.pObjects[1] = parent->VPhysicsGetObject();
-			info.massScale[1] = 1.0f;
-
-			constraint_fixedparams_t fixed;
-			fixed.Defaults();
-			fixed.InitWithCurrentObjectState( info.pObjects[0], info.pObjects[1] );
-			fixed.constraint.Defaults();
-
-			physenv->CreateFixedConstraint( info.pObjects[0], info.pObjects[1],NULL, fixed );
-		}
-
-		parent = cent;
-
-		vec.z += 25.0f;
-
+		int len = strlen(str)-1;
+		if(str[len] == '\n') 
+			str[len] = 0;
+		CEntity *cent = CreateEntityByName(str);
+		META_CONPRINTF("%s\n",str);
 	}
-
-	/*for (int i=0;i<ENTITY_ARRAY_SIZE;i++)
-	{
-		CEntity *cent = CEntity::Instance(i);
-		if(cent != NULL)
-		{
-			META_CONPRINTF("%s\n",cent->GetClassname());
-
-		}
-	}*/
+	fclose(fp);
 }
 
 void monster_dump_CommandCallback(const CCommand &command)
@@ -220,12 +172,14 @@ void monster_dump_CommandCallback(const CCommand &command)
 
 bool CommandInitialize()
 {
-#if 1
+#if 0
 	new ConCommand("e5",cmd1_CommandCallback, "", FCVAR_GAMEDLL);
 	new ConCommand("e6",cmd2_CommandCallback, "", 0);
 	new ConCommand("pp",monster_dump_CommandCallback, "", 0);
 #endif
+
 	new ConCommand("monster_dump",monster_dump_CommandCallback, "", 0);
+	new ConVar("zx2_monster_build_free",__DATE__" "__TIME__,FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 
 	GET_CONVAR(sv_gravity);
 	GET_CONVAR(phys_pushscale);

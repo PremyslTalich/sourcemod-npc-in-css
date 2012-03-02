@@ -2,6 +2,12 @@
 #include "CGrenade.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CE_LINK_ENTITY_TO_CLASS(CBaseGrenade, CE_Grenade);
 
 SH_DECL_MANUALHOOK0_void(Detonate, 0, 0, 0);
@@ -14,8 +20,9 @@ DEFINE_PROP(m_flDamage, CE_Grenade);
 DEFINE_PROP(m_DmgRadius, CE_Grenade);
 DEFINE_PROP(m_hThrower, CE_Grenade);
 
-void CE_Grenade::CE_PostInit()
+void CE_Grenade::PostConstructor()
 {
+	BaseClass::PostConstructor();
 	m_hOriginalThrower.offset = m_hThrower.offset + 4;
 	m_hOriginalThrower.ptr = (CFakeHandle *)(((uint8_t *)(BaseEntity())) + m_hOriginalThrower.offset);
 }

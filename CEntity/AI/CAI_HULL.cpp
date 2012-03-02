@@ -2,6 +2,12 @@
 #include "CEntity.h"
 #include "CAI_NPC.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 struct ai_hull_t
 {
 	ai_hull_t( int bit, const char *pName, const Vector &_mins, const Vector &_maxs, const Vector &_smallMins, const Vector &_smallMaxs )

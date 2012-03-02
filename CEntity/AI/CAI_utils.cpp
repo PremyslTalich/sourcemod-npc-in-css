@@ -13,6 +13,12 @@
 
 
 
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
+
 BEGIN_SIMPLE_DATADESC( CAI_MoveMonitor )
 	DEFINE_FIELD( m_vMark, FIELD_POSITION_VECTOR ), 
 	DEFINE_FIELD( m_flMarkTolerance, FIELD_FLOAT )

@@ -8,6 +8,12 @@
 #include "CPropDoor.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 extern ConVar *ai_use_clipped_paths;
 extern ConVar *ai_navigator_generate_spikes;
 extern ConVar *ai_navigator_generate_spikes_strength;
@@ -867,7 +873,7 @@ void CAI_Navigator::AdvancePath()
 		if ( pEntity )
 		{
 			variant_t emptyVariant;
-			pEntity->AcceptInput( "InPass", GetOuter(), pEntity, emptyVariant, 0 );
+			pEntity->CustomAcceptInput( "InPass", GetOuter()->BaseEntity(), pEntity->BaseEntity(), emptyVariant, 0 );
 		}
 	}
 

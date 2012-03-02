@@ -1,5 +1,6 @@
 
 #include "GameSystem.h"
+#include "stringregistry.h"
 
 
 static CUtlVector<IGameSystem*> s_my_GameSystems( 0, 4 );
@@ -75,7 +76,7 @@ void IGameSystem::Add( IGameSystem* pSys )
 	s_my_GameSystems.AddToTail( pSys );
 }
 
-void IGameSystem::SDKInitAllSystems()
+bool IGameSystem::SDKInitAllSystems()
 {
 	int i;
 	int c = s_my_GameSystems.Count();
@@ -85,7 +86,20 @@ void IGameSystem::SDKInitAllSystems()
 		if(!sys->SDKInit())
 		{
 			META_CONPRINTF("[*] %s SDKInit failed to Initialize.",sys->GetSystemName());
+			return false;
 		}
+	}
+	return true;
+}
+
+void IGameSystem::SDKInitPostAllSystems()
+{
+	int i;
+	int c = s_my_GameSystems.Count();
+	for ( i = 0; i < c ; ++i )
+	{
+		IGameSystem *sys = s_my_GameSystems[i];
+		sys->SDKInitPost();
 	}
 }
 
@@ -109,7 +123,7 @@ void IGameSystem::LevelShutdownPostEntityAllSystems()
 	InvokeMethod(&IGameSystem::LevelShutdownPostEntity);
 }
 
-void IGameSystem::SDKShutdownAllSystem()
+void IGameSystem::SDKShutdownAllSystems()
 {
 	InvokeMethod(&IGameSystem::SDKShutdown);
 }
@@ -137,8 +151,9 @@ CBaseGameSystem::CBaseGameSystem(const char *name)
 
 IValveGameSystem::~IValveGameSystem()
 {
-	if(s_GameSystems)
+	if(s_GameSystems) {
 		s_GameSystems->FindAndRemove( this );
+	}
 }
 
 const char *CPropData::GetRandomChunkModel( const char *pszBreakableSection, int iMaxSize )

@@ -57,10 +57,8 @@ bool CommandInitialize();
 //extern sp_nativeinfo_t g_MonsterNatives[];
 
 
-SH_DECL_HOOK6(IServerGameDLL, LevelInit, SH_NOATTRIB, false, bool, const char *, const char *, const char *, const char *, bool, bool);
 SH_DECL_HOOK3_void(IServerGameDLL, ServerActivate, SH_NOATTRIB, 0, edict_t *, int, int);
 SH_DECL_HOOK1_void(IServerGameClients, SetCommandClient, SH_NOATTRIB, 0, int);
-SH_DECL_HOOK0_void(IServerGameDLL, LevelShutdown, SH_NOATTRIB, 0);
 
 
 #define	TEST_SIGNATURE		1
@@ -299,9 +297,6 @@ bool Monster::SDK_OnMetamodLoad(ISmmAPI *ismm, char *error, size_t maxlen, bool 
 
 	SH_ADD_HOOK_MEMFUNC(IServerGameDLL, ServerActivate, gamedll, this, &Monster::ServerActivate, true);
 	SH_ADD_HOOK_MEMFUNC(IServerGameClients, SetCommandClient, serverclients, this, &Monster::SetCommandClient, true);
-	SH_ADD_HOOK_MEMFUNC(IServerGameDLL, LevelShutdown, gamedll, this, &Monster::OnLevelShutdown_Pre, false);
-	SH_ADD_HOOK_MEMFUNC(IServerGameDLL, LevelShutdown, gamedll, this, &Monster::OnLevelShutdown_Post, true);
-	SH_ADD_HOOK_MEMFUNC(IServerGameDLL, LevelInit, gamedll, this, &Monster::LevelInit, false);
 
 	IGameSystem::InitAllSystems();
 
@@ -319,11 +314,8 @@ bool Monster::SDK_OnMetamodUnload(char *error, size_t maxlength)
 {
 	SH_REMOVE_HOOK_MEMFUNC(IServerGameDLL, ServerActivate, gamedll, this, &Monster::ServerActivate, true);
 	SH_REMOVE_HOOK_MEMFUNC(IServerGameClients, SetCommandClient, serverclients, this, &Monster::SetCommandClient, true);
-	SH_REMOVE_HOOK_MEMFUNC(IServerGameDLL, LevelShutdown, gamedll, this, &Monster::OnLevelShutdown_Pre, false);
-	SH_REMOVE_HOOK_MEMFUNC(IServerGameDLL, LevelShutdown, gamedll, this, &Monster::OnLevelShutdown_Post, true);
-	SH_REMOVE_HOOK_MEMFUNC(IServerGameDLL, LevelInit, gamedll, this, &Monster::LevelInit, false);
 
-	IGameSystem::SDKShutdownAllSystem();
+	IGameSystem::SDKShutdownAllSystems();
 
 	GetEntityManager()->Shutdown();
 
@@ -333,12 +325,8 @@ bool Monster::SDK_OnMetamodUnload(char *error, size_t maxlength)
 	return true;
 }
 
-void Monster::ServerActivate(edict_t *pEdictList, int edictCount, int clientMax)
+void Monster::Precache()
 {
-	gMaxClients = clientMax;
-
-	CEAI_NetworkManager::InitializeAINetworks();
-
 	g_sModelIndexSmoke = engine->PrecacheModel("sprites/steam1.vmt",true);
 	
 	g_sModelIndexBubbles = engine->PrecacheModel("sprites/bubble.vmt",true);
@@ -366,24 +354,13 @@ void Monster::ServerActivate(edict_t *pEdictList, int edictCount, int clientMax)
 	soundemitterbase->AddSoundOverrides("scripts/sm_monster/npc_sounds_turret.txt");
 
 
-	RETURN_META(MRES_IGNORED);
 }
 
-static bool g_LevelEndBarrier = false;
-bool Monster::LevelInit(char const *pMapName, char const *pMapEntities, char const *pOldLevel, char const *pLandmarkName, bool loadGame, bool background)
-{
-	g_LevelEndBarrier = false;
 
-	RETURN_META_VALUE(MRES_IGNORED, true);
-}
-
-void Monster::OnLevelShutdown_Pre()
+void Monster::ServerActivate(edict_t *pEdictList, int edictCount, int clientMax)
 {
-	RETURN_META(MRES_IGNORED);
-}
+	gMaxClients = clientMax;
 
-void Monster::OnLevelShutdown_Post()
-{
 	RETURN_META(MRES_IGNORED);
 }
 

@@ -14,6 +14,12 @@
 
 
 
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
+
 const float TIME_DELAY_FULL_DIRECT_PROBE[2] = { 0.25, 0.35 };
 
 

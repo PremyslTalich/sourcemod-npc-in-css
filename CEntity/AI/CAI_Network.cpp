@@ -5,6 +5,12 @@
 #include "CAI_NPC.h"
 #include "CAI_utils.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CAI_Network * 		g_pBigAINet;
 
 extern ConVar *ai_no_node_cache;

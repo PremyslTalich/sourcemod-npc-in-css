@@ -3,6 +3,12 @@
 #include "soundflags.h"
 #include "CAI_Criteria.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 float RandomInterval( const interval_t &interval )
 {
 	float out = interval.start;
@@ -104,13 +110,21 @@ AI_Response::AI_Response( const AI_Response &from )
 
 AI_Response::~AI_Response()
 {
-	g_pMemAlloc->Free(m_pCriteria);
-	g_pMemAlloc->Free(m_szContext);
+	if(m_pCriteria)
+	{
+		m_pCriteria->m_Lookup.Purge();
+		g_pMemAlloc->Free(m_pCriteria);
+	}
+	if(m_szContext)
+	{
+		g_pMemAlloc->Free(m_szContext);
+	}
+	delete[] m_szContext;
 }
 
 void AI_Response::SetContext( const char *context )
 {
-	delete[] m_szContext;
+	g_pMemAlloc->Free(m_szContext);
 	m_szContext = NULL;
 
 	if ( context )

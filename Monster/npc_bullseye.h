@@ -14,6 +14,7 @@ public:
 	CNPC_Bullseye();
 	~CNPC_Bullseye();
 
+	void PostConstructor();
 	virtual void Precache( void );
 	virtual void Spawn( void );
 	virtual void Activate( void );

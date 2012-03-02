@@ -4,6 +4,12 @@
 #include "bone_setup.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 void VerifySequenceIndex( CStudioHdr *pstudiohdr )
 {
 	g_helpfunc.VerifySequenceIndex(pstudiohdr);

@@ -149,7 +149,6 @@ public: // basenpc
 	bool AutoMovement(CBaseEntity *pEntity, float flInterval, CBaseEntity *pTarget, AIMoveTrace_t *pTraceResult);
 	void EndTaskOverlay(CBaseEntity *pEntity);
 	void SetIdealActivity(CBaseEntity *pEntity, Activity NewActivity);
-	void CallNPCThink(CBaseEntity *pEntity);
 	bool HaveSequenceForActivity(CBaseEntity *pEntity, Activity activity);
 	void TestPlayerPushing(CBaseEntity *pEntity, CBaseEntity *pPlayer);
 

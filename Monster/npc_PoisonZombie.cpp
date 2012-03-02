@@ -112,12 +112,10 @@ static const char *pMoanSounds[] =
 };
 
 
-class CNPC_PoisonZombie : public CAI_BlendingHost<CE_BaseZombie>
+class CNPC_PoisonZombie : public CAI_BlendingHost<CNPC_BaseZombie>
 {
 public:
-	CE_DECLARE_CLASS( CNPC_PoisonZombie, CAI_BlendingHost<CE_BaseZombie> );
-
-	CNPC_PoisonZombie();
+	CE_DECLARE_CLASS( CNPC_PoisonZombie, CAI_BlendingHost<CNPC_BaseZombie> );
 
 	//
 	// CBaseZombie implemenation.
@@ -226,17 +224,6 @@ BEGIN_DATADESC( CNPC_PoisonZombie )
 	//DEFINE_FIELD( m_nThrowCrab, FIELD_INTEGER ),
 
 END_DATADESC()
-
-CNPC_PoisonZombie::CNPC_PoisonZombie()
-{
-	m_pFastBreathSound = NULL;
-	m_pSlowBreathSound = NULL;
-	m_nCrabCount = 0;
-	memset(m_bCrabs, 0, sizeof(m_bCrabs));
-	m_flNextCrabThrowTime = 0.0f;
-	m_flNextPainSoundTime = 0.0f;
-	m_bNearEnemy = false;
-}
 
 
 //-----------------------------------------------------------------------------

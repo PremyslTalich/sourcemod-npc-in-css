@@ -2,6 +2,12 @@
 #include "CAI_NPC.h"
 #include "CAI_Sentence.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 BEGIN_SIMPLE_DATADESC(CAI_SentenceBase)
 	DEFINE_FIELD( m_voicePitch, FIELD_INTEGER ),
 	DEFINE_FIELD( m_nQueuedSentenceIndex, FIELD_INTEGER ),

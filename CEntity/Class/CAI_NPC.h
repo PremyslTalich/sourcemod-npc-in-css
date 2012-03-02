@@ -411,7 +411,7 @@ public:
 	
 	CAI_NPC();
 	virtual ~CAI_NPC();
-	virtual void CE_PostInit();
+	virtual void PostConstructor();
 
 	void		SetHullSizeNormal(bool force=false);
 
@@ -724,9 +724,6 @@ public:
 	};
 
 public:
-	//is virtual, but not hooked, for npc only?
-	virtual bool OnMoveBlocked( AIMoveResult_t *pResult ) { return false;	}
-	virtual bool CreateComponents() { return true; }
 
 public:
 	virtual CEAI_Enemies *GetEnemies();
@@ -904,6 +901,15 @@ public:
 	virtual void SpeakSentence( int sentenceType );
 	virtual Activity GetCoverActivity( CBaseEntity* pHint );
 	virtual bool IsCoverPosition( const Vector &vecThreat, const Vector &vecPosition );
+	virtual bool OnMoveBlocked( AIMoveResult_t *pResult );
+	virtual bool CreateComponents();
+	virtual CAI_Senses *CreateSenses();
+	virtual CAI_MoveProbe *CreateMoveProbe();
+	virtual CAI_Motor *CreateMotor();
+	virtual CAI_LocalNavigator *CreateLocalNavigator();
+	virtual CAI_Navigator *CreateNavigator();
+	virtual CAI_Pathfinder *CreatePathfinder();
+	virtual CAI_TacticalServices *CreateTacticalServices();
 
 public: // sign
 	void CallNPCThink();
@@ -964,6 +970,8 @@ public:
 
 	static CAI_GlobalScheduleNamespace	gm_SchedulingSymbols; // need acturl pointer?
 	static CAI_ClassScheduleIdSpace		gm_ClassScheduleIdSpace;
+
+	static VALVE_BASEPTR		func_CallNPCThink;
 
 protected:
 	static CAI_GlobalNamespace gm_SquadSlotNamespace;
@@ -1159,6 +1167,15 @@ public:
 	DECLARE_DEFAULTHEADER(SpeakSentence, void, ( int sentenceType ));
 	DECLARE_DEFAULTHEADER(GetCoverActivity,Activity,( CBaseEntity* pHint ));
 	DECLARE_DEFAULTHEADER(IsCoverPosition, bool, ( const Vector &vecThreat, const Vector &vecPosition ));
+	DECLARE_DEFAULTHEADER(OnMoveBlocked, bool, (AIMoveResult_t *pResult));
+	DECLARE_DEFAULTHEADER(CreateComponents, bool, ());
+	DECLARE_DEFAULTHEADER(CreateSenses, CAI_Senses *, ());
+	DECLARE_DEFAULTHEADER(CreateMoveProbe, CAI_MoveProbe *, ());
+	DECLARE_DEFAULTHEADER(CreateMotor, CAI_Motor *, ());
+	DECLARE_DEFAULTHEADER(CreateLocalNavigator, CAI_LocalNavigator *, ());
+	DECLARE_DEFAULTHEADER(CreateNavigator, CAI_Navigator *, ());
+	DECLARE_DEFAULTHEADER(CreatePathfinder, CAI_Pathfinder *, ());
+	DECLARE_DEFAULTHEADER(CreateTacticalServices, CAI_TacticalServices *, ());
 
 
 public:

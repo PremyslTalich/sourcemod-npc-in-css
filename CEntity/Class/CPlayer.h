@@ -75,6 +75,7 @@ public:
 
 public:
 	void	Spawn();
+	void	PreThink();
 	void	PostThink();
 
 	void	ViewPunch( const QAngle &angleOffset );
@@ -122,6 +123,8 @@ public:
 	static bool	CanPickupObject( CEntity *pObject, float massLimit, float sizeLimit );
 
 private:
+	void	FixHL2Ladder();
+
 	Vector	m_vecVehicleViewOrigin;		// Used to store the calculated view of the player while riding in a vehicle
 	QAngle	m_vecVehicleViewAngles;		// Vehicle angles
 	float	m_flVehicleViewFOV;			// FOV of the vehicle driver

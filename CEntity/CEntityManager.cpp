@@ -44,6 +44,8 @@ IEntityFactoryReal *IEntityFactoryReal::m_Head;
 EntityFactoryDictionaryCall EntityFactoryDictionary_CE = NULL;
 
 CDetour *RemoveEntity_CDetour = NULL;
+CDetour *PostConstructor_CDetour = NULL;
+const char *szCurrentReplacedClassname = NULL;
 
 
 #ifdef _DEBUG
@@ -58,6 +60,21 @@ DETOUR_DECL_MEMBER1(RemoveEntity, void, CBaseHandle, handle)
 		cent->Destroy();
 	}
 	DETOUR_MEMBER_CALL(RemoveEntity)(handle);
+}
+
+DETOUR_DECL_MEMBER1(PostConstructor, void, const char *, szClassname)
+{
+	CBaseEntity *pEntity = (CBaseEntity*)this;
+	const char *szName = (szCurrentReplacedClassname)?szCurrentReplacedClassname:szClassname;
+
+	DETOUR_MEMBER_CALL(PostConstructor)(szName);
+	CEntity *cent = GetEntityManager()->CBaseEntityPostConstructor(pEntity, szName);
+	szCurrentReplacedClassname = NULL;
+
+	if(cent)
+	{
+		cent->PostConstructor();
+	}
 }
 
 CEntityManager *GetEntityManager()
@@ -98,7 +115,7 @@ bool CEntityManager::Init(IGameConfig *pConfig)
 		return false;
 	}
 
-	FireOutputFunc= (FireOutputFuncType)addr;
+	FireOutputFunc = (FireOutputFuncType)addr;
 
 	if (!pConfig->GetMemSig("PhysIsInCallback", &addr) || addr == NULL)
 	{
@@ -122,6 +139,9 @@ bool CEntityManager::Init(IGameConfig *pConfig)
 	RemoveEntity_CDetour = DETOUR_CREATE_MEMBER(RemoveEntity, "CBaseEntityList::RemoveEntity");
 	RemoveEntity_CDetour->EnableDetour();
 
+	PostConstructor_CDetour = DETOUR_CREATE_MEMBER(PostConstructor, "CBaseEntity::PostConstructor");
+	PostConstructor_CDetour->EnableDetour();
+
 	IDetourTracker *pDetourTracker = IDetourTracker::m_Head;
 	while (pDetourTracker)
 	{
@@ -137,7 +157,6 @@ bool CEntityManager::Init(IGameConfig *pConfig)
 	}
 
 	/* Start the creation hooks! */
-	SH_ADD_HOOK(IEntityFactoryDictionary_CE, Create, pDict, SH_MEMBER(this, &CEntityManager::Create), true);
 	SH_ADD_HOOK(IVEngineServer, RemoveEdict, engine, SH_MEMBER(this, &CEntityManager::RemoveEdict), true);
 
 	srand(time(NULL));
@@ -148,7 +167,6 @@ bool CEntityManager::Init(IGameConfig *pConfig)
 
 void CEntityManager::Shutdown()
 {
-	SH_REMOVE_HOOK(IEntityFactoryDictionary_CE, Create, pDict, SH_MEMBER(this, &CEntityManager::Create), true);
 	SH_REMOVE_HOOK(IVEngineServer, RemoveEdict, engine, SH_MEMBER(this, &CEntityManager::RemoveEdict), true);
 
 	IDetourTracker *pDetourTracker = IDetourTracker::m_Head;
@@ -160,6 +178,16 @@ void CEntityManager::Shutdown()
 	
 	if(RemoveEntity_CDetour)
 		RemoveEntity_CDetour->DisableDetour();
+	RemoveEntity_CDetour = NULL;
+
+	if(PostConstructor_CDetour)
+		PostConstructor_CDetour->DisableDetour();
+	PostConstructor_CDetour = NULL;
+
+	pFactoryTrie.clear();
+	pSwapTrie.clear();
+	pHookedTrie.clear();
+	pCacheTrie.clear();
 }
 
 void CEntityManager::LinkEntityToClass(IEntityFactory_CE *pFactory, const char *className)
@@ -174,46 +202,32 @@ void CEntityManager::LinkEntityToClass(IEntityFactory_CE *pFactory, const char *
 	pSwapTrie.insert(className, replaceName);
 }
 
-static const char hhh[] = "info_player_counterterrorist";
-
-IServerNetworkable *CEntityManager::Create(const char *pClassName)
+CEntity *CEntityManager::CBaseEntityPostConstructor(CBaseEntity *pEntity, const char * szClassname )
 {
-	/*if(strcmp(pClassName,"grenade") == 0)
-	{
-		//META_CONPRINTF("CEntityManager::Create %s\n",pClassName);
-	}*/
+	IServerNetworkable *pNetworkable = pEntity->GetNetworkable();
+	Assert(pNetworkable);
 
-	//META_CONPRINTF("CEntityManager::Create %s\n",pClassName);
-
-	IServerNetworkable *pNetworkable = META_RESULT_ORIG_RET(IServerNetworkable *);
-
-	if (!pNetworkable)
-	{
-		return NULL;
-	}
-
-	CBaseEntity *pEnt = pNetworkable->GetBaseEntity();
 	edict_t *pEdict = pNetworkable->GetEdict();
 
-	if (/*!pEdict || */!pEnt)
+	if(strcmp(szClassname,"player") == 0 && engine->IndexOfEdict(pEdict) == 0)
 	{
 		return NULL;
 	}
-
-	if(strcmp(pClassName,"player") == 0 && engine->IndexOfEdict(pEdict) == 0)
-	{
-		//META_CONPRINTF("CEntityManager::Create Skip! \"%s\"\n",pClassName);
-		return NULL;
-	}
-
 
 	IEntityFactory_CE **value = NULL;
-	value = pFactoryTrie.retrieve(pClassName);
+	value = pFactoryTrie.retrieve(szClassname);
+
+	bool m_bShouldAddToCache = false;
+	if(!value)
+	{
+		value = pCacheTrie.retrieve(szClassname);
+	}
 
 	if (!value)
 	{
+		m_bShouldAddToCache = true;
 		/* Attempt to do an RTTI lookup for C++ class links */
-		IType *pType = GetType(pEnt);
+		IType *pType = GetType(pEntity);
 		IBaseType *pBase = pType->GetBaseType();
 
 		do 
@@ -241,28 +255,28 @@ IServerNetworkable *CEntityManager::Create(const char *pClassName)
 	IEntityFactory_CE *pFactory = *value;
 	assert(pFactory);
 
-	CEntity *pEntity = pFactory->Create(pEdict, pEnt);
+	if(m_bShouldAddToCache)
+	{
+		pCacheTrie.insert(szClassname, pFactory);
+	}
+
+	CEntity *cent = pFactory->Create(pEdict, pEntity);
 
 	char vtable[20];
-	_snprintf(vtable, sizeof(vtable), "%x", (unsigned int) *(void **)pEnt);
+	_snprintf(vtable, sizeof(vtable), "%x", (unsigned int) *(void **)pEntity);
 
-	pEntity->ClearAllFlags();
-	pEntity->InitProps();
+	cent->ClearAllFlags();
+	cent->InitProps();
 	
 	if (!pHookedTrie.retrieve(vtable))
 	{
-		pEntity->InitHooks();
+		cent->InitHooks();
 		pHookedTrie.insert(vtable, true);
 	}
 	
-	pEntity->InitDataMap();
+	cent->InitDataMap();
 
-
-	pEntity->SetClassname(pClassName);
-
-	pEntity->CE_PostInit();
-
-	return NULL;
+	return cent;
 }
 
 void CEntityManager::RemoveEdict(edict_t *e)
@@ -310,7 +324,7 @@ void our_trie_iterator(KTrie<IEntityFactory_CE *> *pTrie, const char *name, IEnt
 		META_CONPRINTF("%s:\t\t\t\t%d\n",name,count);
 	else if(strlen(name) < 15)
 		META_CONPRINTF("%s:\t\t\t%d\n",name,count);
-	else if(strlen(name) < 22)
+	else if(strlen(name) < 23)
 		META_CONPRINTF("%s:\t\t%d\n",name,count);
 	else
 		META_CONPRINTF("%s:\t%d\n",name,count);
@@ -341,6 +355,10 @@ void CEntityManager::PrintDump()
 #ifdef _DEBUG
 	META_CONPRINTF("CEntity Instance:\t\t%lld\n",CEntityManager::count);
 #endif
+	META_CONPRINTF("CEntity Factory:\t\t%d\n",pFactoryTrie.size());
+	META_CONPRINTF("CEntity Swap:\t\t\t%d\n",pSwapTrie.size());
+	META_CONPRINTF("CEntity Cache:\t\t\t%d\n",pCacheTrie.size());
+	META_CONPRINTF("CEntity Hook:\t\t\t%d\n",pHookedTrie.size());
 	META_CONPRINTF("CEntity Networked:\t\t%d\n",networked_count);
 	META_CONPRINTF("CEntity Non Networked:\t\t%d\n",non_networked_count);
 	META_CONPRINTF("CEntity Total:\t\t\t%d\n",networked_count+non_networked_count);

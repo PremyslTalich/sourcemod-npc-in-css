@@ -16,7 +16,7 @@ class CBasePlayer;
 #include "eventqueue.h"
 #include "CAI_Hint.h"
 #include "ai_waypoint.h"
-
+#include "CAI_NetworkManager.h"
 
 class CAI_SensedObjectsManager;
 struct TemplateEntityData_t;
@@ -93,7 +93,7 @@ string_t AllocPooledString( const char * pszValue )
 
 string_t FindPooledString( const char *pszValue )
 {
-	return g_helpfunc.AllocPooledString(pszValue);
+	return g_helpfunc.FindPooledString(pszValue);
 }
 
 HelperFunction::HelperFunction()
@@ -155,7 +155,7 @@ void HelperFunction::LevelInitPreEntity()
 
 void HelperFunction::LevelInitPostEntity()
 {
-
+	CEAI_NetworkManager::InitializeAINetworks();
 }
 
 void HelperFunction::LevelShutdownPreEntity()
@@ -199,7 +199,7 @@ bool HelperFunction::Initialize()
 
 	RegisterHook("GameRules_FAllowNPCs",GameRules_FAllowNPCsHook);
 	RegisterHook("GameRules_ShouldCollide",GameRules_ShouldCollide);
-	RegisterHook("OnLadder",OnLadderHook);
+	RegisterHook("CGameMovement_OnLadder",OnLadderHook);
 
 	if(!g_pGameConf->GetMemSig("CreateGameRulesObject", (void **)&addr) || !addr)
 		return false;
@@ -1031,7 +1031,7 @@ CEntity *HelperFunction::CAI_HintManager_FindHint(CBaseEntity *pNPC, const Vecto
 	static void *func = NULL;
 	if(!func)
 	{
-		if(!g_pGameConf->GetMemSig("CAI_HintManager_FindHint", &func))
+		if(!g_pGameConf->GetMemSig("CAI_HintManager::FindHint", &func))
 		{
 			assert(0);
 			return NULL;
@@ -1050,7 +1050,7 @@ CEntity *HelperFunction::CAI_HintManager_FindHintRandom(CBaseEntity *pNPC, const
 	static void *func = NULL;
 	if(!func)
 	{
-		if(!g_pGameConf->GetMemSig("CAI_HintManager_FindHintRandom", &func))
+		if(!g_pGameConf->GetMemSig("CAI_HintManager::FindHintRandom", &func))
 		{
 			assert(0);
 			return NULL;
@@ -1324,7 +1324,7 @@ void HelperFunction::CBaseEntity_Use(CBaseEntity *pEntity, CBaseEntity *pActivat
 	static void *func = NULL;
 	if(!func)
 	{
-		if(!g_pGameConf->GetMemSig("CBaseEntity_Use", &func))
+		if(!g_pGameConf->GetMemSig("CBaseEntity::Use", &func))
 		{
 			assert(0);
 			return;
@@ -1344,7 +1344,7 @@ bool HelperFunction::CBaseEntity_FVisible_Entity(CBaseEntity *the_pEntity, CBase
 	static void *func = NULL;
 	if(!func)
 	{
-		if(!g_pGameConf->GetMemSig("CBaseEntity_FVisible_Entity", &func))
+		if(!g_pGameConf->GetMemSig("CBaseEntity::FVisible_Entity", &func))
 		{
 			assert(0);
 			return false;
@@ -1486,7 +1486,7 @@ void HelperFunction::CSoundEnt_InsertSound( int iType, const Vector &vecOrigin, 
 	static void *func = NULL;
 	if(!func)
 	{
-		if(!g_pGameConf->GetMemSig("CSoundEnt_InsertSound", &func))
+		if(!g_pGameConf->GetMemSig("CSoundEnt::InsertSound", &func))
 		{
 			assert(0);
 			return;
@@ -1886,7 +1886,7 @@ void HelperFunction::CAI_BaseNPC_Precache(CBaseEntity *pEntity)
 	static void *func = NULL;
 	if(!func)
 	{
-		if(!g_pGameConf->GetMemSig("CAI_BaseNPC_Precache", &func))
+		if(!g_pGameConf->GetMemSig("CAI_BaseNPC::Precache", &func))
 		{
 			assert(0);
 			return;
@@ -1963,26 +1963,6 @@ void HelperFunction::SetIdealActivity(CBaseEntity *pEntity, Activity NewActivity
 	(thisfunc)(pEntity,0, NewActivity);
 }
 
-void HelperFunction::CallNPCThink(CBaseEntity *pEntity)
-{
-	static void *func = NULL;
-	if(!func)
-	{
-		if(!g_pGameConf->GetMemSig("CallNPCThink", &func))
-		{
-			assert(0);
-			return;
-		}
-	}
-
-	if(!pEntity)
-		return;
-
-	typedef void (__fastcall *_func)(void *,int);
-	_func thisfunc = (_func)(func);
-	(thisfunc)(pEntity,0);
-}
-
 bool HelperFunction::HaveSequenceForActivity(CBaseEntity *pEntity, Activity activity)
 {
 	static void *func = NULL;
@@ -2028,7 +2008,7 @@ int HelperFunction::CBaseCombatCharacter_OnTakeDamage(CBaseEntity *pEntity, cons
 	static void *func = NULL;
 	if(!func)
 	{
-		if(!g_pGameConf->GetMemSig("CBaseCombatCharacter_OnTakeDamage", &func))
+		if(!g_pGameConf->GetMemSig("CBaseCombatCharacter::OnTakeDamage", &func))
 		{
 			assert(0);
 			return 0;
@@ -2099,7 +2079,7 @@ int HelperFunction::CAI_TacticalServices_FindLosNode( void *ptr, const Vector &v
 	static void *func = NULL;
 	if(!func)
 	{
-		if(!g_pGameConf->GetMemSig("CAI_TacticalServices_FindLosNode", &func))
+		if(!g_pGameConf->GetMemSig("CAI_TacticalServices::FindLosNode", &func))
 		{
 			assert(0);
 			return 0;
@@ -2116,7 +2096,7 @@ int HelperFunction::CAI_TacticalServices_FindCoverNode( void *ptr, const Vector 
 	static void *func = NULL;
 	if(!func)
 	{
-		if(!g_pGameConf->GetMemSig("CAI_TacticalServices_FindCoverNode", &func))
+		if(!g_pGameConf->GetMemSig("CAI_TacticalServices::FindCoverNode", &func))
 		{
 			assert(0);
 			return 0;
@@ -2133,7 +2113,7 @@ bool HelperFunction::CAI_Navigator_UpdateGoalPos(void *ptr, const Vector &goalPo
 	static void *func = NULL;
 	if(!func)
 	{
-		if(!g_pGameConf->GetMemSig("CAI_Navigator_UpdateGoalPos", &func))
+		if(!g_pGameConf->GetMemSig("CAI_Navigator::UpdateGoalPos", &func))
 		{
 			assert(0);
 			return false;

@@ -12,9 +12,6 @@ abstract_class CBaseHeadcrab : public CE_Cycler_Fix
 public:
 	CE_DECLARE_CLASS(CBaseHeadcrab, CE_Cycler_Fix);
 
-	CBaseHeadcrab();
-
-public:
 	void Spawn( void );
 	void Precache( void );
 	void RunTask( const Task_t *pTask );
@@ -180,7 +177,6 @@ class CFastHeadcrab : public CBaseHeadcrab
 public:
 	CE_DECLARE_CLASS( CFastHeadcrab, CBaseHeadcrab );
 	DECLARE_DATADESC();
-	CFastHeadcrab();
 
 	void	Precache( void );
 	void	Spawn( void );
@@ -230,8 +226,6 @@ class CBlackHeadcrab : public CBaseHeadcrab
 public:
 	CE_DECLARE_CLASS( CBlackHeadcrab, CBaseHeadcrab );
 	
-	CBlackHeadcrab();
-
 	void Eject( const QAngle &vecAngles, float flVelocityScale, CEntity *pEnemy );
 	void EjectTouch( CEntity *pOther );
 

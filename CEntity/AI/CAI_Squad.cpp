@@ -2,6 +2,12 @@
 #include "CAI_NPC.h"
 #include "CAI_Squad.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 //-----------------------------------------------------------------------------
 // Purpose: Try to get one of a contiguous range of slots
 // Input  : slotIDStart - start of slot range

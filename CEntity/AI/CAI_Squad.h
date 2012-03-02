@@ -198,6 +198,29 @@ private:
 	//---------------------------------
 public:
 	DECLARE_SIMPLE_DATADESC();
+
+	void *operator new( size_t nBytes )
+	{
+		void *pResult = g_pMemAlloc->Alloc( nBytes );
+		memset( pResult, 0, nBytes );
+		return pResult;
+	}
+
+	void *operator new( size_t nBytes, int nBlockUse, const char *pFileName, int nLine )
+	{
+		void *pResult = g_pMemAlloc->Alloc( nBytes, pFileName, nLine );
+		memset( pResult, 0, nBytes );
+		return pResult;
+	}
+
+	void operator delete( void *pMem )
+	{
+		g_pMemAlloc->Free(pMem);
+	}
+	void operator delete( void *pMem, int nBlockUse, const char *pFileName, int nLine )
+	{
+		g_pMemAlloc->Free(pMem);
+	}
 };
 
 //-----------------------------------------------------------------------------

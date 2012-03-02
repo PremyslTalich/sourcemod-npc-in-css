@@ -205,27 +205,6 @@ BEGIN_DATADESC( CBlackHeadcrab )
 
 END_DATADESC()
 
-CBaseHeadcrab::CBaseHeadcrab()
-{
-	m_vecCommittedJumpPos.Init();
-
-	m_bStartBurrowed = false;
-
-	m_bHidden = false;
-	m_flTimeDrown = 0.0f;
-	m_bCommittedToJump = false;
-
-	m_flNextNPCThink = 0.0f;
-	m_flIgnoreWorldCollisionTime = 0.0f;
-	m_bBurrowed = false;
-	m_flBurrowTime = 0.0f;
-	m_nContext = 0;
-	m_bCrawlFromCanister = false;
-	m_bMidJump = false;
-	m_nJumpFromCanisterDir = 0;
-	m_bHangingFromCeiling = false;
-	m_flIlluminatedTime = 0.0f;
-}
 
 // Base Headcrab
 void CBaseHeadcrab::Spawn(void)
@@ -2509,15 +2488,6 @@ float CHeadcrab::MaxYawSpeed ( void )
 LINK_ENTITY_TO_CUSTOM_CLASS(npc_headcrab_fast, cycler, CFastHeadcrab);
 
 
-CFastHeadcrab::CFastHeadcrab()
-{
-	m_iRunMode = 0;
-	m_flRealGroundSpeed = 0.0f;
-	m_flSlowRunTime = 0.0f;
-	m_flPauseTime = 0.0f;
-	m_vecJumpVel.Init();
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -2934,13 +2904,6 @@ LINK_ENTITY_TO_CUSTOM_CLASS( npc_headcrab_black, cycler, CBlackHeadcrab );
 LINK_ENTITY_TO_CUSTOM_CLASS( npc_headcrab_poison, cycler, CBlackHeadcrab );
 
 int ACT_BLACKHEADCRAB_RUN_PANIC;
-
-CBlackHeadcrab::CBlackHeadcrab()
-{
-	m_bPanicState = false;
-	m_flPanicStopTime = 0.0f;
-	m_flNextHopTime = 0.0f;
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: Make the sound of this headcrab chomping a target.

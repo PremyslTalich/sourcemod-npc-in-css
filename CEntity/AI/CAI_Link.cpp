@@ -2,6 +2,12 @@
 #include "CAI_Link.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 //-----------------------------------------------------------------------------
 // Purpose:	Given the source node ID, returns the destination ID
 // Input  :

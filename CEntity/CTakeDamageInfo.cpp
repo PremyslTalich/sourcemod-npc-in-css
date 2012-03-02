@@ -20,6 +20,12 @@
 #include "CTakeDamageInfo.h"
 #include "ammodef.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CMultiDamage *my_g_MultiDamage;
 
 void ApplyMultiDamage( void )

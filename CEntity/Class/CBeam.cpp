@@ -1,6 +1,12 @@
 
 #include "CBeam.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CE_LINK_ENTITY_TO_CLASS(CBeam, CE_CBeam);
 
 DEFINE_PROP(m_fWidth, CE_CBeam);
@@ -46,12 +52,12 @@ void CE_CBeam::Set_m_hAttachEntity(int index, CBaseEntity *pEntity)
 
 int CE_CBeam::Get_m_nAttachIndex(int index)
 {
-	return *(int *)(((uint8_t *)(BaseEntity())) + m_nAttachIndex.offset + index);
+	return *(int *)(((uint8_t *)(BaseEntity())) + m_nAttachIndex.offset + (index*4));
 }
 
 void CE_CBeam::Set_m_nAttachIndex(int index, int value)
 {
-	*(int *)(((uint8_t *)(BaseEntity())) + m_nAttachIndex.offset + index) = value;
+	*(int *)(((uint8_t *)(BaseEntity())) + m_nAttachIndex.offset + (index*4)) = value;
 }
 
 

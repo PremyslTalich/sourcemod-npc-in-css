@@ -61,10 +61,10 @@ envelopePoint_t envZombieMoanIgnited[] =
 //=============================================================================
 //=============================================================================
 
-class CZombie : public CAI_BlendingHost<CE_BaseZombie>
+class CZombie : public CAI_BlendingHost<CNPC_BaseZombie>
 {
 public:
-	CE_DECLARE_CLASS( CZombie, CAI_BlendingHost<CE_BaseZombie> );
+	CE_DECLARE_CLASS( CZombie, CAI_BlendingHost<CNPC_BaseZombie> );
 	DECLARE_DATADESC();
 
 public:
@@ -72,9 +72,6 @@ public:
 	 : m_DurationDoorBash( 2, 6),
 	   m_NextTimeToStartDoorBash( 3.0 )
 	{
-		m_flDoorBashYaw = 0.0f;
-
-		m_vPositionCharged.Init();
 	}
 
 	void Spawn( void );

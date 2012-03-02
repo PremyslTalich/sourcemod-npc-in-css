@@ -170,30 +170,12 @@ END_DATADESC()
 //-----------------------------------------------------------------------------
 CAntlionTemplateMaker::CAntlionTemplateMaker( void )
 {
+	m_hFightTarget.Set(NULL);
+	m_hProxyTarget.Set(NULL);
+	m_hFollowTarget.Set(NULL);
 	m_nChildMoveState = ANTLION_MOVE_FREE;
 	m_iSkinCount = 0;
 	m_flBlockedBumpTime = 0.0f;
-
-	m_strSpawnGroup = NULL_STRING;
-	m_strSpawnTarget = NULL_STRING;
-	m_flSpawnRadius = 0.0f;
-	m_flWorkerSpawnRate = 0.0f;
-	
-	m_strFightTarget = NULL_STRING;
-	m_strFollowTarget = NULL_STRING;
-
-	m_bIgnoreBugbait = false;	
-	
-	m_iPool = 0;
-	m_iMaxPool = 0;
-	m_iPoolRegenAmount = 0;
-	m_flPoolRegenTime = 0.0f;
-
-	m_flVehicleSpawnDistance = 0.0f;
-	
-	m_bBlocked = false;
-
-	m_bCreateSpores = false;
 }
 
 //-----------------------------------------------------------------------------

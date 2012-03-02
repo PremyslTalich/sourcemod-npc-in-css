@@ -7,6 +7,12 @@
 #include "physics_saverestore.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 BEGIN_DATADESC( CAI_BasePhysicsFlyingBot )
 
 	DEFINE_FIELD( m_vCurrentVelocity,			FIELD_VECTOR),
@@ -266,12 +272,11 @@ AI_NavPathProgress_t CAI_BasePhysicsFlyingBot::ProgressFlyPath(
 //------------------------------------------------------------------------------
 CAI_BasePhysicsFlyingBot::CAI_BasePhysicsFlyingBot()
 {
+#ifdef _DEBUG
 	m_vCurrentVelocity.Init();
 	m_vCurrentBanking.Init();
-	m_vNoiseMod.Init();
 	m_vLastPatrolDir.Init();
-	m_fHeadYaw = 0;
-	m_pMotionController = NULL;
+#endif
 }
 
 

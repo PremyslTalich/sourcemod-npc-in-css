@@ -2,6 +2,12 @@
 #include "CAI_NPC.h"
 #include "ai_movesolver.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 inline float round( float f )
 {
 	return (float)( (int)( f + 0.5 ) );

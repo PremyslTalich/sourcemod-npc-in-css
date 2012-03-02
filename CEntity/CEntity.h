@@ -312,14 +312,21 @@ public: // CEntity
 	virtual ~CEntity();
 
 	virtual void CE_Init(edict_t *pEdict, CBaseEntity *pBaseEntity);
-	virtual void CE_PostInit() {}
+	virtual void PostConstructor() {}
 
 	void InitHooks();
 	void InitProps();
 	void ClearAllFlags();
 	virtual void Destroy();
-	CBaseEntity *BaseEntity();
-	CBaseEntity *BaseEntity() const;
+	inline CBaseEntity *BaseEntity() { return m_pEntity; }
+	inline CBaseEntity *BaseEntity() const { return m_pEntity; }
+
+	// memory handling
+    void *operator new( size_t stAllocateBlock );
+    void *operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
+	void operator delete( void *pMem );
+	void operator delete( void *pMem, int nBlockUse, const char *pFileName, int nLine ) { operator delete(pMem); }
+
 
 	operator CBaseEntity* ()
 	{
@@ -395,7 +402,7 @@ public: // CBaseEntity virtuals
 	virtual void Spawn();
 	virtual int OnTakeDamage(const CTakeDamageInfo &info);
 	virtual void Think();
-	virtual bool AcceptInput(const char *szInputName, CEntity *pActivator, CEntity *pCaller, variant_t Value, int outputID);
+	virtual bool AcceptInput(const char *szInputName, CBaseEntity *pActivator, CBaseEntity *pCaller, variant_t Value, int outputID);
 	virtual void StartTouch(CEntity *pOther);
 	virtual void Touch(CEntity *pOther); 
 	virtual void EndTouch(CEntity *pOther);
@@ -522,7 +529,8 @@ public: // CBaseEntity non virtual helpers
 	CEntity *GetMoveParent();
 	CEntity *GetRootMoveParent();
 
-	edict_t *edict();
+	inline edict_t *edict() { return m_pEdict; }
+	inline const edict_t *edict() const { return m_pEdict; }
 	int entindex();
 	int entindex_non_network();
 
@@ -756,6 +764,8 @@ public: // custom
 		CBaseEntity *pAttacker = NULL, bool bFirstShotAccurate = false );
 
 
+	bool		CustomDispatchKeyValue(const char *szKeyName, const char *szValue);
+	bool		CustomAcceptInput(const char *szInputName, CBaseEntity *pActivator, CBaseEntity *pCaller, variant_t Value, int outputID);
 
 private:
 	bool		NameMatchesComplex( const char *pszNameOrWildcard );

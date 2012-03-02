@@ -32,6 +32,12 @@
 #include "soundchars.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 IHookTracker *IHookTracker::m_Head = NULL;
 IPropTracker *IPropTracker::m_Head = NULL;
 IDetourTracker *IDetourTracker::m_Head = NULL;
@@ -223,7 +229,7 @@ DECLARE_DEFAULTHANDLER_void(CEntity,Event_Killed, (const CTakeDamageInfo &info),
 DECLARE_DEFAULTHANDLER_void(CEntity,TraceAttack, (const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr), (info, vecDir, ptr));
 DECLARE_DEFAULTHANDLER_SPECIAL(CEntity,BodyTarget, Vector, (const Vector &posSrc, bool bNoisy),(posSrc, bNoisy), vec3_origin);
 DECLARE_DEFAULTHANDLER(CEntity,IsAlive, bool, (),());
-DECLARE_DEFAULTHANDLER_SPECIAL(CEntity,WorldSpaceCenter, const Vector &, () const,(), vec3_origin);
+DECLARE_DEFAULTHANDLER_REFERENCE(CEntity,WorldSpaceCenter, const Vector &, () const,());
 DECLARE_DEFAULTHANDLER_void(CEntity,PhysicsSimulate, (),());
 DECLARE_DEFAULTHANDLER(CEntity, BloodColor, int, (), ());
 DECLARE_DEFAULTHANDLER_void(CEntity, StopLoopingSounds, (), ());
@@ -251,7 +257,7 @@ DECLARE_DEFAULTHANDLER(CEntity, CreateVPhysics, bool, (), ());
 DECLARE_DEFAULTHANDLER(CEntity, IsNetClient, bool, () const, ());
 DECLARE_DEFAULTHANDLER(CEntity, HasPhysicsAttacker, CBaseEntity *, (float dt), (dt));
 //fuck this!
-DECLARE_DEFAULTHANDLER_SPECIAL(CEntity, EyeAngles, const QAngle &, (), (), vec3_angle);
+DECLARE_DEFAULTHANDLER_REFERENCE(CEntity, EyeAngles, const QAngle &, (), ());
 DECLARE_DEFAULTHANDLER(CEntity, Save, int, (ISave &save), (save));
 DECLARE_DEFAULTHANDLER(CEntity, Restore, int, (IRestore &restore), (restore));
 DECLARE_DEFAULTHANDLER_void(CEntity, ModifyOrAppendCriteria, (AI_CriteriaSet& set), (set));
@@ -420,6 +426,9 @@ bool CEntity::DispatchKeyValue(const char *szKeyName, const char *szValue)
 	SET_META_RESULT(MRES_IGNORED);
 	SH_GLOB_SHPTR->DoRecall();
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
+	if(thisptr != (void *)BaseEntity()) {
+		RETURN_META_VALUE(MRES_SUPERCEDE, SH_MCALL(BaseEntity(), DispatchKeyValue)(szKeyName, szValue));
+	}
 	bool ret = (thisptr->*(__SoureceHook_FHM_GetRecallMFPDispatchKeyValue(thisptr)))(szKeyName, szValue);
 	RETURN_META_VALUE(MRES_SUPERCEDE, ret);
 }
@@ -524,6 +533,18 @@ bool ParseKeyvalue( void *pObject, typedescription_t *pFields, int iNumFields, c
 	return false;
 }
 
+bool CEntity::CustomDispatchKeyValue(const char *szKeyName, const char *szValue)
+{
+	datamap_t *dmap = NULL;
+	for ( dmap = GetDataDescMap(); dmap != NULL; dmap = dmap->baseMap )
+	{
+		if(ParseKeyvalue(this, dmap->dataDesc, dmap->dataNumFields, szKeyName, szValue))
+		{
+			return true;
+		}
+	}
+	return DispatchKeyValue(szKeyName, szValue);
+}
 
 bool CEntity::InternalDispatchKeyValue(const char *szKeyName, const char *szValue)
 {
@@ -596,16 +617,6 @@ void CEntity::Destroy()
 	pEntityData[index] = NULL;
 }
 
-CBaseEntity * CEntity::BaseEntity()
-{
-	return m_pEntity;
-}
-
-CBaseEntity * CEntity::BaseEntity() const
-{
-	return m_pEntity;
-}
-
 IHandleEntity *CEntity::GetIHandle() const
 {
 	return reinterpret_cast<IHandleEntity *>(m_pEntity);
@@ -621,12 +632,14 @@ void CEntity::UpdateOnRemove()
 	}
 
 	SET_META_RESULT(MRES_IGNORED);
-
 	SH_GLOB_SHPTR->DoRecall();
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
+	if(thisptr != (void *)BaseEntity()) {
+		SH_MCALL(BaseEntity(), UpdateOnRemove);
+		RETURN_META(MRES_SUPERCEDE);
+	}
 	(thisptr->*(__SoureceHook_FHM_GetRecallMFPUpdateOnRemove(thisptr)))();
-
-	SET_META_RESULT(MRES_SUPERCEDE);
+	RETURN_META(MRES_SUPERCEDE);
 }
 
 void CEntity::InternalUpdateOnRemove()
@@ -661,8 +674,12 @@ void CEntity::StartTouch(CEntity *pOther)
 	SET_META_RESULT(MRES_IGNORED);
 	SH_GLOB_SHPTR->DoRecall();
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
+	if(thisptr != (void *)BaseEntity()) {
+		SH_MCALL(BaseEntity(), StartTouch)(*pOther);
+		RETURN_META(MRES_SUPERCEDE);
+	}
 	(thisptr->*(__SoureceHook_FHM_GetRecallMFPStartTouch(thisptr)))(*pOther);
-	SET_META_RESULT(MRES_SUPERCEDE);
+	RETURN_META(MRES_SUPERCEDE);
 }
 
 void CEntity::InternalStartTouch(CBaseEntity *pOther)
@@ -694,8 +711,12 @@ void CEntity::EndTouch(CEntity *pOther)
 	SET_META_RESULT(MRES_IGNORED);
 	SH_GLOB_SHPTR->DoRecall();
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
+	if(thisptr != (void *)BaseEntity()) {
+		SH_MCALL(BaseEntity(), EndTouch)(*pOther);
+		RETURN_META(MRES_SUPERCEDE);
+	}
 	(thisptr->*(__SoureceHook_FHM_GetRecallMFPEndTouch(thisptr)))(*pOther);
-	SET_META_RESULT(MRES_SUPERCEDE);
+	RETURN_META(MRES_SUPERCEDE);
 }
 
 void CEntity::InternalEndTouch(CBaseEntity *pOther)
@@ -737,8 +758,12 @@ void CEntity::Touch(CEntity *pOther)
 	SET_META_RESULT(MRES_IGNORED);
 	SH_GLOB_SHPTR->DoRecall();
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
+	if(thisptr != (void *)BaseEntity()) {
+		SH_MCALL(BaseEntity(), Touch)(*pOther);
+		RETURN_META(MRES_SUPERCEDE);
+	}
 	(thisptr->*(__SoureceHook_FHM_GetRecallMFPTouch(thisptr)))(*pOther);
-	SET_META_RESULT(MRES_SUPERCEDE);
+	RETURN_META(MRES_SUPERCEDE);
 }
 
 void CEntity::InternalTouch(CBaseEntity *pOther)
@@ -777,8 +802,12 @@ void CEntity::Use(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useTyp
 	SET_META_RESULT(MRES_IGNORED);
 	SH_GLOB_SHPTR->DoRecall();
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
+	if(thisptr != (void *)BaseEntity()) {
+		SH_MCALL(BaseEntity(), Use)(pActivator, pCaller, useType, value);
+		RETURN_META(MRES_SUPERCEDE);
+	}
 	(thisptr->*(__SoureceHook_FHM_GetRecallMFPUse(thisptr)))(pActivator, pCaller, useType, value);
-	SET_META_RESULT(MRES_SUPERCEDE);
+	RETURN_META(MRES_SUPERCEDE);
 }
 
 void CEntity::InternalUse(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
@@ -797,7 +826,7 @@ void CEntity::InternalUse(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 
 Vector CEntity::GetSoundEmissionOrigin()
 {
-	if (!m_bInGetSoundEmissionOrigin)
+if (!m_bInGetSoundEmissionOrigin)
 	{
 		Vector ret = SH_MCALL(BaseEntity(), GetSoundEmissionOrigin)();
 		return ret;
@@ -806,10 +835,10 @@ Vector CEntity::GetSoundEmissionOrigin()
 	SET_META_RESULT(MRES_IGNORED);
 	SH_GLOB_SHPTR->DoRecall();
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
-	Vector ret = (thisptr->*(__SoureceHook_FHM_GetRecallMFPGetSoundEmissionOrigin(thisptr)))();
-	SET_META_RESULT(MRES_SUPERCEDE);
-
-	return ret;
+	if(thisptr != (void *)BaseEntity()) {
+		RETURN_META_VALUE(MRES_SUPERCEDE, SH_MCALL(BaseEntity(), GetSoundEmissionOrigin)());
+	}
+	RETURN_META_VALUE(MRES_SUPERCEDE, (thisptr->*(__SoureceHook_FHM_GetRecallMFPGetSoundEmissionOrigin(thisptr)))());
 }
 
 Vector CEntity::InternalGetSoundEmissionOrigin()
@@ -849,8 +878,12 @@ void CEntity::Think()
 	SET_META_RESULT(MRES_IGNORED);
 	SH_GLOB_SHPTR->DoRecall();
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
+	if(thisptr != (void *)BaseEntity()) {
+		SH_MCALL(BaseEntity(), Think)();
+		RETURN_META(MRES_SUPERCEDE);
+	}
 	(thisptr->*(__SoureceHook_FHM_GetRecallMFPThink(thisptr)))();
-	SET_META_RESULT(MRES_SUPERCEDE);
+	RETURN_META(MRES_SUPERCEDE);
 }
 
 void CEntity::InternalThink()
@@ -903,8 +936,14 @@ BASEPTR	CEntity::ThinkSet(BASEPTR func, float thinkTime, const char *szContext)
 	//m_pfnThink = NULL;
 	if ( !szContext )
 	{
-		*(m_pfnThink) = reinterpret_cast<VALVE_BASEPTR>(&CEntity::CBaseEntityThink);
-		ce_m_pfnThink = func;
+		if(func == (BASEPTR)&CAI_NPC::CallNPCThink)
+		{
+			*(m_pfnThink) = CAI_NPC::func_CallNPCThink;
+			ce_m_pfnThink = NULL;
+		} else {
+			*(m_pfnThink) = reinterpret_cast<VALVE_BASEPTR>(&CEntity::CBaseEntityThink);
+			ce_m_pfnThink = func;
+		}
 		return ce_m_pfnThink;
 	}
 
@@ -1169,11 +1208,6 @@ CEntity *CEntity::GetRootMoveParent()
 	return pEntity;
 }
 
-edict_t *CEntity::edict()
-{
-	return m_pEdict;
-}
-
 int CEntity::entindex_non_network()
 {
 	return BaseEntity()->GetRefEHandle().GetEntryIndex();
@@ -1197,45 +1231,95 @@ int CEntity::GetTeam()
 	return m_iTeamNum;
 }
 
-bool CEntity::AcceptInput(const char *szInputName, CEntity *pActivator, CEntity *pCaller, variant_t Value, int outputID)
+#define ACCEPTINPUT_FAIL		0
+#define ACCEPTINPUT_FOUND		1
+#define ACCEPTINPUT_NOTFOUND	2
+
+static int _AcceptInput(CEntity *pEntity, const char *szInputName, CBaseEntity *pActivator, CBaseEntity *pCaller, variant_t Value, int outputID)
+{
+	for ( datamap_t *dmap = pEntity->GetDataDescMap(); dmap != NULL; dmap = dmap->baseMap )
+	{
+		// search through all the actions in the data description, looking for a match
+		for ( int i = 0; i < dmap->dataNumFields; i++ )
+		{
+			if ( dmap->dataDesc[i].flags & FTYPEDESC_INPUT )
+			{
+				if ( !Q_stricmp(dmap->dataDesc[i].externalName, szInputName) )
+				{
+					// convert the value if necessary
+					if ( Value.FieldType() != dmap->dataDesc[i].fieldType )
+					{
+						if ( !(Value.FieldType() == FIELD_VOID && dmap->dataDesc[i].fieldType == FIELD_STRING) ) // allow empty strings
+						{
+							if ( !Value.Convert( (fieldtype_t)dmap->dataDesc[i].fieldType ) )
+							{
+								pEntity->m_bInAcceptInput = false;
+								return ACCEPTINPUT_FAIL;
+							}
+						}
+					}
+					// call the input handler, or if there is none just set the value
+					inputfunc_t pfnInput = dmap->dataDesc[i].inputFunc;
+					if ( pfnInput )
+					{ 
+						// Package the data into a struct for passing to the input handler.
+						inputdata_t data;
+						data.pActivator = pActivator;
+						data.pCaller = pCaller;
+						data.value = Value;
+						data.nOutputID = outputID;
+
+						(pEntity->*pfnInput)( data );
+					}
+					else if ( dmap->dataDesc[i].flags & FTYPEDESC_KEY )
+					{
+						// set the value directly
+						Value.SetOther( ((char*)pEntity->BaseEntity()) + dmap->dataDesc[i].fieldOffset[ TD_OFFSET_NORMAL ]);
+					
+						// TODO: if this becomes evil and causes too many full entity updates, then we should make
+						// a macro like this:
+						//
+						// define MAKE_INPUTVAR(x) void Note##x##Modified() { x.GetForModify(); }
+						//
+						// Then the datadesc points at that function and we call it here. The only pain is to add
+						// that function for all the DEFINE_INPUT calls.
+						
+						// CEntity: this is custom input, need this??
+						//pEnt->NetworkStateChanged();
+					}
+					pEntity->m_bInAcceptInput = false;
+					return ACCEPTINPUT_FOUND;
+				}
+			}
+		}
+	}
+	return ACCEPTINPUT_NOTFOUND;
+}
+
+bool CEntity::CustomAcceptInput(const char *szInputName, CBaseEntity *pActivator, CBaseEntity *pCaller, variant_t Value, int outputID)
+{
+	int local_ret = _AcceptInput(this,szInputName, pActivator, pCaller, Value, outputID);
+	if(local_ret < ACCEPTINPUT_NOTFOUND)
+		return (local_ret != 0);
+
+	return AcceptInput(szInputName, pActivator, pCaller, Value, outputID);
+}
+
+bool CEntity::AcceptInput(const char *szInputName, CBaseEntity *pActivator, CBaseEntity *pCaller, variant_t Value, int outputID)
 {
 	if (!m_bInAcceptInput)
 	{
-		return SH_MCALL(BaseEntity(), AcceptInput)(szInputName, *pActivator, *pCaller, Value, outputID);
+		return SH_MCALL(BaseEntity(), AcceptInput)(szInputName, pActivator, pCaller, Value, outputID);
 	}
-
-	/**
-	 * This gets the award for the worst hack so far. Detects the end of waiting for players and probably lots of other things.
-	 * Forces players out of vehicles.
-	 */
-	/*if (strcmp(szInputName, "ShowInHUD") == 0 || strcmp(szInputName, "RoundSpawn") == 0 || strcmp(szInputName, "RoundWin") == 0)
-	{
-		CEntity *pEnt;
-		for (int i=1; i<=gpGlobals->maxClients; i++)
-		{
-			pEnt = CEntity::Instance(i);
-			if (!pEnt)
-			{
-				continue;
-			}
-
-			CPlayer *pPlayer = dynamic_cast<CPlayer *>(pEnt);
-			assert(pPlayer);
-
-			IServerVehicle *pVehicle = pPlayer->GetVehicle();
-			if (pVehicle && !pVehicle->IsPassengerExiting())
-			{
-				pPlayer->LeaveVehicle();
-			}
-		}
-	}*/
 
 	SET_META_RESULT(MRES_IGNORED);
 	SH_GLOB_SHPTR->DoRecall();
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
-	bool ret = (thisptr->*(__SoureceHook_FHM_GetRecallMFPAcceptInput(thisptr)))(szInputName, *pActivator, *pCaller, Value, outputID);
-	SET_META_RESULT(MRES_SUPERCEDE);
-	return ret;
+	if(thisptr != (void *)BaseEntity()) {
+		RETURN_META_VALUE(MRES_SUPERCEDE, SH_MCALL(BaseEntity(), AcceptInput)(szInputName, pActivator, pCaller, Value, outputID));
+	}
+	bool ret = (thisptr->*(__SoureceHook_FHM_GetRecallMFPAcceptInput(thisptr)))(szInputName, pActivator, pCaller, Value, outputID);
+	RETURN_META_VALUE(MRES_SUPERCEDE, ret);
 }
 
 bool CEntity::InternalAcceptInput(const char *szInputName, CBaseEntity *pActivator, CBaseEntity *pCaller, variant_t Value, int outputID)
@@ -1253,69 +1337,12 @@ bool CEntity::InternalAcceptInput(const char *szInputName, CBaseEntity *pActivat
 
 	//if(pEnt->IsCustomEntity())
 	{
-		for ( datamap_t *dmap = pEnt->GetDataDescMap(); dmap != NULL; dmap = dmap->baseMap )
-		{
-			// search through all the actions in the data description, looking for a match
-			for ( int i = 0; i < dmap->dataNumFields; i++ )
-			{
-				if ( dmap->dataDesc[i].flags & FTYPEDESC_INPUT )
-				{
-					if ( !Q_stricmp(dmap->dataDesc[i].externalName, szInputName) )
-					{
-						// convert the value if necessary
-						if ( Value.FieldType() != dmap->dataDesc[i].fieldType )
-						{
-							if ( !(Value.FieldType() == FIELD_VOID && dmap->dataDesc[i].fieldType == FIELD_STRING) ) // allow empty strings
-							{
-								if ( !Value.Convert( (fieldtype_t)dmap->dataDesc[i].fieldType ) )
-								{
-									pEnt->m_bInAcceptInput = false;
-									return false;
-								}
-							}
-						}
-
-						// call the input handler, or if there is none just set the value
-						inputfunc_t pfnInput = dmap->dataDesc[i].inputFunc;
-
-						if ( pfnInput )
-						{ 
-							// Package the data into a struct for passing to the input handler.
-							inputdata_t data;
-							data.pActivator = pActivator;
-							data.pCaller = pCaller;
-							data.value = Value;
-							data.nOutputID = outputID;
-
-							(pEnt->*pfnInput)( data );
-						}
-						else if ( dmap->dataDesc[i].flags & FTYPEDESC_KEY )
-						{
-							// set the value directly
-							Value.SetOther( ((char*)pEnt->BaseEntity()) + dmap->dataDesc[i].fieldOffset[ TD_OFFSET_NORMAL ]);
-						
-							// TODO: if this becomes evil and causes too many full entity updates, then we should make
-							// a macro like this:
-							//
-							// define MAKE_INPUTVAR(x) void Note##x##Modified() { x.GetForModify(); }
-							//
-							// Then the datadesc points at that function and we call it here. The only pain is to add
-							// that function for all the DEFINE_INPUT calls.
-							
-
-							// CEntity: this is custom input, need this??
-							//pEnt->NetworkStateChanged();
-						}
-
-						pEnt->m_bInAcceptInput = false;
-						return true;
-					}
-				}
-			}
-		}
+		int local_ret = _AcceptInput(pEnt,szInputName, pActivator, pCaller, Value, outputID);
+		if(local_ret < ACCEPTINPUT_NOTFOUND)
+			return (local_ret != 0);	
 	}
 
-	bool ret = pEnt->AcceptInput(szInputName, *pActivator, *pCaller, Value, outputID);
+	bool ret = pEnt->AcceptInput(szInputName, pActivator, pCaller, Value, outputID);
 
 	if (pEnt == CEntity::Instance(index))
 		pEnt->m_bInAcceptInput = false;
@@ -2521,3 +2548,41 @@ void CEntity::FireBullets( int cShots, const Vector &vecSrc,
 
 	FireBullets( info );
 }
+
+
+
+
+
+
+#include "tier0/memdbgoff.h"
+
+//-----------------------------------------------------------------------------
+// CBaseEntity new/delete
+// allocates and frees memory for itself from the engine->
+// All fields in the object are all initialized to 0.
+//-----------------------------------------------------------------------------
+void *CEntity::operator new( size_t stAllocateBlock )
+{
+	// call into engine to get memory
+	Assert( stAllocateBlock != 0 );
+	return engine->PvAllocEntPrivateData(stAllocateBlock);
+};
+
+void *CEntity::operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
+{
+	// call into engine to get memory
+	Assert( stAllocateBlock != 0 );
+	return engine->PvAllocEntPrivateData(stAllocateBlock);
+}
+
+void CEntity::operator delete( void *pMem )
+{
+	// get the engine to free the memory
+	engine->FreeEntPrivateData( pMem );
+}
+
+#include "tier0/memdbgon.h"
+
+
+
+

@@ -4,6 +4,12 @@
 #include "CPlayer.h"
 
 
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
+
 #pragma pack(push, 1)
 
 struct AISightIterVal_t

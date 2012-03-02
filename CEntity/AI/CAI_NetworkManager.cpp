@@ -2,6 +2,12 @@
 #include "CAI_NetworkManager.h"
 #include "CAI_Hint.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CEAI_NetworkManager *g_pAINetworkManager;
 
 CE_LINK_ENTITY_TO_CLASS(CAI_NetworkManager, CEAI_NetworkManager);

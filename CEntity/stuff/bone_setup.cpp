@@ -3,6 +3,12 @@
 #include "bone_setup.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 //-----------------------------------------------------------------------------
 // Purpose: calculate changes in position and angle relative to the start of an animations cycle
 // Output:	updated position and angle, relative to the origin

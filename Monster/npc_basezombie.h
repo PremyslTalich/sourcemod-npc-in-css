@@ -103,13 +103,13 @@ enum Zombie_Conds
 typedef CAI_BlendingHost< CAI_BehaviorHost<CE_Cycler_Fix> > CAI_BaseZombieBase;
 
 
-abstract_class CE_BaseZombie : public CAI_BaseZombieBase
+abstract_class CNPC_BaseZombie : public CAI_BaseZombieBase
 {
 public:
-	CE_DECLARE_CLASS(CE_BaseZombie, CAI_BaseZombieBase);
+	CE_DECLARE_CLASS(CNPC_BaseZombie, CAI_BaseZombieBase);
 
-	CE_BaseZombie( void );
-	virtual ~CE_BaseZombie( void );
+	CNPC_BaseZombie( void );
+	virtual ~CNPC_BaseZombie( void );
 
 	void Spawn( void );
 	void Precache( void );

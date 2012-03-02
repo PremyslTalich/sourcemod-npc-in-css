@@ -6,9 +6,15 @@
 bool Pickup_GetPreferredCarryAngles( CEntity *pObject, CPlayer *pPlayer, matrix3x4_t &localToWorld, QAngle &outputAnglesWorldSpace )
 {
 	IPlayerPickupVPhysics *pPickup = dynamic_cast<IPlayerPickupVPhysics *>(pObject);
+
+	if(!pPickup && pObject)
+	{
+		pPickup = dynamic_cast<IPlayerPickupVPhysics *>(pObject->BaseEntity());
+	}
+
 	if ( pPickup )
 	{
-		if ( pPickup->HasPreferredCarryAnglesForPlayer( pPlayer ) )
+		if ( pPickup->HasPreferredCarryAnglesForPlayer( (pPlayer)?pPlayer->BaseEntity():NULL ) )
 		{
 			outputAnglesWorldSpace = TransformAnglesToWorldSpace( pPickup->PreferredCarryAngles(), localToWorld );
 			return true;
@@ -50,9 +56,13 @@ void Pickup_ForcePlayerToDropThisObject( CEntity *pTarget )
 void Pickup_OnPhysGunDrop( CEntity *pDroppedObject, CPlayer *pPlayer, PhysGunDrop_t Reason )
 {
 	IPlayerPickupVPhysics *pPickup = dynamic_cast<IPlayerPickupVPhysics *>(pDroppedObject);
+	if(!pPickup && pDroppedObject)
+	{
+		pPickup = dynamic_cast<IPlayerPickupVPhysics *>(pDroppedObject->BaseEntity());
+	}
 	if ( pPickup )
 	{
-		pPickup->OnPhysGunDrop( pPlayer, Reason );
+		pPickup->OnPhysGunDrop( (pPlayer)?pPlayer->BaseEntity():NULL, Reason );
 	}
 }
 
@@ -60,9 +70,13 @@ void Pickup_OnPhysGunDrop( CEntity *pDroppedObject, CPlayer *pPlayer, PhysGunDro
 void Pickup_OnPhysGunPickup( CEntity *pPickedUpObject, CPlayer *pPlayer, PhysGunPickup_t reason )
 {
 	IPlayerPickupVPhysics *pPickup = dynamic_cast<IPlayerPickupVPhysics *>(pPickedUpObject);
+	if(!pPickup && pPickedUpObject)
+	{
+		pPickup = dynamic_cast<IPlayerPickupVPhysics *>(pPickedUpObject->BaseEntity());
+	}
 	if ( pPickup )
 	{
-		pPickup->OnPhysGunPickup( pPlayer, reason );
+		pPickup->OnPhysGunPickup( (pPlayer)?pPlayer->BaseEntity():NULL, reason );
 	}
 }
 

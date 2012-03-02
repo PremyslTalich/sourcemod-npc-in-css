@@ -1,7 +1,13 @@
 
 #include "CSmoke_trail.h"
 
-CE_LINK_ENTITY_TO_CLASS(SmokeTrail, CSmokeTrail);
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
+CE_LINK_ENTITY_TO_CLASS(env_smoketrail, CSmokeTrail);
 
 DEFINE_PROP(m_StartColor, CSmokeTrail);
 DEFINE_PROP(m_EndColor, CSmokeTrail );
@@ -21,7 +27,7 @@ DEFINE_PROP(m_nAttachment, CSmokeTrail );
 
 
 
-CE_LINK_ENTITY_TO_CLASS(SporeExplosion, CE_SporeExplosion);
+CE_LINK_ENTITY_TO_CLASS(env_sporeexplosion, CE_SporeExplosion);
 
 DEFINE_PROP(m_bDontRemove, CE_SporeExplosion );
 DEFINE_PROP(m_bEmit, CE_SporeExplosion );

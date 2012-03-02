@@ -1,6 +1,12 @@
 
 #include "CEnvExplosion.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CE_LINK_ENTITY_TO_CLASS(CEnvExplosion, CE_CEnvExplosion);
 
 // Datamaps
@@ -20,20 +26,20 @@ void ExplosionCreate( const Vector &center, const QAngle &angles,
 	Q_snprintf( buf,sizeof(buf), "%3d", magnitude );
 	const char *szKeyName = "iMagnitude";
 	char *szValue = buf;
-	pExplosion->DispatchKeyValue( szKeyName, szValue );
+	pExplosion->CustomDispatchKeyValue( szKeyName, szValue );
 
 	pExplosion->AddSpawnFlags( nSpawnFlags );
 
 	if ( radius )
 	{
 		Q_snprintf( buf,sizeof(buf), "%d", radius );
-		pExplosion->DispatchKeyValue( "iRadiusOverride", buf );
+		pExplosion->CustomDispatchKeyValue( "iRadiusOverride", buf );
 	}
 
 	if ( flExplosionForce != 0.0f )
 	{
 		Q_snprintf( buf,sizeof(buf), "%.3f", flExplosionForce );
-		pExplosion->DispatchKeyValue( "DamageForce", buf );
+		pExplosion->CustomDispatchKeyValue( "DamageForce", buf );
 	}
 
 	variant_t emptyVariant;
@@ -48,7 +54,7 @@ void ExplosionCreate( const Vector &center, const QAngle &angles,
 	}
 	pExplosion->m_iClassIgnore = ignoredClass;
 
-	pExplosion->AcceptInput( "Explode", NULL, NULL, emptyVariant, 0 );
+	pExplosion->CustomAcceptInput( "Explode", NULL, NULL, emptyVariant, 0 );
 }
 
 

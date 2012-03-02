@@ -1,11 +1,17 @@
 
 #include "CCycler_Fix.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 #define	MIN_PHYSICS_FLINCH_DAMAGE	5.0f
 
-void CE_Cycler_Fix::CE_PostInit()
+void CE_Cycler_Fix::PostConstructor()
 {
-	BaseClass::CE_PostInit();
+	BaseClass::PostConstructor();
 	*(m_pfnThink) = NULL;
 }
 

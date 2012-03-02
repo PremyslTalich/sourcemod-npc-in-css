@@ -5,6 +5,12 @@
 #include "CPlayer.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CE_LINK_ENTITY_TO_CLASS(CAI_FollowGoal, CE_AI_FollowGoal);
 
 //Datamaps
@@ -1355,7 +1361,7 @@ void CAI_FollowBehavior::StartTask( const Task_t *pTask )
 					bool bIsEpisodicVitalAlly;
 					
 #ifdef HL2_DLL
-					bIsEpisodicVitalAlly = (hl2_episodic.GetBool() && GetOuter()->Classify() == CLASS_PLAYER_ALLY_VITAL);
+					bIsEpisodicVitalAlly = (hl2_episodic->GetBool() && GetOuter()->Classify() == CLASS_PLAYER_ALLY_VITAL);
 #else
 					bIsEpisodicVitalAlly = false;
 #endif//HL2_DLL

@@ -375,7 +375,6 @@ class CAntlionRepellant : public CE_InfoTarget_Fix
 public:
 	CE_DECLARE_CLASS( CAntlionRepellant, CE_InfoTarget_Fix );
 	DECLARE_DATADESC();
-	CAntlionRepellant();
 	~CAntlionRepellant();
 
 public:

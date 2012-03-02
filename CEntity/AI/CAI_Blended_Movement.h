@@ -223,36 +223,15 @@ public:
 	const CAI_BlendedMotor *GetBlendedMotor() const { return assert_cast<const CAI_BlendedMotor *>(this->GetMotor()); }
 	CAI_BlendedMotor *		GetBlendedMotor()		{ return assert_cast<CAI_BlendedMotor *>(this->GetMotor()); }
 
-	/* Replace Original pointer */
-	virtual bool CreateComponents()
-	{
-		if(!BaseClass::CreateComponents())
-			return false;
-
-		CreateMotor();
-		CreateNavigator();
-		return true;
-	}
-
 	CAI_Motor *CreateMotor()
 	{
-		//remove old one
-		CAI_Motor *ptr = *(m_pMotor.ptr);
-		delete ptr;
-
-		// create & set
-		ptr = new CAI_BlendedMotor(this);
-		ptr->Init( m_pLocalNavigator );		
-		*(m_pMotor.ptr) = ptr;
-		
-		// hack!!
-		(*(m_pNavigator.ptr))->Init(g_pBigAINet);		
-		return m_pMotor;
+		MEM_ALLOC_CREDIT();
+		return new CAI_BlendedMotor( this );
 	}
 
 	CAI_Navigator *CreateNavigator()
 	{
-		CAI_Navigator *pNavigator = m_pNavigator;
+		CAI_Navigator *pNavigator = BaseClass::CreateNavigator();
 		pNavigator->SetValidateActivitySpeed( false );
 		return pNavigator;
 	}

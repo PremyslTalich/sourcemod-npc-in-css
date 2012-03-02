@@ -117,50 +117,10 @@ int ACT_ANTLION_WORKER_EXPLODE;
 
 CNPC_Antlion::CNPC_Antlion( void )
 {
-	m_flIdleDelay	= 0.0f;
-	m_flBurrowTime	= 0.0f;
-	m_flJumpTime	= 0.0f;
-	m_flPounceTime	= 0.0f;
-	m_flObeyFollowTime = 0.0f;
-	m_iUnBurrowAttempts = 0;
-
 	m_flAlertRadius	= 256.0f;
-
-	m_bStartBurrowed	= false;
-	m_bAgitatedSound	= false;
-	m_bWingsOpen		= false;
-	
-	m_flIgnoreSoundTime	= 0.0f;
-	m_bHasHeardSound	= false;
-
-	m_flNextAcknowledgeTime = 0.0f;
-	m_flNextJumpPushTime = 0.0f;
-
-	m_bLoopingStarted = false;
-
-	m_bForcedStuckJump = false;
 	m_nBodyBone = -1;
-	m_bSuppressUnburrowEffects = false;
-
-	m_bHasDoneAirAttack = false;
-
-	m_vecLastJumpAttempt.Init();
-	m_vecSavedJump.Init();
-	m_vecHeardSound.Init();
-
-
-	m_iContext = 0;
-	m_vecSaveSpitVelocity.Init();
 	m_MoveState = ANTLION_MOVE_FREE;
-	m_flSuppressFollowTime = 0.0f;
 	m_strParentSpawner = NULL_STRING;
-	m_flEludeDistance = 0.0f;
-	m_bLeapAttack = false;
-	m_flTimeDrown = 0.0f;
-	m_flTimeDrownSplash = 0.0f;
-	m_nSustainedDamage = 0;
-	m_flLastDamageTime = 0.0f;
-	m_flZapDuration = 0.0f;
 
 }
 
@@ -4312,12 +4272,6 @@ END_DATADESC()
 
 static CUtlVector< CHandle< CAntlionRepellant > >m_hRepellantList;
 
-
-CAntlionRepellant::CAntlionRepellant()
-{
-	m_flRepelRadius = 0.0f;
-	m_bEnabled = false;
-}
 
 CAntlionRepellant::~CAntlionRepellant()
 {

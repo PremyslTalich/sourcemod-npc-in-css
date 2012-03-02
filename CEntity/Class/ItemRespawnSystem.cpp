@@ -4,6 +4,12 @@
 #include "CCombatWeapon.h"
 #include "CItem.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 ItemRespawnSystem g_ItemRespawnSystem("ItemRespawnSystem");
 
 #define WEAPON_MAX_DISTANCE_FROM_SPAWN 64

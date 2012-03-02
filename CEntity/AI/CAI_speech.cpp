@@ -8,6 +8,12 @@
 
 
 
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
+
 CAI_TimedSemaphore *g_AIFriendliesTalkSemaphore = NULL;
 CAI_TimedSemaphore *g_AIFoesTalkSemaphore = NULL;
 

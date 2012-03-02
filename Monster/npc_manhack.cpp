@@ -171,13 +171,6 @@ END_DATADESC()
 //------------------------------------------------------------------------------
 CNPC_Manhack::CNPC_Manhack()
 {
-	m_vForceMoveTarget.Init();
-	m_vSwarmMoveTarget.Init();
-	m_vTargetBanking.Init();
-	m_vForceVelocity.Init();
-	m_vecBurstDirection.Init();
-	m_vecLoiterPosition.Init();
-
 	m_bDirtyPitch = true;
 	m_nLastWaterLevel = 0;
 	m_nEnginePitch1 = -1;
@@ -186,38 +179,6 @@ CNPC_Manhack::CNPC_Manhack()
 	m_flEnginePitch1Time = 0;
 	m_bDoSwarmBehavior = true;
 	m_flBumpSuppressTime = 0;
-
-	m_fForceMoveTime = 0.0f;
-	m_fSwarmMoveTime = 0.0f;
-	m_fEnginePowerScale = 0.0f;
-
-
-	m_flNextEngineSoundTime = 0.0f;
-	m_flEngineStallTime = 0.0f;
-	m_flNextBurstTime = 0.0f;
-	m_flWaterSuspendTime = 0.0f;
-	m_nLastSpinSound = 0;
-
-	m_pEyeGlow = NULL;
-	m_pLightGlow = NULL;
-	m_hSmokeTrail = NULL;
-
-	// Death
-	m_fSparkTime = 0.0f;
-	m_fSmokeTime = 0.0f;
-
-	m_bDirtyPitch = false;
-	m_bGib = false;
-	m_bHeld = false;
-	
-	m_bHackedByAlyx = false;
-	m_fTimeNextLoiterPulse = 0.0f;
-
-	m_flBumpSuppressTime = 0.0f;
-
-	m_bBladesActive = false;
-	m_flBladeSpeed = 0.0f;
-
 }
 
 //------------------------------------------------------------------------------

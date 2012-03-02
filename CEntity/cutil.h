@@ -470,5 +470,6 @@ int SENTENCEG_Lookup(const char *sample);
 int SENTENCEG_PlayRndSz(edict_t *entity, const char *szrootname, float volume, soundlevel_t soundlevel, int flags, int pitch);
 void SENTENCEG_PlaySentenceIndex( edict_t *entity, int iSentenceIndex, float volume, soundlevel_t soundlevel, int flags, int pitch );
 
+void *UTIL_FunctionFromName( datamap_t *pMap, const char *pName );
 
 #endif // _INCLUDE_UTIL_H_

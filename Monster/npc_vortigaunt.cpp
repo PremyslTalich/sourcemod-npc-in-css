@@ -150,27 +150,10 @@ static bool IsRoller( CEntity *pRoller )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CNPC_Vortigaunt::CNPC_Vortigaunt( void ) 
+CNPC_Vortigaunt::CNPC_Vortigaunt( void ) : 
+m_nNumTokensToSpawn( 0 ),
+m_flAimDelay( 0.0f )
 {
-	m_nNumTokensToSpawn = 0;
-	m_flAimDelay = 0.0f;
-
-	m_flDispelTestTime = 0.0f;
-	m_nLightningSprite = 0;
-	m_fGlowAge = 0.0f;
-	m_fGlowChangeTime = 0.0f;
-	m_bGlowTurningOn = false;
-	m_nCurGlowIndex = 0;
-	m_flPainTime = 0.0f;
-	m_nextLineFireTime = 0.0f;
-	m_iLeftHandAttachment = 0;
-	m_iRightHandAttachment = 0;
-	m_flBlueEndFadeTime = 0.0f;
-	m_bIsBlue = false;
-	m_bIsBlack = false;
-	m_bCarryingNPC = false;
-
-	memset(m_pHandGlow, 0, sizeof(m_pHandGlow));
 }
 
 //-----------------------------------------------------------------------------

@@ -19,6 +19,12 @@
 
 #include "CAnimating.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CE_LINK_ENTITY_TO_CLASS(CBaseAnimating, CAnimating);
 
 SH_DECL_MANUALHOOK0_void(StudioFrameAdvance, 0, 0, 0);

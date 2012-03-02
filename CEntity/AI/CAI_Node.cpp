@@ -3,6 +3,12 @@
 #include "CAI_Network.h"
 #include "CAI_Link.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 //-----------------------------------------------------------------------------
 
 CAI_Link *CAI_Node::GetLink( int destNodeId )

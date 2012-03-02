@@ -4,11 +4,12 @@
 
 #include "CEntity.h"
 #include "CAI_NPC.h"
+#include "CDynamicProp.h"
 
-class CPropDoor : public CEntity
+class CPropDoor : public CE_CDynamicProp
 {
 public:
-	CE_DECLARE_CLASS( CPropDoor, CEntity );
+	CE_DECLARE_CLASS( CPropDoor, CE_CDynamicProp );
 	bool NPCOpenDoor(CAI_NPC *pNPC);
 	bool IsDoorClosed();
 

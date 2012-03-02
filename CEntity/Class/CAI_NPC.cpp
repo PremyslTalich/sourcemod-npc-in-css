@@ -11,6 +11,12 @@
 
 
 
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
+
 CAI_Manager g_AI_Manager;
 
 //-------------------------------------
@@ -70,8 +76,8 @@ int						*CAI_NPC::m_iNumActivities  = NULL;
 CStringRegistry*		CAI_NPC::m_pEventSR			= NULL;
 int						*CAI_NPC::m_iNumEvents		= NULL;
 
-string_t CAI_NPC::gm_iszPlayerSquad;
-
+string_t CAI_NPC::gm_iszPlayerSquad = NULL_STRING;
+VALVE_BASEPTR CAI_NPC::func_CallNPCThink = NULL;
 
 
 
@@ -127,9 +133,10 @@ CAI_ClassScheduleIdSpace *CAI_NPC::GetClassScheduleIdSpace()
 	SET_META_RESULT(MRES_IGNORED);
 	SH_GLOB_SHPTR->DoRecall();
 	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
-	CAI_ClassScheduleIdSpace *ret = (thisptr->*(__SoureceHook_FHM_GetRecallMFPGetClassScheduleIdSpace(thisptr)))();
-	SET_META_RESULT(MRES_SUPERCEDE);
-	return ret;
+	if(thisptr != (void *)BaseEntity()) {
+		RETURN_META_VALUE(MRES_SUPERCEDE, SH_MCALL(BaseEntity(), GetClassScheduleIdSpace)());
+	}
+	RETURN_META_VALUE(MRES_SUPERCEDE,(thisptr->*(__SoureceHook_FHM_GetRecallMFPGetClassScheduleIdSpace(thisptr)))());
 }
 
 CAI_ClassScheduleIdSpace *CAI_NPC::InternalGetClassScheduleIdSpace()
@@ -251,16 +258,18 @@ DECLARE_HOOK(GetSchedule, CAI_NPC);
 
 CAI_Schedule *CAI_NPC::GetSchedule(int schedule)
 {
-	if(!m_bInGetSchedule)
+	CAI_Schedule *ret = NULL;
+	if (!GetClassScheduleIdSpace()->IsGlobalBaseSet())
 	{
-		return SH_MCALL(BaseEntity(), GetSchedule)(schedule);
+		ret = g_AI_SchedulesManager.GetScheduleFromID(SCHED_IDLE_STAND);
+		return ret;
 	}
-
-	SET_META_RESULT(MRES_IGNORED);
-	SH_GLOB_SHPTR->DoRecall();
-	SourceHook::EmptyClass *thisptr = reinterpret_cast<SourceHook::EmptyClass*>(SH_GLOB_SHPTR->GetIfacePtr());
-	CAI_Schedule *ret = (thisptr->*(__SoureceHook_FHM_GetRecallMFPGetSchedule(thisptr)))(schedule);
-	SET_META_RESULT(MRES_SUPERCEDE);
+	if ( AI_IdIsLocal( schedule ) )
+	{
+		schedule = GetClassScheduleIdSpace()->ScheduleLocalToGlobal(schedule);
+	}
+	
+	ret = g_AI_SchedulesManager.GetScheduleFromID( schedule );
 	return ret;
 }
 
@@ -276,21 +285,7 @@ CAI_Schedule *CAI_NPC::InternalGetSchedule(int schedule)
 
 	int index = pEnt->entindex_non_network();
 	pEnt->m_bInGetSchedule = true;
-	CAI_Schedule *ret = NULL;
-
-	if (!pEnt->GetClassScheduleIdSpace()->IsGlobalBaseSet())
-	{
-		ret = g_AI_SchedulesManager.GetScheduleFromID(SCHED_IDLE_STAND);
-		if (pEnt == CEntity::Instance(index))
-			pEnt->m_bInGetSchedule = false;
-		return ret;
-	}
-	if ( AI_IdIsLocal( schedule ) )
-	{
-		schedule = pEnt->GetClassScheduleIdSpace()->ScheduleLocalToGlobal(schedule);
-	}
-	
-	ret = g_AI_SchedulesManager.GetScheduleFromID( schedule );
+	CAI_Schedule *ret = pEnt->GetSchedule(schedule);
 	if (pEnt == CEntity::Instance(index))
 		pEnt->m_bInGetSchedule = false;
 	return ret;
@@ -564,8 +559,8 @@ DECLARE_HOOK(GetFlinchActivity, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, GetFlinchActivity, Activity, (bool bHeavyDamage, bool bGesture ), (bHeavyDamage, bGesture));
 
 SH_DECL_MANUALHOOK3(OnCalcBaseMove, 0, 0, 0, bool, AILocalMoveGoal_t *, float , AIMoveResult_t *);
-DECLARE_HOOK(OnCalcBaseMove, CAI_NPC);
-DECLARE_DEFAULTHANDLER(CAI_NPC, OnCalcBaseMove, bool, (AILocalMoveGoal_t *pMoveGoal, float distClear, AIMoveResult_t *pResult ), (pMoveGoal, distClear, pResult));
+DECLARE_DEFAULTHANDLER_SUBCLASS(CAI_NPC, IAI_MovementSink, OnCalcBaseMove, bool, (AILocalMoveGoal_t *pMoveGoal, float distClear, AIMoveResult_t *pResult ), (pMoveGoal, distClear, pResult ));
+DECLARE_HOOK_SUBCLASS(OnCalcBaseMove, CAI_NPC, IAI_MovementSink);
 
 SH_DECL_MANUALHOOK0(ShouldAlwaysThink, 0, 0, 0, bool);
 DECLARE_HOOK(ShouldAlwaysThink, CAI_NPC);
@@ -636,8 +631,8 @@ DECLARE_HOOK(InnateWeaponLOSCondition, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, InnateWeaponLOSCondition, bool, (const Vector &ownerPos, const Vector &targetPos, bool bSetConditions), (ownerPos, targetPos, bSetConditions));
 
 SH_DECL_MANUALHOOK3(OnObstructionPreSteer, 0, 0, 0, bool, AILocalMoveGoal_t *, float , AIMoveResult_t *);
-DECLARE_HOOK(OnObstructionPreSteer, CAI_NPC);
-DECLARE_DEFAULTHANDLER(CAI_NPC, OnObstructionPreSteer, bool, (AILocalMoveGoal_t *pMoveGoal, float distClear, AIMoveResult_t *pResult), (pMoveGoal, distClear, pResult));
+DECLARE_DEFAULTHANDLER_SUBCLASS(CAI_NPC, IAI_MovementSink, OnObstructionPreSteer, bool, (AILocalMoveGoal_t *pMoveGoal, float distClear, AIMoveResult_t *pResult ), (pMoveGoal, distClear, pResult ));
+DECLARE_HOOK_SUBCLASS(OnObstructionPreSteer, CAI_NPC, IAI_MovementSink);
 
 SH_DECL_MANUALHOOK0(CoverRadius, 0, 0, 0, float);
 DECLARE_HOOK(CoverRadius, CAI_NPC);
@@ -867,6 +862,42 @@ SH_DECL_MANUALHOOK2(IsCoverPosition, 0, 0, 0, bool, const Vector &, const Vector
 DECLARE_HOOK(IsCoverPosition, CAI_NPC);
 DECLARE_DEFAULTHANDLER(CAI_NPC, IsCoverPosition, bool, (const Vector &vecThreat, const Vector &vecPosition), (vecThreat, vecPosition));
 
+SH_DECL_MANUALHOOK1(OnMoveBlocked, 0, 0, 0, bool, AIMoveResult_t *);
+DECLARE_DEFAULTHANDLER_SUBCLASS(CAI_NPC, IAI_MovementSink, OnMoveBlocked, bool, (AIMoveResult_t *pResult), (pResult));
+DECLARE_HOOK_SUBCLASS(OnMoveBlocked, CAI_NPC, IAI_MovementSink);
+
+SH_DECL_MANUALHOOK0(CreateComponents, 0, 0, 0, bool);
+DECLARE_HOOK(CreateComponents, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CreateComponents, bool, (), ());
+
+SH_DECL_MANUALHOOK0(CreateSenses, 0, 0, 0, CAI_Senses *);
+DECLARE_HOOK(CreateSenses, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CreateSenses, CAI_Senses *, (), ());
+
+SH_DECL_MANUALHOOK0(CreateMoveProbe, 0, 0, 0, CAI_MoveProbe *);
+DECLARE_HOOK(CreateMoveProbe, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CreateMoveProbe, CAI_MoveProbe *, (), ());
+
+SH_DECL_MANUALHOOK0(CreateMotor, 0, 0, 0, CAI_Motor *);
+DECLARE_HOOK(CreateMotor, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CreateMotor, CAI_Motor *, (), ());
+
+SH_DECL_MANUALHOOK0(CreateLocalNavigator, 0, 0, 0, CAI_LocalNavigator *);
+DECLARE_HOOK(CreateLocalNavigator, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CreateLocalNavigator, CAI_LocalNavigator *, (), ());
+
+SH_DECL_MANUALHOOK0(CreateNavigator, 0, 0, 0, CAI_Navigator *);
+DECLARE_HOOK(CreateNavigator, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CreateNavigator, CAI_Navigator *, (), ());
+
+SH_DECL_MANUALHOOK0(CreatePathfinder, 0, 0, 0, CAI_Pathfinder *);
+DECLARE_HOOK(CreatePathfinder, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CreatePathfinder, CAI_Pathfinder *, (), ());
+
+SH_DECL_MANUALHOOK0(CreateTacticalServices, 0, 0, 0, CAI_TacticalServices *);
+DECLARE_HOOK(CreateTacticalServices, CAI_NPC);
+DECLARE_DEFAULTHANDLER(CAI_NPC, CreateTacticalServices, CAI_TacticalServices *, (), ());
+
 
 
 
@@ -965,15 +996,18 @@ CAI_NPC::~CAI_NPC()
 	g_AI_Manager.RemoveAI( this );
 }
 
-void CAI_NPC::CE_PostInit()
+void CAI_NPC::PostConstructor()
 {
-	BaseClass::CE_PostInit();
-
-	if(!CreateComponents())
+	BaseClass::PostConstructor();
+	if(func_CallNPCThink == NULL)
 	{
-		META_CONPRINT("CAI_NPC::CreateComponents Fail\n");
-		Assert(0);
+		void *ptr = UTIL_FunctionFromName( GetDataDescMap_Real(), "CAI_BaseNPCCallNPCThink");
+		if(ptr)
+		{
+			memcpy(&func_CallNPCThink, &ptr, sizeof(void *));
+		}
 	}
+	Assert(func_CallNPCThink);
 }
 
 void CAI_NPC::CapabilitiesClear()
@@ -1262,7 +1296,7 @@ bool CAI_NPC::HandleInteraction(int interactionType, void *data, CBaseEntity* so
 {
 	//CE_WTF
 #ifdef HL2_DLL
-	if ( interactionType == g_interactionBarnacleVictimGrab )
+	/*if ( interactionType == g_interactionBarnacleVictimGrab )
 	{
 		// Make the victim stop thinking so they're as good as dead without 
 		// shocking the system by destroying the entity.
@@ -1280,7 +1314,7 @@ bool CAI_NPC::HandleInteraction(int interactionType, void *data, CBaseEntity* so
 		}
 
 		return true;
-	}
+	}*/
 #endif // HL2_DLL
 
 	return BaseClass::HandleInteraction( interactionType, data, sourceEnt );
@@ -1404,7 +1438,7 @@ bool CAI_NPC::OccupyStrategySlotRange( int slotIDStart, int slotIDEnd )
 
 void CAI_NPC::CallNPCThink()
 {
-	g_helpfunc.CallNPCThink(BaseEntity());
+	(BaseEntity()->*func_CallNPCThink)();
 }
 
 Navigation_t CAI_NPC::GetNavType() const

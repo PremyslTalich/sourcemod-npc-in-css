@@ -61,8 +61,8 @@ void CGrenadeSpit::Spawn( void )
 	{
 		m_hSpitEffect.Set(_m_hSpitEffect->BaseEntity());
 		// Setup our basic parameters
-		_m_hSpitEffect->DispatchKeyValue( "start_active", "1" );
-		_m_hSpitEffect->DispatchKeyValue( "effect_name", "vomit_barnacle_b" );
+		_m_hSpitEffect->CustomDispatchKeyValue( "start_active", "1" );
+		_m_hSpitEffect->CustomDispatchKeyValue( "effect_name", "vomit_barnacle_b" );
 		_m_hSpitEffect->SetParent( BaseEntity() );
 		_m_hSpitEffect->SetLocalOrigin( vec3_origin );
 		DispatchSpawn( _m_hSpitEffect->BaseEntity() );

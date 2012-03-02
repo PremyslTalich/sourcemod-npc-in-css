@@ -6,6 +6,12 @@
 #include "CAI_utils.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 #define	COVER_CHECKS	5// how many checks are made
 #define COVER_DELTA		48// distance between checks
 

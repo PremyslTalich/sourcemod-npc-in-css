@@ -403,13 +403,6 @@ public:
 	{
 	}
 	
-	virtual void CE_PostInit()
-	{
-		BaseClass::CE_PostInit();
-
-		CreateBehaviors();
-	}
-
 	void CleanupOnDeath( CBaseEntity *pCulprit = NULL, bool bFireDeathOutput = true );
 
 	virtual int		Save( ISave &save );
@@ -1957,8 +1950,12 @@ inline int CAI_BehaviorHost<BASE_NPC>::Restore( IRestore &restore )
 template <class BASE_NPC>
 inline bool CAI_BehaviorHost<BASE_NPC>::CreateComponents()
 {
-	//CE_WTF , unable hook!!
-	return true;
+	if ( BaseClass::CreateComponents() )
+	{
+		bool result = CreateBehaviors();
+		return result;
+	}
+	return false;
 }
 
 //-----------------------------------------------------------------------------

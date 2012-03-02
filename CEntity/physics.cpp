@@ -3,6 +3,12 @@
 #include "physics.h"
 #include "vphysics/friction.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 float PhysGetEntityMass( CEntity *pEntity )
 {
 	IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];

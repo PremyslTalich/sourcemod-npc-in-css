@@ -3,6 +3,12 @@
 #include "eventqueue.h"
 
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CEventQueue *g_CEventQueue = NULL;
 CMemoryPool *EventQueuePrioritizedEvent_t::s_Allocator = NULL;
 

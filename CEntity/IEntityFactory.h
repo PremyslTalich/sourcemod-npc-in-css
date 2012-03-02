@@ -28,9 +28,11 @@
 
 #define LINK_ENTITY_TO_CUSTOM_CLASS(mapClassName,replaceClassName,DLLClassName); \
 	static CCustomEntityFactory<DLLClassName> mapClassName##custom(#mapClassName, #replaceClassName); \
-	static CEntityFactory_CE<DLLClassName> mapClassName(#mapClassName);
+	static CEntityFactory_CE<DLLClassName> mapClassName(#mapClassName, #replaceClassName);
+
 
 class CEntity;
+extern const char *szCurrentReplacedClassname;
 
 class IEntityFactoryDictionary_CE
 {
@@ -56,6 +58,11 @@ public:
 	CEntityFactory_CE(const char *pClassName)
 	{
 		GetEntityManager()->LinkEntityToClass(this, pClassName);
+	}
+
+	CEntityFactory_CE(const char *pClassName, const char *pReplaceName)
+	{
+		GetEntityManager()->LinkEntityToClass(this, pClassName, pReplaceName);
 	}
 
 	CEntity *Create(edict_t *pEdict, CBaseEntity *pEnt)
@@ -96,7 +103,7 @@ public:
 	CCustomEntityFactory(const char *pClassName, const char *pReplaceName)
 	{
 		this->pReplaceName = pReplaceName;
-		this->pClassName = pClassName;
+		this->pClassName = pClassName;		
 	}
 
 	void AddToList()
@@ -107,6 +114,7 @@ public:
 
 	IServerNetworkable *Create( const char *pClassName )
 	{
+		szCurrentReplacedClassname = pClassName;
 		IEntityFactoryReal *pFactory = (IEntityFactoryReal *)EntityFactoryDictionary_CE()->FindFactory(pReplaceName);
 		assert(pFactory);
 

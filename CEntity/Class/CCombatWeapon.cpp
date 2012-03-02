@@ -9,6 +9,12 @@
 
 
 
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
+
 CE_LINK_ENTITY_TO_CLASS(CBaseCombatWeapon, CCombatWeapon);
 
 ConVar sv_css_weapon_respawn_time( "sv_css_weapon_respawn_time", "20", FCVAR_GAMEDLL | FCVAR_NOTIFY );

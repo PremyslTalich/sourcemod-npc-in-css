@@ -46,14 +46,6 @@ class CRollerController : public IMotionEvent
 	DECLARE_SIMPLE_DATADESC();
 
 public:
-	CRollerController()
-	{
-		m_fIsStopped = false;
-
-		m_vecAngular.Init();
-		m_vecLinear.Init();
-	}
-
 	IMotionEvent::simresult_e Simulate( IPhysicsMotionController *pController, IPhysicsObject *pObject, float deltaTime, Vector &linear, AngularImpulse &angular );
 
 	AngularImpulse	m_vecAngular;
@@ -164,43 +156,7 @@ class CNPC_RollerMine : public CNPCBaseInteractive<CE_Cycler_Fix>
 public:
 	CE_DECLARE_CLASS( CNPC_RollerMine, CNPCBaseInteractive<CE_Cycler_Fix> );
 
-	CNPC_RollerMine( void )
-	{
-		m_bTurnedOn = true;
-		m_bUniformSight = false;
-		m_pPingSound = NULL;
-		m_pRollSound = NULL;
-		m_pMotionController = NULL;
-
-		m_flSeeVehiclesOnlyBeyond = 0.0f;
-		m_flActiveTime = 0.0f;
-		m_flChargeTime = 0.0f;
-		m_flGoIdleTime = 0.0f;
-		m_flShockTime = 0.0f;
-		m_flForwardSpeed = 0.0f;
-		m_bIsOpen = false;
-		m_bHeld = false;
-		m_hVehicleStuckTo.Set(NULL);
-		m_flPreventUnstickUntil = 0.0f;
-		m_flNextHop = 0.0f;
-		m_bIsPrimed = false;
-		m_iSoundEventFlags = 0;
-		m_rollingSoundState = ROLL_SOUND_NOT_READY;
-
-		m_bBuried = false;
-		m_wakeUp = false;
-		m_bEmbedOnGroundImpact = false;
-		m_bHackedByAlyx = false;
-		m_bPowerDown = false;
-		m_flPowerDownTime = 0.0f;
-		m_flPowerDownDetonateTime = 0.0f;
-		m_pConstraint = NULL;
-
-		m_bStartBuried = false;
-
-		m_iBulletHit = 0;
-	}
-
+	CNPC_RollerMine( void ) { m_bTurnedOn = true; m_bUniformSight = false; }
 	~CNPC_RollerMine( void );
 
 	void	Spawn( void );

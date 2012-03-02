@@ -2,6 +2,12 @@
 #include "CEntity.h"
 #include "CESoundEnt.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CE_LINK_ENTITY_TO_CLASS(CSoundEnt, CE_CSoundEnt);
 
 static CE_CSoundEnt *g_pSoundEnt = NULL;
@@ -87,7 +93,7 @@ CSound*	CE_CSoundEnt::SoundPointerForIndex( int iIndex )
 		return NULL;
 	}
 	
-	CSound &sound = *(CSound *)(((uint8_t *)(g_pSoundEnt->BaseEntity())) + g_pSoundEnt->m_SoundPool.offset + (iIndex));
+	CSound &sound = *(CSound *)(((uint8_t *)(g_pSoundEnt->BaseEntity())) + g_pSoundEnt->m_SoundPool.offset + (sizeof(CSound) + iIndex));
 	return &sound;
 }
 

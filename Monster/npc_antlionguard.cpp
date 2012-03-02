@@ -607,42 +607,6 @@ CNPC_AntlionGuard::CNPC_AntlionGuard( void )
 	m_bInCavern = false;
 
 	m_iszPhysicsPropClass = AllocPooledString("prop_physics");
-
-	m_nFlinchActivity = 0;
-	m_bStopped = false; 
-	m_bIsBurrowed = false;
-	m_bBarkEnabled = false;
-	m_flNextSummonTime = 0.0f;
-	m_iNumLiveAntlions = 0;
-
-	m_flSearchNoiseTime = 0.0f; 
-	m_flAngerNoiseTime = 0.0f; 
-	m_flBreathTime = 0.0f; 
-	m_flChargeTime = 0.0f;
-
-	m_flPhysicsCheckTime = 0.0f;
-	m_flNextHeavyFlinchTime = 0.0f;
-	m_flNextRoarTime = 0.0f;
-	m_iChargeMisses = 0;
-	m_bDecidedNotToStop = false;
-	m_bPreferPhysicsAttack = false;
-
-	m_strShoveTargets = NULL_STRING;
-
-	memset(m_hCaveGlow, 0, sizeof(m_hCaveGlow));
-
-	m_pGrowlHighSound = NULL;
-	m_pGrowlLowSound = NULL;
-	m_pGrowlIdleSound = NULL;
-	m_pBreathSound = NULL;
-	m_pConfusedSound = NULL;
-
-	m_vecPhysicsTargetStartPos.Init();
-	m_vecPhysicsHitPosition.Init();
-
-
-
-
 }
 
 
@@ -3047,7 +3011,7 @@ void CNPC_AntlionGuard::SummonAntlions( void )
 		pAntlion->AddSpawnFlags( SF_NPC_FADE_CORPSE );
 
 		// Make the antlion fire my input when he dies
-		pAntlion->DispatchKeyValue( "OnDeath", UTIL_VarArgs("%s,SummonedAntlionDied,,0,-1", GetEntityName()) );
+		pAntlion->CustomDispatchKeyValue( "OnDeath", UTIL_VarArgs("%s,SummonedAntlionDied,,0,-1", GetEntityName()) );
 
 		// Start the antlion burrowed, and tell him to come up
 		pAntlion->m_bStartBurrowed = true;

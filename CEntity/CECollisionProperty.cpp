@@ -1,6 +1,12 @@
 
 #include "CECollisionProperty.h"
 
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+
+
 CECollisionProperty::CECollisionProperty(CEntity *centity)
 {
 	this->centity = centity;
