@@ -215,17 +215,17 @@ CEntity *CEntityManager::CBaseEntityPostConstructor(CBaseEntity *pEntity, const 
 	}
 
 	IEntityFactory_CE **value = NULL;
-	value = pFactoryTrie.retrieve(szClassname);
-
 	bool m_bShouldAddToCache = false;
+	value = pCacheTrie.retrieve(szClassname);
+
 	if(!value)
 	{
-		value = pCacheTrie.retrieve(szClassname);
+		m_bShouldAddToCache = true;
+		value = pFactoryTrie.retrieve(szClassname);
 	}
 
 	if (!value)
 	{
-		m_bShouldAddToCache = true;
 		/* Attempt to do an RTTI lookup for C++ class links */
 		IType *pType = GetType(pEntity);
 		IBaseType *pBase = pType->GetBaseType();
