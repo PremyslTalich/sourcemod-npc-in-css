@@ -596,6 +596,7 @@ void CBaseHeadcrab::HandleAnimEvent( animevent_t *pEvent )
 			// Once we telegraph, we MUST jump. This is also when commit to what point
 			// we jump at. Jump at our enemy's eyes.
 			m_vecCommittedJumpPos = pEnemy->EyePosition();
+			m_vecCommittedJumpPos.z -= 5.0f;
 			m_bCommittedToJump = true;
 		}
 
@@ -3301,6 +3302,7 @@ void CBlackHeadcrab::HandleAnimEvent( animevent_t *pEvent )
 			// Once we telegraph, we MUST jump. This is also when commit to what point
 			// we jump at. Jump at our enemy's eyes.
 			m_vecCommittedJumpPos = pEnemy->EyePosition();
+			m_vecCommittedJumpPos.z -= 5.0f;
 			m_bCommittedToJump = true;
 		}
  
