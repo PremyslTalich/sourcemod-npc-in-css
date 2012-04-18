@@ -31,15 +31,6 @@ CEntity *CEntityLookup::Instance(CBaseEntity *pEnt)
 	}
 	
 	return Instance(pEnt->GetRefEHandle());
-
-	/*IServerNetworkable *pNetwork = pEnt->GetNetworkable();
-
-	if (!pNetwork)
-	{
-		return NULL;
-	}
-
-	return Instance(pEnt->GetRefEHandle().GetEntryIndex());*/
 }
 
 CEntity *CEntityLookup::Instance(int iEnt)
@@ -61,7 +52,8 @@ CEntity *CEntityLookup::Instance(const edict_t *pEnt)
 
 CEntity *CEntityLookup::Instance(const CBaseHandle &hEnt)
 {
-	if (!hEnt.IsValid())
+	IHandleEntity *handle = hEnt.Get();
+	if(handle == NULL)
 	{
 		return NULL;
 	}

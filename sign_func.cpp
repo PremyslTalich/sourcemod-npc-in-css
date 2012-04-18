@@ -235,7 +235,7 @@ bool HelperFunction::Initialize()
 	GET_VARIABLE(g_SoundController, CSoundEnvelopeController *);
 
 	// "Can't find decal %s\n"
-	GET_VARIABLE(decalsystem, IDecalEmitterSystem *);
+	GET_VARIABLE_POINTER(decalsystem, IDecalEmitterSystem *);
 	
 	IPredictionSystem *g_pPredictionSystems = NULL;
 	GET_VARIABLE_POINTER(g_pPredictionSystems, IPredictionSystem *);
