@@ -698,6 +698,7 @@ struct EmitSound_t
 		m_pOrigin( 0 ),
 		m_flSoundTime( 0.0f ),
 		m_pflSoundDuration( 0 ),
+		m_nDPS(0),
 		m_bEmitCloseCaption( true ),
 		m_bWarnOnMissingCloseCaption( false ),
 		m_bWarnOnDirectWaveReference( false ),
@@ -715,6 +716,7 @@ struct EmitSound_t
 	soundlevel_t				m_SoundLevel;
 	int							m_nFlags;
 	int							m_nPitch;
+	int							m_nDPS;
 	const Vector				*m_pOrigin;
 	float						m_flSoundTime; ///< NOT DURATION, but rather, some absolute time in the future until which this sound should be delayed
 	float						*m_pflSoundDuration;

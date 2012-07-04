@@ -49,6 +49,7 @@ public:
 	void LevelInitPreEntity();
 	void LevelInitPostEntity();
 	void LevelShutdownPreEntity();
+	void LevelShutdownPostEntity();
 
 public:
 	void HookGameRules();

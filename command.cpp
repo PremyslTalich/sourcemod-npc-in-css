@@ -55,6 +55,69 @@ ConVar *npc_sentences = NULL;
 
 ConVar *ai_find_lateral_cover = NULL;
 
+
+ConVar npc_create_equipment("npc_create_equipment", "");
+
+void CC_NPC_Create( const CCommand &args )
+{
+	CPlayer* pPlayer = UTIL_PlayerByIndex(g_Monster.GetCommandClient());
+	if(pPlayer == NULL)
+		return;
+
+	// Try to create entity
+	CAI_NPC *baseNPC = dynamic_cast< CAI_NPC * >( CreateEntityByName(args[1]) );
+	if (baseNPC)
+	{
+		baseNPC->DispatchKeyValue( "additionalequipment", npc_create_equipment.GetString() );
+		baseNPC->Precache();
+
+		if ( args.ArgC() == 3 )
+		{
+			baseNPC->SetName(args[2]);
+		}
+
+		DispatchSpawn(baseNPC->BaseEntity());
+		// Now attempt to drop into the world		
+		trace_t tr;
+		Vector forward;
+		pPlayer->EyeVectors( &forward );
+		UTIL_TraceLine(pPlayer->EyePosition(),
+			pPlayer->EyePosition() + forward * MAX_TRACE_LENGTH,MASK_NPCSOLID, 
+			pPlayer->BaseEntity(), COLLISION_GROUP_NONE, &tr );
+		if ( tr.fraction != 1.0)
+		{
+			if (baseNPC->CapabilitiesGet() & bits_CAP_MOVE_FLY)
+			{
+				Vector pos = tr.endpos - forward * 36;
+				baseNPC->Teleport( &pos, NULL, NULL );
+			}
+			else
+			{
+				// Raise the end position a little up off the floor, place the npc and drop him down
+				tr.endpos.z += 12;
+				baseNPC->Teleport( &tr.endpos, NULL, NULL );
+				UTIL_DropToFloor( baseNPC, MASK_NPCSOLID );
+			}
+
+			// Now check that this is a valid location for the new npc to be
+			Vector	vUpBit = baseNPC->GetAbsOrigin();
+			vUpBit.z += 1;
+
+			UTIL_TraceHull( baseNPC->GetAbsOrigin(), vUpBit, baseNPC->GetHullMins(), baseNPC->GetHullMaxs(), 
+				MASK_NPCSOLID, baseNPC->BaseEntity(), COLLISION_GROUP_NONE, &tr );
+			if ( tr.startsolid || (tr.fraction < 1.0) )
+			{
+				baseNPC->SUB_Remove();
+				DevMsg("Can't create %s.  Bad Position!\n",args[1]);
+			}
+		}
+
+		baseNPC->Activate();
+	}
+}
+
+
+
 void cmd1_CommandCallback(const CCommand &command)
 {
 	int client = g_Monster.GetCommandClient();
@@ -180,6 +243,8 @@ bool CommandInitialize()
 
 	new ConCommand("monster_dump",monster_dump_CommandCallback, "", 0);
 	new ConVar("zx2_monster_build_free",__DATE__" "__TIME__,FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+
+	new ConCommand("npc_create", CC_NPC_Create, "Creates an NPC of the given type where the player is looking (if the given NPC can actually stand at that location).  Note that this only works for npc classes that are already in the world.  You can not create an entity that doesn't have an instance in the level.\n\tArguments:	{npc_class_name}", FCVAR_CHEAT|FCVAR_GAMEDLL);
 
 	GET_CONVAR(sv_gravity);
 	GET_CONVAR(phys_pushscale);

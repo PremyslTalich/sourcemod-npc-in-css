@@ -74,6 +74,10 @@ public:
 	{
 		g_helpfunc.LevelShutdownPreEntity();
 	}
+	void LevelShutdownPostEntity()
+	{
+		g_helpfunc.LevelShutdownPostEntity();
+	}
 	void SDKShutdown()
 	{
 		g_helpfunc.Shutdown();
@@ -161,14 +165,20 @@ void HelperFunction::LevelInitPostEntity()
 void HelperFunction::LevelShutdownPreEntity()
 {
 	UnHookGameRules();
-	CCombatCharacter::Shutdown();
+}
+
+void HelperFunction::LevelShutdownPostEntity()
+{
 	g_AI_SchedulesManager.DeleteAllSchedules();
 	g_AI_SchedulesManager.DestroyStringRegistries();
 }
 
+
 void HelperFunction::Shutdown()
 {
 	LevelShutdownPreEntity();
+	CCombatCharacter::Shutdown();
+
 	SH_REMOVE_MANUALHOOK_MEMFUNC(OnLadderHook, g_CGameMovement, &g_helpfunc, &HelperFunction::OnLadder, false);
 }
 

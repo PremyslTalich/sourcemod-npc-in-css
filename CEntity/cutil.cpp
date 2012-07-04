@@ -1738,6 +1738,7 @@ EmitSound_t::EmitSound_t( const CSoundParameters &src )
 	m_SoundLevel = src.soundlevel;
 	m_nFlags = 0;
 	m_nPitch = src.pitch;
+	m_nDPS = 0;
 	m_pOrigin = 0;
 	m_flSoundTime = ( src.delay_msec == 0 ) ? 0.0f : gpGlobals->curtime + ( (float)src.delay_msec / 1000.0f );
 	m_pflSoundDuration = 0;
