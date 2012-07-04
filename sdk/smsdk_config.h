@@ -40,7 +40,7 @@
 /* Basic information exposed publicly */
 #define SMEXT_CONF_NAME			"Monster Extension"
 #define SMEXT_CONF_DESCRIPTION	"Monster Extension"
-#define SMEXT_CONF_VERSION		"0.0.0.2 free"
+#define SMEXT_CONF_VERSION		"0.0.0.3 free"
 #define SMEXT_CONF_AUTHOR		"ZombieX2"
 #define SMEXT_CONF_URL			"http://www.ZombieX2.net/"
 #define SMEXT_CONF_LOGTAG		"MONSTER"
